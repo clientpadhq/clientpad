@@ -219,7 +219,9 @@ export type ActivityType =
   | "reminder.dismissed"
   | "reminder.completed"
   | "invoice.overdue"
-  | "follow_up.overdue";
+  | "follow_up.overdue"
+  | "invite.accepted"
+  | "invite.expired";
 
 export type Activity = {
   id: string;
