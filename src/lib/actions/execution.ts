@@ -6,17 +6,66 @@ import { requireWorkspace } from "@/lib/rbac/permissions";
 import { logActivity } from "@/lib/db/activity";
 import { ensureSystemReminders } from "@/lib/db/execution";
 
+async function validateWorkspaceRecord(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  workspaceId: string,
+  table: "clients" | "deals" | "invoices" | "jobs" | "leads",
+  recordId: string | null,
+  label: string,
+) {
+  if (!recordId) return null;
+  const { data } = await supabase.from(table).select("id").eq("workspace_id", workspaceId).eq("id", recordId).maybeSingle();
+  if (!data) return `${label} does not belong to this workspace.`;
+  return null;
+}
+
+async function validateJobLinks(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  workspaceId: string,
+  links: { clientId?: string | null; dealId?: string | null; invoiceId?: string | null },
+) {
+  const checks = await Promise.all([
+    validateWorkspaceRecord(supabase, workspaceId, "clients", links.clientId ?? null, "Selected client"),
+    validateWorkspaceRecord(supabase, workspaceId, "deals", links.dealId ?? null, "Selected deal"),
+    validateWorkspaceRecord(supabase, workspaceId, "invoices", links.invoiceId ?? null, "Selected invoice"),
+  ]);
+  return checks.find(Boolean) ?? null;
+}
+
+async function validateRelatedEntity(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  workspaceId: string,
+  relatedType: string | null,
+  relatedId: string | null,
+) {
+  if (!relatedType || !relatedId) return null;
+  const relationMap: Record<string, { table: "jobs" | "deals" | "invoices" | "leads"; label: string }> = {
+    job: { table: "jobs", label: "Selected job" },
+    deal: { table: "deals", label: "Selected deal" },
+    invoice: { table: "invoices", label: "Selected invoice" },
+    lead: { table: "leads", label: "Selected lead" },
+  };
+  const relation = relationMap[relatedType];
+  if (!relation) return null;
+  return validateWorkspaceRecord(supabase, workspaceId, relation.table, relatedId, relation.label);
+}
+
 export async function createJobAction(formData: FormData) {
   const { workspace, user } = await requireWorkspace("staff");
   const supabase = await createClient();
+  const clientId = String(formData.get("client_id") ?? "").trim() || null;
+  const dealId = String(formData.get("deal_id") ?? "").trim() || null;
+  const invoiceId = String(formData.get("invoice_id") ?? "").trim() || null;
+  const linkError = await validateJobLinks(supabase, workspace.id, { clientId, dealId, invoiceId });
+  if (linkError) redirect(`/jobs/new?error=${encodeURIComponent(linkError)}`);
 
   const payload = {
     workspace_id: workspace.id,
     title: String(formData.get("title") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim() || null,
-    client_id: String(formData.get("client_id") ?? "").trim() || null,
-    deal_id: String(formData.get("deal_id") ?? "").trim() || null,
-    invoice_id: String(formData.get("invoice_id") ?? "").trim() || null,
+    client_id: clientId,
+    deal_id: dealId,
+    invoice_id: invoiceId,
     assignee_user_id: String(formData.get("assignee_user_id") ?? "").trim() || null,
     owner_user_id: String(formData.get("owner_user_id") ?? "").trim() || user.id,
     status: String(formData.get("status") ?? "pending"),
@@ -41,6 +90,11 @@ export async function createJobAction(formData: FormData) {
 export async function updateJobAction(jobId: string, formData: FormData) {
   const { workspace, user } = await requireWorkspace("staff");
   const supabase = await createClient();
+  const clientId = String(formData.get("client_id") ?? "").trim() || null;
+  const dealId = String(formData.get("deal_id") ?? "").trim() || null;
+  const invoiceId = String(formData.get("invoice_id") ?? "").trim() || null;
+  const linkError = await validateJobLinks(supabase, workspace.id, { clientId, dealId, invoiceId });
+  if (linkError) redirect(`/jobs/${jobId}/edit?error=${encodeURIComponent(linkError)}`);
 
   const { data: previous } = await supabase
     .from("jobs")
@@ -52,9 +106,9 @@ export async function updateJobAction(jobId: string, formData: FormData) {
   const payload = {
     title: String(formData.get("title") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim() || null,
-    client_id: String(formData.get("client_id") ?? "").trim() || null,
-    deal_id: String(formData.get("deal_id") ?? "").trim() || null,
-    invoice_id: String(formData.get("invoice_id") ?? "").trim() || null,
+    client_id: clientId,
+    deal_id: dealId,
+    invoice_id: invoiceId,
     assignee_user_id: String(formData.get("assignee_user_id") ?? "").trim() || null,
     owner_user_id: String(formData.get("owner_user_id") ?? "").trim() || null,
     status: String(formData.get("status") ?? "pending"),
@@ -80,13 +134,17 @@ export async function updateJobAction(jobId: string, formData: FormData) {
 export async function createTaskAction(formData: FormData) {
   const { workspace, user } = await requireWorkspace("staff");
   const supabase = await createClient();
+  const relatedType = String(formData.get("related_entity_type") ?? "").trim() || null;
+  const relatedId = String(formData.get("related_entity_id") ?? "").trim() || null;
+  const relatedError = await validateRelatedEntity(supabase, workspace.id, relatedType, relatedId);
+  if (relatedError) redirect(`/tasks/new?error=${encodeURIComponent(relatedError)}`);
 
   const payload = {
     workspace_id: workspace.id,
     title: String(formData.get("title") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim() || null,
-    related_entity_type: String(formData.get("related_entity_type") ?? "").trim() || null,
-    related_entity_id: String(formData.get("related_entity_id") ?? "").trim() || null,
+    related_entity_type: relatedType,
+    related_entity_id: relatedId,
     assignee_user_id: String(formData.get("assignee_user_id") ?? "").trim() || null,
     owner_user_id: String(formData.get("owner_user_id") ?? "").trim() || user.id,
     due_at: String(formData.get("due_at") ?? "").trim() || null,
@@ -111,6 +169,10 @@ export async function createTaskAction(formData: FormData) {
 export async function updateTaskAction(taskId: string, formData: FormData) {
   const { workspace, user } = await requireWorkspace("staff");
   const supabase = await createClient();
+  const relatedType = String(formData.get("related_entity_type") ?? "").trim() || null;
+  const relatedId = String(formData.get("related_entity_id") ?? "").trim() || null;
+  const relatedError = await validateRelatedEntity(supabase, workspace.id, relatedType, relatedId);
+  if (relatedError) redirect(`/tasks/${taskId}/edit?error=${encodeURIComponent(relatedError)}`);
 
   const { data: previous } = await supabase
     .from("tasks")
@@ -122,8 +184,8 @@ export async function updateTaskAction(taskId: string, formData: FormData) {
   const payload = {
     title: String(formData.get("title") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim() || null,
-    related_entity_type: String(formData.get("related_entity_type") ?? "").trim() || null,
-    related_entity_id: String(formData.get("related_entity_id") ?? "").trim() || null,
+    related_entity_type: relatedType,
+    related_entity_id: relatedId,
     assignee_user_id: String(formData.get("assignee_user_id") ?? "").trim() || null,
     owner_user_id: String(formData.get("owner_user_id") ?? "").trim() || null,
     due_at: String(formData.get("due_at") ?? "").trim() || null,
@@ -149,14 +211,18 @@ export async function updateTaskAction(taskId: string, formData: FormData) {
 export async function createReminderAction(formData: FormData) {
   const { workspace, user } = await requireWorkspace("staff");
   const supabase = await createClient();
+  const relatedType = String(formData.get("related_entity_type") ?? "").trim() || null;
+  const relatedId = String(formData.get("related_entity_id") ?? "").trim() || null;
+  const relatedError = await validateRelatedEntity(supabase, workspace.id, relatedType, relatedId);
+  if (relatedError) redirect(`/dashboard?error=${encodeURIComponent(relatedError)}`);
 
   const payload = {
     workspace_id: workspace.id,
     type: String(formData.get("type") ?? "custom"),
     title: String(formData.get("title") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim() || null,
-    related_entity_type: String(formData.get("related_entity_type") ?? "").trim() || null,
-    related_entity_id: String(formData.get("related_entity_id") ?? "").trim() || null,
+    related_entity_type: relatedType,
+    related_entity_id: relatedId,
     assignee_user_id: String(formData.get("assignee_user_id") ?? "").trim() || null,
     due_at: String(formData.get("due_at") ?? "").trim() || null,
     status: "open",
@@ -200,6 +266,8 @@ export async function addNoteAction(formData: FormData) {
 
   const relatedType = String(formData.get("related_entity_type") ?? "").trim();
   const relatedId = String(formData.get("related_entity_id") ?? "").trim();
+  const relatedError = await validateRelatedEntity(supabase, workspace.id, relatedType || null, relatedId || null);
+  if (relatedError) redirect(`/dashboard?error=${encodeURIComponent(relatedError)}`);
 
   const { error } = await supabase.from("notes").insert({
     workspace_id: workspace.id,

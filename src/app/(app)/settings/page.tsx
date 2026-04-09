@@ -13,7 +13,7 @@ import { updateAISettingsAction } from "@/lib/actions/ai";
 import { getWorkspaceInvites, getWorkspaceMembers } from "@/lib/db/workspace";
 import { getPaymentSettings } from "@/lib/db/revenue";
 import { getWorkspaceAISettings, listAIGenerations } from "@/lib/db/ai";
-import { canManageSettings, getAssignableRoles, requireWorkspace } from "@/lib/rbac/permissions";
+import { canManageSettings, requireWorkspace } from "@/lib/rbac/permissions";
 
 export default async function SettingsPage({
   searchParams,
@@ -63,11 +63,9 @@ export default async function SettingsPage({
             <form action={inviteMemberAction} className="grid gap-2 md:grid-cols-3">
               <input name="email" type="email" placeholder="Invite email" required />
               <select name="role" defaultValue="staff">
-                {assignableRoles.map((roleOption) => (
-                  <option key={roleOption} value={roleOption}>
-                    {roleOption}
-                  </option>
-                ))}
+                <option value="owner">owner</option>
+                <option value="admin">admin</option>
+                <option value="staff">staff</option>
               </select>
               <button className="bg-emerald-700 text-white">Invite member</button>
             </form>
@@ -75,34 +73,25 @@ export default async function SettingsPage({
             <div>
               <p className="mb-2 text-sm font-semibold">Current members</p>
               <ul className="space-y-2">
-                {members.map((member) => {
-                  const canEditOwner = context.role === "owner" || member.role !== "owner";
-                  const memberRoleOptions = canEditOwner
-                    ? assignableRoles
-                    : assignableRoles.filter((item) => item !== "owner");
-
-                  return (
-                    <li key={member.user_id} className="rounded border border-slate-200 p-3 text-sm">
-                      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <p className="font-medium text-slate-900">{member.profiles?.full_name ?? member.user_id}</p>
-                          <p className="text-xs text-slate-500">{member.user_id}</p>
-                        </div>
-                        <form action={updateMemberRoleAction} className="flex items-center gap-2">
-                          <input type="hidden" name="member_user_id" value={member.user_id} />
-                          <select name="role" defaultValue={member.role}>
-                            {memberRoleOptions.map((roleOption) => (
-                              <option key={roleOption} value={roleOption}>
-                                {roleOption}
-                              </option>
-                            ))}
-                          </select>
-                          <button className="border border-slate-300">Update role</button>
-                        </form>
+                {members.map((member) => (
+                  <li key={member.user_id} className="rounded border border-slate-200 p-3 text-sm">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900">{member.profiles?.full_name ?? member.user_id}</p>
+                        <p className="text-xs text-slate-500">{member.user_id}</p>
                       </div>
-                    </li>
-                  );
-                })}
+                      <form action={updateMemberRoleAction} className="flex items-center gap-2">
+                        <input type="hidden" name="member_user_id" value={member.user_id} />
+                        <select name="role" defaultValue={member.role}>
+                          <option value="owner">owner</option>
+                          <option value="admin">admin</option>
+                          <option value="staff">staff</option>
+                        </select>
+                        <button className="border border-slate-300">Update role</button>
+                      </form>
+                    </div>
+                  </li>
+                ))}
               </ul>
             </div>
 
@@ -169,17 +158,15 @@ export default async function SettingsPage({
               defaultValue={paymentSettings?.flutterwave_public_key ?? ""}
               placeholder="Flutterwave public key (optional)"
             />
-            <input
-              name="flutterwave_webhook_hash"
-              defaultValue={paymentSettings?.flutterwave_webhook_hash ?? ""}
-              placeholder="Workspace webhook hash (optional)"
-            />
             <textarea
               name="bank_instruction"
               defaultValue={paymentSettings?.bank_instruction ?? ""}
               placeholder="Payment instructions shown on invoice PDF"
               rows={3}
             />
+            <p className="rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+              Webhook verification uses the server environment variable <code>FLUTTERWAVE_WEBHOOK_HASH</code>.
+            </p>
             <button className="w-full bg-slate-800 text-white">Save payment settings</button>
           </form>
         ) : (
@@ -191,37 +178,19 @@ export default async function SettingsPage({
         {canManageSettings(context.role) ? (
           <form action={updateAISettingsAction} className="space-y-3">
             <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                name="ai_enabled"
-                defaultChecked={aiSettings?.ai_enabled ?? true}
-                className="h-4 w-4"
-              />
+              <input type="checkbox" name="ai_enabled" defaultChecked={aiSettings?.ai_enabled ?? true} className="h-4 w-4" />
               AI enabled
             </label>
-            <input
-              name="default_provider"
-              defaultValue={aiSettings?.default_provider ?? process.env.AI_PROVIDER ?? "mistral"}
-              placeholder="Default provider"
-            />
-            <input
-              name="default_model"
-              defaultValue={aiSettings?.default_model ?? process.env.MISTRAL_MODEL ?? "mistral-small-latest"}
-              placeholder="Default model"
-            />
-            <input
-              type="number"
-              name="monthly_cap"
-              defaultValue={aiSettings?.monthly_cap ?? ""}
-              placeholder="Monthly generation cap (optional)"
-            />
+            <input name="default_provider" defaultValue={aiSettings?.default_provider ?? process.env.AI_PROVIDER ?? "mistral"} placeholder="Default provider" />
+            <input name="default_model" defaultValue={aiSettings?.default_model ?? process.env.MISTRAL_MODEL ?? "mistral-small-latest"} placeholder="Default model" />
+            <input type="number" name="monthly_cap" defaultValue={aiSettings?.monthly_cap ?? ""} placeholder="Monthly generation cap (optional)" />
             <button className="w-full bg-emerald-700 text-white">Save AI settings</button>
           </form>
         ) : (
           <p className="text-sm text-slate-600">Only owners/admins can edit AI settings.</p>
         )}
         <div className="mt-3 rounded border border-slate-200 p-3 text-xs text-slate-600">
-          AI is optional and review-only. Missing Mistral config will result in graceful unavailable/error generation records.
+          AI is optional and review-only. Missing Mistral config produces graceful unavailable/error generation records.
         </div>
         <div className="mt-3 flex items-center justify-between text-sm">
           <span>Recent AI generations: {aiRows.length}</span>

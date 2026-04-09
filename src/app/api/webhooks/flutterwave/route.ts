@@ -18,60 +18,22 @@ export async function POST(request: Request) {
     const data = payload?.data;
     if (!data) return NextResponse.json({ ok: true });
 
-    const workspaceId = data?.meta?.workspace_id;
-    const invoiceId = data?.meta?.invoice_id;
-    const txRef = data?.tx_ref;
-    const flwRef = data?.flw_ref;
-    const status = data?.status;
-    const amount = Number(data?.amount ?? 0);
+    const workspaceId = typeof data?.meta?.workspace_id === "string" ? data.meta.workspace_id : "";
+    const invoiceId = typeof data?.meta?.invoice_id === "string" ? data.meta.invoice_id : "";
+    const transactionId = Number(data?.id);
 
-    if (!workspaceId || !invoiceId || !txRef || !flwRef || Number.isNaN(amount)) {
-      return NextResponse.json({ ok: true, ignored: "missing fields" });
+    if (!workspaceId || !invoiceId || !Number.isInteger(transactionId) || transactionId <= 0) {
+      return NextResponse.json({ ok: true, ignored: "missing identifiers" });
     }
 
     await handleWebhookPayment({
       workspaceId,
       invoiceId,
-      txRef,
-      flwRef,
-      amount: Math.max(0, amount),
-      status: status === "successful" ? "successful" : "failed",
+      transactionId,
     });
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Webhook processing failed" }, { status: 500 });
   }
-  const webhookHash = request.headers.get("verif-hash") ?? "";
-  if (process.env.FLUTTERWAVE_WEBHOOK_HASH && webhookHash !== process.env.FLUTTERWAVE_WEBHOOK_HASH) {
-    return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
-  }
-
-  const payload = await request.json();
-  const data = payload?.data;
-
-  if (!data) {
-    return NextResponse.json({ ok: true });
-  }
-
-  const workspaceId = data?.meta?.workspace_id;
-  const invoiceId = data?.meta?.invoice_id;
-  const txRef = data?.tx_ref;
-  const flwRef = data?.flw_ref;
-  const status = data?.status;
-
-  if (!workspaceId || !invoiceId || !txRef || !flwRef) {
-    return NextResponse.json({ ok: true });
-  }
-
-  await handleWebhookPayment({
-    workspaceId,
-    invoiceId,
-    txRef,
-    flwRef,
-    amount: Number(data?.amount ?? 0),
-    status: status === "successful" ? "successful" : "failed",
-  });
-
-  return NextResponse.json({ ok: true });
 }
