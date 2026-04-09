@@ -8,6 +8,7 @@ import { requireWorkspace } from "@/lib/rbac/permissions";
 import { AIGenerateCard } from "@/components/ai/ai-generate-card";
 import { AIHistoryList } from "@/components/ai/ai-history-list";
 import { listAIGenerations } from "@/lib/db/ai";
+import { WhatsAppShareCard } from "@/components/ai/whatsapp-share-card";
 import { getDeal } from "@/lib/db/deals";
 import { createClient } from "@/lib/supabase/server";
 import { StatusBadge } from "@/components/revenue/status-badge";
@@ -68,6 +69,17 @@ export default async function DealDetailPage({ params }: { params: Promise<{ dea
           />
         </div>
         <div className="mt-3"><AIHistoryList rows={aiRows} /></div>
+      </Card>
+
+
+      <Card title="WhatsApp Follow-up Share">
+        <WhatsAppShareCard
+          title="Share deal follow-up draft"
+          phone={(deal as any).client?.phone}
+          message={latestFollowUp ?? `Hello ${(deal as any).client?.business_name ?? ""}, following up on deal ${deal.title}. Current stage: ${deal.stage?.name ?? ""}. Let us know next step to move forward.`}
+          fallbackLabel="Copy follow-up"
+          logPath={JSON.stringify({ workspace_id: workspace.id, entity_type: "deal", entity_id: dealId, activity_type: "follow_up.shared", description: "Deal follow-up shared via WhatsApp" })}
+        />
       </Card>
 
       <Card title="Activity"><ActivityList items={(activities ?? [])} /></Card>

@@ -12,6 +12,7 @@ const navItems = [
   { href: "/invoices", label: "Invoices" },
   { href: "/jobs", label: "Jobs" },
   { href: "/tasks", label: "Tasks" },
+  { href: "/reports", label: "Reports" },
   { href: "/ai/history", label: "AI History" },
   { href: "/settings", label: "Settings" },
 ];
@@ -50,11 +51,13 @@ export function BottomNav() {
     { href: "/deals", label: "Deals" },
     { href: "/jobs", label: "Jobs" },
     { href: "/tasks", label: "Tasks" },
+    { href: "/reports", label: "Reports" },
     { href: "/invoices", label: "Invoices" },
   ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-2 md:hidden">
+      <ul className="grid grid-cols-7 gap-1">
       <ul className="grid grid-cols-6 gap-1">
         {mobileItems.map((item) => (
           <li key={item.href}>

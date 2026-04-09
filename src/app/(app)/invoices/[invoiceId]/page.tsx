@@ -13,6 +13,7 @@ import { getInvoice } from "@/lib/db/revenue";
 import { formatNaira } from "@/lib/revenue/calculations";
 import { createClient } from "@/lib/supabase/server";
 import { generatePaymentLinkAction, recordManualPaymentAction } from "@/lib/actions/revenue";
+import { WhatsAppShareCard } from "@/components/ai/whatsapp-share-card";
 
 export default async function InvoiceDetailPage({ params, searchParams }: { params: Promise<{ invoiceId: string }>; searchParams: Promise<{ error?: string; success?: string }>; }) {
   const { workspace } = await requireWorkspace();
@@ -111,6 +112,25 @@ export default async function InvoiceDetailPage({ params, searchParams }: { para
           />
         </div>
         <div className="mt-3"><AIHistoryList rows={aiRows} /></div>
+      </Card>
+
+
+      <Card title="WhatsApp Share">
+        <div className="grid gap-3 md:grid-cols-2">
+          <WhatsAppShareCard
+            title="Share invoice"
+            phone={(invoiceData.invoice as any).client?.phone}
+            message={`Hello ${(invoiceData.invoice as any).client?.business_name ?? ""}, this is invoice ${invoiceData.invoice.invoice_number}. Amount due: ${formatNaira(Number(invoiceData.invoice.balance_amount))}. Payment link: ${invoiceData.invoice.flutterwave_payment_link ?? "(generate payment link first)"}`}
+            logPath={JSON.stringify({ workspace_id: workspace.id, entity_type: "invoice", entity_id: invoiceId, activity_type: "invoice.shared", description: "Invoice shared via WhatsApp" })}
+          />
+          <WhatsAppShareCard
+            title="Share payment reminder"
+            phone={(invoiceData.invoice as any).client?.phone}
+            message={`Hello ${(invoiceData.invoice as any).client?.business_name ?? ""}, friendly reminder that invoice ${invoiceData.invoice.invoice_number} due ${invoiceData.invoice.due_date ?? ""} has outstanding balance ${formatNaira(Number(invoiceData.invoice.balance_amount))}. Kindly confirm payment today.`}
+            fallbackLabel="Copy reminder"
+            logPath={JSON.stringify({ workspace_id: workspace.id, entity_type: "invoice", entity_id: invoiceId, activity_type: "payment_reminder.shared", description: "Payment reminder shared via WhatsApp" })}
+          />
+        </div>
       </Card>
 
       <Card title="Payments">

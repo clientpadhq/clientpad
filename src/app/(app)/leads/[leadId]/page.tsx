@@ -8,6 +8,7 @@ import { requireWorkspace } from "@/lib/rbac/permissions";
 import { AIGenerateCard } from "@/components/ai/ai-generate-card";
 import { AIHistoryList } from "@/components/ai/ai-history-list";
 import { listAIGenerations } from "@/lib/db/ai";
+import { WhatsAppShareCard } from "@/components/ai/whatsapp-share-card";
 import { getLead } from "@/lib/db/leads";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,6 +27,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ lea
   ]);
 
   const isFollowUpOverdue = !!lead.next_follow_up_at && new Date(lead.next_follow_up_at) < new Date();
+  const latestFollowUp = (aiRows ?? []).find((r:any) => r.generation_type === "follow_up_draft" && r.status === "success")?.output_text;
 
   return (
     <div className="space-y-4">
@@ -84,6 +86,17 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ lea
 
         </div>
         <div className="mt-3"><AIHistoryList rows={aiRows} /></div>
+      </Card>
+
+
+      <Card title="WhatsApp Follow-up Share">
+        <WhatsAppShareCard
+          title="Share follow-up draft"
+          phone={lead.phone}
+          message={latestFollowUp ?? `Hello ${lead.name}, just following up regarding ${lead.service_interest ?? "your request"}. Kindly share a convenient time to proceed.`}
+          fallbackLabel="Copy follow-up"
+          logPath={JSON.stringify({ workspace_id: workspace.id, entity_type: "lead", entity_id: leadId, activity_type: "follow_up.shared", description: "Lead follow-up shared via WhatsApp" })}
+        />
       </Card>
 
       <Card title="Activity"><ActivityList items={(activities ?? [])} /></Card>

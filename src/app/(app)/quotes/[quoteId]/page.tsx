@@ -8,6 +8,7 @@ import { getQuote } from "@/lib/db/revenue";
 import { formatNaira } from "@/lib/revenue/calculations";
 import { createClient } from "@/lib/supabase/server";
 import { convertQuoteToInvoiceAction } from "@/lib/actions/revenue";
+import { WhatsAppShareCard } from "@/components/ai/whatsapp-share-card";
 
 export default async function QuoteDetailPage({ params }: { params: Promise<{ quoteId: string }> }) {
   const { workspace } = await requireWorkspace();
@@ -60,6 +61,16 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ qu
           <form action={convertAction}><button className="w-full md:w-auto bg-emerald-600 text-white">Convert to invoice</button></form>
         ) : null}
       </div>
+
+
+      <Card title="WhatsApp Share">
+        <WhatsAppShareCard
+          title="Share quote with client"
+          phone={(quoteData.quote as any).client?.phone}
+          message={`Hello ${(quoteData.quote as any).client?.business_name ?? ""}, please find quote ${quoteData.quote.quote_number} from ${(quoteData.quote as any).client?.business_name ? "ClientPad" : "our team"}. Total: ${formatNaira(Number(quoteData.quote.total_amount))}. View PDF: ${process.env.NEXT_PUBLIC_APP_URL}/api/quotes/${quoteId}/pdf`}
+          logPath={JSON.stringify({ workspace_id: workspace.id, entity_type: "quote", entity_id: quoteId, activity_type: "quote.shared", description: "Quote shared via WhatsApp" })}
+        />
+      </Card>
 
       <Card title="Activity">
         <ActivityList items={activities ?? []} />

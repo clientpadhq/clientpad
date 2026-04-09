@@ -2,6 +2,11 @@ import { redirect } from "next/navigation";
 import { SidebarNav, BottomNav } from "@/components/layout/nav";
 import { TopBar } from "@/components/layout/top-bar";
 import { requireUser } from "@/lib/auth/session";
+import { acceptPendingInvites, getWorkspaceForUser } from "@/lib/db/workspace";
+
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const user = await requireUser();
+  await acceptPendingInvites(user.id, user.email);
 import { getWorkspaceForUser } from "@/lib/db/workspace";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
