@@ -26,8 +26,9 @@ export async function createQuoteAction(formData: FormData) {
     taxAmount: Number(formData.get("tax_amount") ?? 0),
   });
 
-  const { data: quoteNumberData, error: quoteNumberError } = await supabase.rpc("next_quote_number", {
+  const { data: quoteNumberData, error: quoteNumberError } = await supabase.rpc("next_document_number", {
     target_workspace: workspace.id,
+    target_doc_type: "quote",
   });
   if (quoteNumberError) throw quoteNumberError;
 
@@ -132,7 +133,7 @@ export async function convertQuoteToInvoiceAction(quoteId: string) {
   if (quote.status !== "accepted") redirect(`/quotes/${quoteId}?error=Only accepted quotes can be converted`);
 
   const { data: items } = await supabase.from("quote_items").select("*").eq("workspace_id", workspace.id).eq("quote_id", quoteId).order("position", { ascending: true });
-  const { data: invoiceNumberData, error: invoiceNumberError } = await supabase.rpc("next_invoice_number", { target_workspace: workspace.id });
+  const { data: invoiceNumberData, error: invoiceNumberError } = await supabase.rpc("next_document_number", { target_workspace: workspace.id, target_doc_type: "invoice" });
   if (invoiceNumberError) throw invoiceNumberError;
 
   const { data: invoice, error: createError } = await supabase
@@ -187,7 +188,7 @@ export async function createInvoiceAction(formData: FormData) {
   const dueDate = String(formData.get("due_date") ?? "").trim() || null;
   const status = computeInvoiceStatus({ status: String(formData.get("status") ?? "draft"), dueDate, totalAmount: totals.total, paidAmount: 0 });
 
-  const { data: invoiceNumberData, error: invoiceNumberError } = await supabase.rpc("next_invoice_number", { target_workspace: workspace.id });
+  const { data: invoiceNumberData, error: invoiceNumberError } = await supabase.rpc("next_document_number", { target_workspace: workspace.id, target_doc_type: "invoice" });
   if (invoiceNumberError) throw invoiceNumberError;
 
   const { data: invoice, error } = await supabase.from("invoices").insert({

@@ -147,6 +147,12 @@ ClientPad is a WhatsApp-first CRM and revenue workflow platform for Nigerian ser
 - `MISTRAL_MODEL` (default: `mistral-small-latest`)
 
 ## Operational notes
+
+### Document numbering
+- Quote and invoice numbers are now allocated by a concurrency-safe database counter keyed by workspace, document type, and month (`YYYYMM`).
+- Format remains `Q-YYYYMM-####` for quotes and `INV-YYYYMM-####` for invoices.
+- Unique constraints on `(workspace_id, quote_number)` and `(workspace_id, invoice_number)` remain as a final safety net.
+
 ### Team invites
 - Owner/admin can invite by email and role from Settings.
 - Invite acceptance is automatic when invited email signs up/signs in.
