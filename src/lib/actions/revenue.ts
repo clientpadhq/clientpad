@@ -12,6 +12,33 @@ import {
 } from "@/lib/revenue/calculations";
 import { refreshInvoiceAmounts } from "@/lib/revenue/payments";
 
+async function validateWorkspaceRecord(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  workspaceId: string,
+  table: "deals" | "clients" | "quotes" | "invoices",
+  recordId: string | null,
+  label: string,
+) {
+  if (!recordId) return null;
+  const { data } = await supabase.from(table).select("id").eq("workspace_id", workspaceId).eq("id", recordId).maybeSingle();
+  if (!data) return `${label} does not belong to this workspace.`;
+  return null;
+}
+
+async function validateRevenueLinks(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  workspaceId: string,
+  links: { dealId?: string | null; clientId?: string | null; quoteId?: string | null; invoiceId?: string | null },
+) {
+  const checks = await Promise.all([
+    validateWorkspaceRecord(supabase, workspaceId, "deals", links.dealId ?? null, "Selected deal"),
+    validateWorkspaceRecord(supabase, workspaceId, "clients", links.clientId ?? null, "Selected client"),
+    validateWorkspaceRecord(supabase, workspaceId, "quotes", links.quoteId ?? null, "Selected quote"),
+    validateWorkspaceRecord(supabase, workspaceId, "invoices", links.invoiceId ?? null, "Selected invoice"),
+  ]);
+  return checks.find(Boolean) ?? null;
+}
+
 export async function createQuoteAction(formData: FormData) {
   const { workspace, user, role } = await requireWorkspace("staff");
   if (role === "staff") throw new Error("Staff cannot create quotes.");
@@ -25,6 +52,10 @@ export async function createQuoteAction(formData: FormData) {
     discountAmount: Number(formData.get("discount_amount") ?? 0),
     taxAmount: Number(formData.get("tax_amount") ?? 0),
   });
+  const dealId = String(formData.get("deal_id") ?? "").trim() || null;
+  const clientId = String(formData.get("client_id") ?? "").trim() || null;
+  const linkError = await validateRevenueLinks(supabase, workspace.id, { dealId, clientId });
+  if (linkError) redirect(`/quotes/new?error=${encodeURIComponent(linkError)}`);
 
   const { data: quoteNumberData, error: quoteNumberError } = await supabase.rpc("next_quote_number", {
     target_workspace: workspace.id,
@@ -34,8 +65,8 @@ export async function createQuoteAction(formData: FormData) {
   const quotePayload = {
     workspace_id: workspace.id,
     quote_number: quoteNumberData,
-    deal_id: String(formData.get("deal_id") ?? "").trim() || null,
-    client_id: String(formData.get("client_id") ?? "").trim() || null,
+    deal_id: dealId,
+    client_id: clientId,
     status: String(formData.get("status") ?? "draft"),
     issue_date: String(formData.get("issue_date") ?? new Date().toISOString().slice(0, 10)),
     valid_until: String(formData.get("valid_until") ?? "").trim() || null,
@@ -83,9 +114,13 @@ export async function updateQuoteAction(quoteId: string, formData: FormData) {
   });
 
   const nextStatus = String(formData.get("status") ?? "draft");
+  const dealId = String(formData.get("deal_id") ?? "").trim() || null;
+  const clientId = String(formData.get("client_id") ?? "").trim() || null;
+  const linkError = await validateRevenueLinks(supabase, workspace.id, { dealId, clientId });
+  if (linkError) redirect(`/quotes/${quoteId}/edit?error=${encodeURIComponent(linkError)}`);
   const updatePayload = {
-    deal_id: String(formData.get("deal_id") ?? "").trim() || null,
-    client_id: String(formData.get("client_id") ?? "").trim() || null,
+    deal_id: dealId,
+    client_id: clientId,
     status: nextStatus,
     issue_date: String(formData.get("issue_date") ?? new Date().toISOString().slice(0, 10)),
     valid_until: String(formData.get("valid_until") ?? "").trim() || null,
@@ -186,6 +221,11 @@ export async function createInvoiceAction(formData: FormData) {
   const totals = calculateRevenueTotals({ items, discountAmount: Number(formData.get("discount_amount") ?? 0), taxAmount: Number(formData.get("tax_amount") ?? 0) });
   const dueDate = String(formData.get("due_date") ?? "").trim() || null;
   const status = computeInvoiceStatus({ status: String(formData.get("status") ?? "draft"), dueDate, totalAmount: totals.total, paidAmount: 0 });
+  const quoteId = String(formData.get("quote_id") ?? "").trim() || null;
+  const dealId = String(formData.get("deal_id") ?? "").trim() || null;
+  const clientId = String(formData.get("client_id") ?? "").trim() || null;
+  const linkError = await validateRevenueLinks(supabase, workspace.id, { quoteId, dealId, clientId });
+  if (linkError) redirect(`/invoices/new?error=${encodeURIComponent(linkError)}`);
 
   const { data: invoiceNumberData, error: invoiceNumberError } = await supabase.rpc("next_invoice_number", { target_workspace: workspace.id });
   if (invoiceNumberError) throw invoiceNumberError;
@@ -193,9 +233,9 @@ export async function createInvoiceAction(formData: FormData) {
   const { data: invoice, error } = await supabase.from("invoices").insert({
     workspace_id: workspace.id,
     invoice_number: invoiceNumberData,
-    quote_id: String(formData.get("quote_id") ?? "").trim() || null,
-    deal_id: String(formData.get("deal_id") ?? "").trim() || null,
-    client_id: String(formData.get("client_id") ?? "").trim() || null,
+    quote_id: quoteId,
+    deal_id: dealId,
+    client_id: clientId,
     status,
     issue_date: String(formData.get("issue_date") ?? new Date().toISOString().slice(0, 10)),
     due_date: dueDate,
@@ -241,11 +281,16 @@ export async function updateInvoiceAction(invoiceId: string, formData: FormData)
   const paidAmount = Number(invoiceCurrent?.paid_amount || 0);
 
   const status = computeInvoiceStatus({ status: String(formData.get("status") ?? "draft"), dueDate, totalAmount: totals.total, paidAmount });
+  const quoteId = String(formData.get("quote_id") ?? "").trim() || null;
+  const dealId = String(formData.get("deal_id") ?? "").trim() || null;
+  const clientId = String(formData.get("client_id") ?? "").trim() || null;
+  const linkError = await validateRevenueLinks(supabase, workspace.id, { quoteId, dealId, clientId });
+  if (linkError) redirect(`/invoices/${invoiceId}/edit?error=${encodeURIComponent(linkError)}`);
 
   const { error } = await supabase.from("invoices").update({
-    quote_id: String(formData.get("quote_id") ?? "").trim() || null,
-    deal_id: String(formData.get("deal_id") ?? "").trim() || null,
-    client_id: String(formData.get("client_id") ?? "").trim() || null,
+    quote_id: quoteId,
+    deal_id: dealId,
+    client_id: clientId,
     status,
     issue_date: String(formData.get("issue_date") ?? new Date().toISOString().slice(0, 10)),
     due_date: dueDate,
@@ -320,6 +365,8 @@ export async function recordManualPaymentAction(invoiceId: string, formData: For
   const supabase = await createClient();
   const amount = Math.max(0, Number(formData.get("amount") ?? 0));
   if (amount <= 0) redirect(`/invoices/${invoiceId}?error=Payment amount must be greater than 0`);
+  const linkError = await validateRevenueLinks(supabase, workspace.id, { invoiceId });
+  if (linkError) redirect(`/invoices/${invoiceId}?error=${encodeURIComponent(linkError)}`);
 
   const { error } = await supabase.from("payments").insert({
     workspace_id: workspace.id,
