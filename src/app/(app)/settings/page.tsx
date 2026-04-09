@@ -7,6 +7,8 @@ import { getWorkspaceMembers } from "@/lib/db/workspace";
 import { getPaymentSettings } from "@/lib/db/revenue";
 import { getWorkspaceAISettings, listAIGenerations } from "@/lib/db/ai";
 import Link from "next/link";
+import { getWorkspaceMembers } from "@/lib/db/workspace";
+import { getPaymentSettings } from "@/lib/db/revenue";
 import { canManageSettings, requireWorkspace } from "@/lib/rbac/permissions";
 
 export default async function SettingsPage({
@@ -21,6 +23,9 @@ export default async function SettingsPage({
     getPaymentSettings(context.workspace.id),
     getWorkspaceAISettings(context.workspace.id),
     listAIGenerations(context.workspace.id),
+  const [members, paymentSettings] = await Promise.all([
+    getWorkspaceMembers(context.workspace.id),
+    getPaymentSettings(context.workspace.id),
   ]);
 
   return (

@@ -20,6 +20,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ dea
   const supabase = await createClient();
   const [aiRows, { data: activities }, { data: tasks }, { data: reminders }] = await Promise.all([
     listAIGenerations(workspace.id, "deal", dealId),
+  const [{ data: activities }, { data: tasks }, { data: reminders }] = await Promise.all([
     supabase.from("activities").select("id, description, created_at, activity_type").eq("workspace_id", workspace.id).eq("entity_type", "deal").eq("entity_id", dealId).order("created_at", { ascending: false }),
     supabase.from("tasks").select("*").eq("workspace_id", workspace.id).eq("related_entity_type", "deal").eq("related_entity_id", dealId).order("due_at", { ascending: true }),
     supabase.from("reminders").select("*").eq("workspace_id", workspace.id).eq("related_entity_type", "deal").eq("related_entity_id", dealId).eq("status", "open").order("due_at", { ascending: true }),

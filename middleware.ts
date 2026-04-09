@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 
 const authPaths = ["/sign-in", "/sign-up"];
 const protectedPrefixes = ["/dashboard", "/leads", "/clients", "/deals", "/quotes", "/invoices", "/jobs", "/tasks", "/ai", "/settings", "/onboarding"];
+const protectedPrefixes = ["/dashboard", "/leads", "/clients", "/deals", "/quotes", "/invoices", "/jobs", "/tasks", "/settings", "/onboarding"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
