@@ -352,7 +352,6 @@ export async function updatePaymentSettingsAction(formData: FormData) {
   const payload = {
     workspace_id: workspace.id,
     flutterwave_public_key: String(formData.get("flutterwave_public_key") ?? "").trim() || null,
-    flutterwave_webhook_hash: String(formData.get("flutterwave_webhook_hash") ?? "").trim() || null,
     bank_instruction: String(formData.get("bank_instruction") ?? "").trim() || null,
     updated_at: new Date().toISOString(),
   };

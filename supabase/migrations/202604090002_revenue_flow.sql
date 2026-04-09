@@ -6,7 +6,6 @@ create type payment_status as enum ('pending', 'successful', 'failed', 'partiall
 create table if not exists public.workspace_payment_settings (
   workspace_id uuid primary key references public.workspaces(id) on delete cascade,
   flutterwave_public_key text,
-  flutterwave_webhook_hash text,
   bank_instruction text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
