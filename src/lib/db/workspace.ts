@@ -34,6 +34,19 @@ export async function getWorkspaceMembers(workspaceId: string) {
   return data;
 }
 
+export async function getWorkspaceInvites(workspaceId: string) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("workspace_invites")
+    .select("id, email, role, status, created_at")
+    .eq("workspace_id", workspaceId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getWorkspaceById(workspaceId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase

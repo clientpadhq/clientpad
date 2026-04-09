@@ -39,3 +39,12 @@ export function canDeleteRecords(role: Role) {
 export function canManageRevenue(role: Role) {
   return role === "owner" || role === "admin";
 }
+
+export function canAssignRole(actorRole: Role, targetRole: Role) {
+  if (targetRole === "owner") return actorRole === "owner";
+  return actorRole === "owner" || actorRole === "admin";
+}
+
+export function getAssignableRoles(actorRole: Role): Role[] {
+  return actorRole === "owner" ? ["owner", "admin", "staff"] : ["admin", "staff"];
+}
