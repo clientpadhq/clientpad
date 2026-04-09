@@ -19,11 +19,40 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     getPaymentSettings(context.workspace.id),
     getWorkspaceAISettings(context.workspace.id),
     listAIGenerations(context.workspace.id),
+import { PageHeader } from "@/components/ui/page-header";
+import { Card } from "@/components/ui/card";
+import { updateWorkspaceAction } from "@/lib/actions/workspace";
+import { updatePaymentSettingsAction } from "@/lib/actions/revenue";
+import { updateAISettingsAction } from "@/lib/actions/ai";
+import { getWorkspaceMembers } from "@/lib/db/workspace";
+import { getPaymentSettings } from "@/lib/db/revenue";
+import { getWorkspaceAISettings, listAIGenerations } from "@/lib/db/ai";
+import Link from "next/link";
+import { getWorkspaceMembers } from "@/lib/db/workspace";
+import { getPaymentSettings } from "@/lib/db/revenue";
+import { canManageSettings, requireWorkspace } from "@/lib/rbac/permissions";
+
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; success?: string }>;
+}) {
+  const context = await requireWorkspace();
+  const params = await searchParams;
+  const [members, paymentSettings, aiSettings, aiRows] = await Promise.all([
+    getWorkspaceMembers(context.workspace.id),
+    getPaymentSettings(context.workspace.id),
+    getWorkspaceAISettings(context.workspace.id),
+    listAIGenerations(context.workspace.id),
+  const [members, paymentSettings] = await Promise.all([
+    getWorkspaceMembers(context.workspace.id),
+    getPaymentSettings(context.workspace.id),
   ]);
 
   return (
     <div className="space-y-4">
       <PageHeader title="Settings" description="Workspace profile, team, payments, and AI controls." />
+      <PageHeader title="Settings" description="Workspace profile, team and payments config." />
 
       {params.error ? <p className="rounded bg-red-50 p-2 text-sm text-red-700">{params.error}</p> : null}
       {params.success ? <p className="rounded bg-green-50 p-2 text-sm text-green-700">{params.success}</p> : null}
@@ -86,6 +115,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             </div>
           </div>
         ) : <p className="text-sm text-slate-600">Only owners/admins can manage team members.</p>}
+            <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+              Default currency: <span className="font-medium">NGN</span>
+            </div>
+            <button className="w-full bg-emerald-600 text-white">Save changes</button>
+          </form>
+        ) : (
+          <p className="text-sm text-slate-600">Only owners/admins can edit workspace settings.</p>
+        )}
       </Card>
 
       <Card title="Payment Configuration (Flutterwave)">
@@ -99,6 +136,30 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         ) : <p className="text-sm text-slate-600">Only owners/admins can edit payment settings.</p>}
       </Card>
 
+            <input
+              name="flutterwave_public_key"
+              defaultValue={paymentSettings?.flutterwave_public_key ?? ""}
+              placeholder="Flutterwave public key (optional)"
+            />
+            <input
+              name="flutterwave_webhook_hash"
+              defaultValue={paymentSettings?.flutterwave_webhook_hash ?? ""}
+              placeholder="Workspace webhook hash (optional)"
+            />
+            <textarea
+              name="bank_instruction"
+              defaultValue={paymentSettings?.bank_instruction ?? ""}
+              placeholder="Payment instructions shown on invoice PDF"
+              rows={3}
+            />
+            <button className="w-full bg-slate-800 text-white">Save payment settings</button>
+          </form>
+        ) : (
+          <p className="text-sm text-slate-600">Only owners/admins can edit payment settings.</p>
+        )}
+      </Card>
+
+
       <Card title="AI Controls">
         {canManageSettings(context.role) ? (
           <form action={updateAISettingsAction} className="space-y-3">
@@ -111,6 +172,31 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         ) : <p className="text-sm text-slate-600">Only owners/admins can edit AI settings.</p>}
         <div className="mt-3 rounded border border-slate-200 p-3 text-xs text-slate-600">AI is optional and review-only. Missing Mistral config produces graceful unavailable/error generation records.</div>
         <div className="mt-3 flex items-center justify-between text-sm"><span>Recent AI generations: {aiRows.length}</span><Link href="/ai/history" className="text-emerald-700 underline">View AI history</Link></div>
+        ) : (
+          <p className="text-sm text-slate-600">Only owners/admins can edit AI settings.</p>
+        )}
+        <div className="mt-3 rounded border border-slate-200 p-3 text-xs text-slate-600">
+          AI is optional and review-only. Missing Mistral config will result in graceful unavailable/error generation records.
+        </div>
+        <div className="mt-3 flex items-center justify-between text-sm">
+          <span>Recent AI generations: {aiRows.length}</span>
+          <Link href="/ai/history" className="text-emerald-700 underline">View AI history</Link>
+        </div>
+      </Card>
+
+      <Card title="Team Members">
+        {members.length === 0 ? (
+          <p className="text-sm text-slate-600">No members available.</p>
+        ) : (
+          <ul className="space-y-2">
+            {members.map((member) => (
+              <li key={member.user_id} className="rounded border border-slate-200 p-3 text-sm">
+                <p className="font-medium text-slate-900">{member.profiles?.full_name ?? member.user_id}</p>
+                <p className="text-slate-600">Role: {member.role}</p>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
     </div>
   );

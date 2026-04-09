@@ -15,6 +15,10 @@ import { AIHistoryList } from "@/components/ai/ai-history-list";
 export default async function DashboardPage() {
   const { workspace, user } = await requireWorkspace();
   const [stats, revenue, execution, reminders, digestRows] = await Promise.all([
+
+export default async function DashboardPage() {
+  const { workspace, user } = await requireWorkspace();
+  const [stats, revenue, execution, reminders] = await Promise.all([
     getDashboardStats(workspace.id),
     getRevenueMetrics(workspace.id),
     getExecutionMetrics(workspace.id, user.id),

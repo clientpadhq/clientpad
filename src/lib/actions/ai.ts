@@ -72,7 +72,7 @@ export async function generateWeeklyDigestAction() {
 }
 
 export async function updateAISettingsAction(formData: FormData) {
-  const { workspace, role, user } = await requireWorkspace("staff");
+  const { workspace, role } = await requireWorkspace("staff");
   if (role === "staff") throw new Error("Staff cannot change AI settings");
 
   const supabase = await createClient();
@@ -86,16 +86,5 @@ export async function updateAISettingsAction(formData: FormData) {
 
   const { error } = await supabase.from("workspace_ai_settings").upsert(payload);
   if (error) redirect(`/settings?error=${encodeURIComponent(error.message)}`);
-
-  await supabase.from("activities").insert({
-    workspace_id: workspace.id,
-    actor_user_id: user.id,
-    entity_type: "workspace",
-    entity_id: workspace.id,
-    activity_type: "ai.settings.updated",
-    description: "AI settings updated",
-    metadata: { ai_enabled: payload.ai_enabled, provider: payload.default_provider, model: payload.default_model },
-  });
-
   redirect("/settings?success=AI settings updated");
 }

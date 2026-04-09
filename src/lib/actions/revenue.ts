@@ -286,10 +286,6 @@ export async function generatePaymentLinkAction(invoiceId: string) {
   const txRef = `clientpad-${workspace.id.slice(0, 8)}-${invoiceId.slice(0, 8)}-${Date.now()}`;
   const amount = Number(invoice.balance_amount || invoice.total_amount || 0);
 
-  if (!process.env.FLUTTERWAVE_SECRET_KEY || !process.env.NEXT_PUBLIC_APP_URL) {
-    redirect(`/invoices/${invoiceId}?error=Flutterwave configuration is incomplete`);
-  }
-
   const response = await fetch("https://api.flutterwave.com/v3/payments", {
     method: "POST",
     headers: {

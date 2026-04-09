@@ -5,7 +5,7 @@ export async function listDeals(workspaceId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("deals")
-    .select("*, stage:pipeline_stages(id,name,position), lead:leads(id,name), client:clients(id,business_name,phone)")
+    .select("*, stage:pipeline_stages(id,name,position), lead:leads(id,name), client:clients(id,business_name)")
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false });
 
@@ -17,7 +17,7 @@ export async function getDeal(workspaceId: string, dealId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("deals")
-    .select("*, stage:pipeline_stages(id,name,position), lead:leads(id,name), client:clients(id,business_name,phone)")
+    .select("*, stage:pipeline_stages(id,name,position), lead:leads(id,name), client:clients(id,business_name)")
     .eq("workspace_id", workspaceId)
     .eq("id", dealId)
     .single();

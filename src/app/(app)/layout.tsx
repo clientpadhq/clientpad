@@ -7,6 +7,10 @@ import { acceptPendingInvites, getWorkspaceForUser } from "@/lib/db/workspace";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   await acceptPendingInvites(user.id, user.email);
+import { getWorkspaceForUser } from "@/lib/db/workspace";
+
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const user = await requireUser();
   const workspaceData = await getWorkspaceForUser(user.id);
 
   if (!workspaceData) {

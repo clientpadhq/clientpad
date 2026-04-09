@@ -20,6 +20,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ lea
   const supabase = await createClient();
   const [aiRows, { data: activities }, { data: tasks }, { data: reminders }] = await Promise.all([
     listAIGenerations(workspace.id, "lead", leadId),
+  const [{ data: activities }, { data: tasks }, { data: reminders }] = await Promise.all([
     supabase.from("activities").select("id, description, created_at, activity_type").eq("workspace_id", workspace.id).eq("entity_type", "lead").eq("entity_id", leadId).order("created_at", { ascending: false }),
     supabase.from("tasks").select("*").eq("workspace_id", workspace.id).eq("related_entity_type", "lead").eq("related_entity_id", leadId).order("due_at", { ascending: true }),
     supabase.from("reminders").select("*").eq("workspace_id", workspace.id).eq("related_entity_type", "lead").eq("related_entity_id", leadId).eq("status", "open").order("due_at", { ascending: true }),

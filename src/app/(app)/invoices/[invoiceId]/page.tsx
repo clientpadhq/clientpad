@@ -27,6 +27,7 @@ export default async function InvoiceDetailPage({ params, searchParams }: { para
   const supabase = await createClient();
   const [aiRows, { data: activities }, { data: reminders }, { data: tasks }] = await Promise.all([
     listAIGenerations(workspace.id, "invoice", invoiceId),
+  const [{ data: activities }, { data: reminders }, { data: tasks }] = await Promise.all([
     supabase.from("activities").select("id,description,created_at,activity_type").eq("workspace_id", workspace.id).in("entity_type", ["invoice", "payment", "task", "reminder"]).eq("entity_id", invoiceId).order("created_at", { ascending: false }).limit(16),
     supabase.from("reminders").select("*").eq("workspace_id", workspace.id).eq("related_entity_type", "invoice").eq("related_entity_id", invoiceId).eq("status", "open").order("due_at", { ascending: true }),
     supabase.from("tasks").select("*").eq("workspace_id", workspace.id).eq("related_entity_type", "invoice").eq("related_entity_id", invoiceId).order("due_at", { ascending: true }),
