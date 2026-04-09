@@ -185,6 +185,10 @@ Webhook validates `verif-hash` against the global server environment variable `F
 ### Reporting
 - Lightweight reporting route: `/reports`
 - Supported ranges: last 7 days, last 30 days, this month.
+- Data-status banner on report page: `ok`, `partial`, or `failed` to prevent silent partial reporting.
+- Lead → Deal conversion is cohort-based: leads created in selected range that have at least one linked deal created on or before report generation time, divided by leads created in selected range.
+- Status-based metrics normalize status text to lowercase before counting.
+- Completion metrics and conversion metrics guard divide-by-zero by returning `0%` when denominator is `0`.
 - `FLUTTERWAVE_SECRET_KEY`
 - `FLUTTERWAVE_WEBHOOK_HASH`
 - `SUPABASE_SERVICE_ROLE_KEY`
