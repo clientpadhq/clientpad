@@ -2,8 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 const authPaths = ["/sign-in", "/sign-up"];
-const protectedPrefixes = ["/dashboard", "/leads", "/clients", "/deals", "/quotes", "/invoices", "/jobs", "/tasks", "/reports", "/ai", "/settings", "/onboarding"];
-const protectedPrefixes = ["/dashboard", "/leads", "/clients", "/deals", "/quotes", "/invoices", "/jobs", "/tasks", "/ai", "/settings", "/onboarding"];
 const protectedPrefixes = ["/dashboard", "/leads", "/clients", "/deals", "/quotes", "/invoices", "/jobs", "/tasks", "/settings", "/onboarding"];
 
 export async function middleware(request: NextRequest) {
@@ -21,7 +19,7 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>

@@ -21,6 +21,18 @@ export async function createDealAction(formData: FormData) {
     notes: String(formData.get("notes") ?? "").trim() || null,
   };
 
+  const { data: stage, error: stageError } = await supabase
+    .from("pipeline_stages")
+    .select("id")
+    .eq("workspace_id", workspace.id)
+    .eq("id", payload.stage_id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (stageError || !stage) {
+    redirect(`/deals/new?error=${encodeURIComponent(stageError?.message ?? "Select an active pipeline stage")}`);
+  }
+
   const { data, error } = await supabase.from("deals").insert(payload).select("id").single();
 
   if (error || !data) {
@@ -51,6 +63,18 @@ export async function updateDealAction(dealId: string, formData: FormData) {
     .eq("workspace_id", workspace.id)
     .eq("id", dealId)
     .single();
+
+  const { data: stage, error: stageError } = await supabase
+    .from("pipeline_stages")
+    .select("id")
+    .eq("workspace_id", workspace.id)
+    .eq("id", stageId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (stageError || !stage) {
+    redirect(`/deals/${dealId}/edit?error=${encodeURIComponent(stageError?.message ?? "Select an active pipeline stage")}`);
+  }
 
   const updatePayload = {
     title: String(formData.get("title") ?? "").trim(),

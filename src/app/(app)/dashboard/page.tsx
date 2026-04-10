@@ -15,10 +15,6 @@ import { AIHistoryList } from "@/components/ai/ai-history-list";
 export default async function DashboardPage() {
   const { workspace, user } = await requireWorkspace();
   const [stats, revenue, execution, reminders, digestRows] = await Promise.all([
-
-export default async function DashboardPage() {
-  const { workspace, user } = await requireWorkspace();
-  const [stats, revenue, execution, reminders] = await Promise.all([
     getDashboardStats(workspace.id),
     getRevenueMetrics(workspace.id),
     getExecutionMetrics(workspace.id, user.id),
@@ -51,7 +47,7 @@ export default async function DashboardPage() {
       <Card title="Open Reminders"><ReminderList reminders={reminders} /></Card>
       <Card title="Weekly AI Digest (Optional)">
         <form action={generateWeeklyDigestAction} className="mb-3"><button className="bg-emerald-700 text-white">Generate weekly digest</button></form>
-        <AIHistoryList rows={(digestRows ?? []).filter((r:any) => r.generation_type === "weekly_digest").slice(0,3)} />
+        <AIHistoryList rows={(digestRows ?? []).filter((row) => row.generation_type === "weekly_digest").slice(0, 3)} />
       </Card>
 
       <Card title="Recent Activity"><ActivityList items={stats.recentActivity} /></Card>

@@ -5,6 +5,7 @@ import { listClients } from "@/lib/db/clients";
 import { listDeals } from "@/lib/db/deals";
 import { getPaymentSettings, listQuotes } from "@/lib/db/revenue";
 import { requireWorkspace } from "@/lib/rbac/permissions";
+type QuoteOption = { id: string; quote_number: string };
 
 export default async function NewInvoicePage() {
   const { workspace } = await requireWorkspace();
@@ -26,6 +27,7 @@ export default async function NewInvoicePage() {
           quotes={quotes as any}
           defaultNotes={paymentSettings?.invoice_default_terms ?? ""}
         />
+        <InvoiceForm action={createInvoiceAction} clients={clients} deals={deals} quotes={quotes as QuoteOption[]} />
       </div>
     </div>
   );

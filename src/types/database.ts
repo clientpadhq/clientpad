@@ -11,11 +11,46 @@ export type Workspace = {
   updated_at: string;
 };
 
+export type WorkspaceBrandingSettings = {
+  workspace_id: string;
+  email: string | null;
+  address: string | null;
+  website_or_social: string | null;
+  logo_url: string | null;
+  default_footer_text: string | null;
+  default_quote_terms: string | null;
+  default_invoice_terms: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type WorkspaceMember = {
   workspace_id: string;
   user_id: string;
   role: Role;
   created_at: string;
+};
+
+export type WorkspaceOnboardingStep =
+  | "business_profile"
+  | "branding_payment"
+  | "preset_selection"
+  | "data_import"
+  | "completed";
+
+export type WorkspaceOnboardingState = {
+  workspace_id: string;
+  current_step: WorkspaceOnboardingStep;
+  business_profile_completed: boolean;
+  branding_payment_completed: boolean;
+  preset_selected: boolean;
+  data_import_completed: boolean;
+  selected_preset: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  last_skipped_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type LeadStatus = "new" | "contacted" | "qualified" | "unqualified";
@@ -56,6 +91,8 @@ export type PipelineStage = {
   name: string;
   position: number;
   is_closed: boolean;
+  is_active: boolean;
+  color: string | null;
   created_at: string;
 };
 
@@ -223,12 +260,18 @@ export type ActivityType =
   | "invite.accepted"
   | "invite.expired"
   | "preset.applied";
+  | "pipeline_stage.created"
+  | "pipeline_stage.updated"
+  | "pipeline_stage.archived";
+  | "branding.updated";
+  | "onboarding.started"
+  | "onboarding.completed";
 
 export type Activity = {
   id: string;
   workspace_id: string;
   actor_user_id: string | null;
-  entity_type: "workspace" | "lead" | "client" | "deal" | "quote" | "invoice" | "payment" | "job" | "task" | "reminder";
+  entity_type: "workspace" | "lead" | "client" | "deal" | "quote" | "invoice" | "payment" | "job" | "task" | "reminder" | "pipeline_stage";
   entity_id: string;
   activity_type: ActivityType;
   description: string;

@@ -26,7 +26,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
         <select name="entity_type" defaultValue={params.entity_type ?? ""}><option value="">Any entity</option><option value="lead">Lead</option><option value="deal">Deal</option><option value="invoice">Invoice</option><option value="job">Job</option></select>
         <button className="border border-slate-300">Apply</button>
       </form>
-      {tasks.length === 0 ? <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600">No tasks found.</div> : <ul className="space-y-2">{tasks.map((task:any)=><li key={task.id} className="rounded-lg border border-slate-200 bg-white p-4"><div className="flex items-center justify-between"><Link href={`/tasks/${task.id}`} className="font-medium">{task.title}</Link><StatusBadge status={task.status} /></div><p className="text-sm text-slate-600">Priority: {task.priority} • Due: {task.due_at ? new Date(task.due_at).toLocaleString() : '-'}</p></li>)}</ul>}
+      {tasks.length === 0 ? <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-600">No tasks found.</div> : <ul className="space-y-2">{tasks.map((task) => <li key={task.id} className="rounded-lg border border-slate-200 bg-white p-4"><div className="flex items-center justify-between"><Link href={`/tasks/${task.id}`} className="font-medium">{task.title}</Link><StatusBadge status={task.status} /></div><p className="text-sm text-slate-600">Priority: {task.priority} • Due: {task.due_at ? new Date(task.due_at).toLocaleString() : "-"}</p></li>)}</ul>}
     </div>
   );
 }
