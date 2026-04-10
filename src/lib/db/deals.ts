@@ -26,13 +26,15 @@ export async function getDeal(workspaceId: string, dealId: string) {
   return data;
 }
 
-export async function listPipelineStages(workspaceId: string) {
+export async function listPipelineStages(workspaceId: string, options?: { includeInactive?: boolean }) {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("pipeline_stages")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .order("position", { ascending: true });
+  let query = supabase.from("pipeline_stages").select("*").eq("workspace_id", workspaceId);
+
+  if (!options?.includeInactive) {
+    query = query.eq("is_active", true);
+  }
+
+  const { data, error } = await query.order("position", { ascending: true });
 
   if (error) throw error;
   return (data ?? []) as PipelineStage[];

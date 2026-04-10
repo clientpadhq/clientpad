@@ -21,8 +21,8 @@ export async function getDashboardStats(workspaceId: string) {
   if (dealsData.error) throw dealsData.error;
   if (activitiesData.error) throw activitiesData.error;
 
-  const deals = dealsData.data ?? [];
-  const activeDeals = deals.filter((deal) => !deal.stage?.is_closed);
+  const deals = (dealsData.data ?? []) as Array<{ amount: number | null; stage: Array<{ is_closed: boolean }> | null }>;
+  const activeDeals = deals.filter((deal) => !(deal.stage?.[0]?.is_closed ?? false));
 
   return {
     totalLeads: leadsCount.count ?? 0,

@@ -3,6 +3,18 @@ import { LineItemsFields } from "@/components/revenue/line-items-fields";
 
 const statuses: InvoiceStatus[] = ["draft", "issued", "partially_paid", "paid", "overdue", "cancelled"];
 
+type InvoiceFormInvoice = {
+  client_id: string | null;
+  deal_id: string | null;
+  quote_id: string | null;
+  issue_date: string;
+  due_date: string | null;
+  status: InvoiceStatus;
+  discount_amount: number;
+  tax_amount: number;
+  notes: string | null;
+};
+
 export function InvoiceForm({
   action,
   clients,
@@ -10,13 +22,15 @@ export function InvoiceForm({
   quotes,
   invoice,
   items,
+  defaultNotes,
 }: {
   action: (formData: FormData) => void;
   clients: Array<{ id: string; business_name: string }>;
   deals: Array<{ id: string; title: string }>;
   quotes: Array<{ id: string; quote_number: string }>;
-  invoice?: any;
+  invoice?: InvoiceFormInvoice;
   items?: Array<{ description: string; quantity: number; unit_price: number; notes?: string | null }>;
+  defaultNotes?: string;
 }) {
   return (
     <form action={action} className="space-y-3">
@@ -55,7 +69,7 @@ export function InvoiceForm({
         <input type="number" min="0" step="0.01" name="tax_amount" placeholder="Tax amount" defaultValue={invoice?.tax_amount ?? 0} />
       </div>
 
-      <textarea name="notes" placeholder="Notes" defaultValue={invoice?.notes ?? ""} rows={3} />
+      <textarea name="notes" placeholder="Notes" defaultValue={invoice?.notes ?? defaultNotes ?? ""} rows={3} />
       <button className="w-full bg-emerald-600 text-white">Save invoice</button>
     </form>
   );

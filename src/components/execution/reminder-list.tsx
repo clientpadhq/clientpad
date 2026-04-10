@@ -1,7 +1,8 @@
 import { updateReminderStatusAction } from "@/lib/actions/execution";
 import { StatusBadge } from "@/components/revenue/status-badge";
+import type { Reminder } from "@/types/database";
 
-export function ReminderList({ reminders }: { reminders: any[] }) {
+export function ReminderList({ reminders }: { reminders: Reminder[] }) {
   if (!reminders.length) return <p className="text-sm text-slate-600">No reminders due.</p>;
 
   return (

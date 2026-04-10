@@ -4,11 +4,12 @@ import { redirect } from "next/navigation";
 import { requireWorkspace } from "@/lib/rbac/permissions";
 import { runAIGeneration } from "@/lib/ai/service";
 import { createClient } from "@/lib/supabase/server";
+import type { AIGenerationType } from "@/lib/ai/types";
 
 export async function generateAIDraftAction(formData: FormData) {
   const { workspace, user } = await requireWorkspace("staff");
 
-  const generationType = String(formData.get("generation_type") ?? "") as any;
+  const generationType = String(formData.get("generation_type") ?? "") as AIGenerationType;
   const entityType = String(formData.get("entity_type") ?? "").trim() || undefined;
   const entityId = String(formData.get("entity_id") ?? "").trim() || undefined;
   const returnPath = String(formData.get("return_path") ?? "/dashboard");
@@ -49,9 +50,9 @@ export async function generateWeeklyDigestAction() {
   ]);
 
   const today = new Date().toISOString().slice(0, 10);
-  const stalledDeals = (deals.data ?? []).filter((d: any) => new Date(d.updated_at) < new Date(Date.now() - 10 * 24 * 60 * 60 * 1000));
-  const overdueInvoices = (invoices.data ?? []).filter((i: any) => i.due_date && i.due_date < today && Number(i.balance_amount || 0) > 0 && i.status !== "paid" && i.status !== "cancelled");
-  const pendingJobs = (jobs.data ?? []).filter((j: any) => !["completed", "cancelled"].includes(j.status));
+  const stalledDeals = (deals.data ?? []).filter((d: { updated_at: string }) => new Date(d.updated_at) < new Date(Date.now() - 10 * 24 * 60 * 60 * 1000));
+  const overdueInvoices = (invoices.data ?? []).filter((i: { due_date: string | null; balance_amount: number | null; status: string }) => i.due_date && i.due_date < today && Number(i.balance_amount || 0) > 0 && i.status !== "paid" && i.status !== "cancelled");
+  const pendingJobs = (jobs.data ?? []).filter((j: { status: string }) => !["completed", "cancelled"].includes(j.status));
 
   const generation = await runAIGeneration({
     workspaceId: workspace.id,

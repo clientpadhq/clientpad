@@ -20,6 +20,11 @@ export async function generateDocumentPdf(params: {
   type: "QUOTE" | "INVOICE";
   workspaceName: string;
   workspacePhone?: string | null;
+  workspaceEmail?: string | null;
+  workspaceAddress?: string | null;
+  workspaceWebsiteOrSocial?: string | null;
+  logoUrl?: string | null;
+  footerText?: string | null;
   clientName?: string | null;
   clientPhone?: string | null;
   number: string;
@@ -44,9 +49,29 @@ export async function generateDocumentPdf(params: {
     page.drawText(text, { x, y, size, font: bold ? fontBold : font, color: rgb(0.1, 0.1, 0.1) });
   };
 
+  if (params.logoUrl) {
+    try {
+      const response = await fetch(params.logoUrl);
+      if (response.ok) {
+        const logoBytes = await response.arrayBuffer();
+        const isPng = params.logoUrl.toLowerCase().includes(".png");
+        const embeddedLogo = isPng ? await pdfDoc.embedPng(logoBytes) : await pdfDoc.embedJpg(logoBytes);
+        const ratio = embeddedLogo.width / embeddedLogo.height;
+        const logoHeight = 36;
+        const logoWidth = logoHeight * ratio;
+        page.drawImage(embeddedLogo, { x: 40, y: 796, width: logoWidth, height: logoHeight });
+      }
+    } catch {
+      // optional branding asset; silently continue when unreachable or invalid
+    }
+  }
+
   draw("ClientPad", 40, 800, 16, true);
   draw(params.workspaceName, 40, 785, 11, true);
   if (params.workspacePhone) draw(params.workspacePhone, 40, 770);
+  if (params.workspaceEmail) draw(params.workspaceEmail, 40, 756);
+  if (params.workspaceWebsiteOrSocial) draw(params.workspaceWebsiteOrSocial, 40, 742);
+  if (params.workspaceAddress) draw(params.workspaceAddress.slice(0, 80), 40, 728, 9);
 
   draw(params.type, 470, 800, 16, true);
   draw(`No: ${params.number}`, 420, 785, 10, true);
@@ -55,11 +80,11 @@ export async function generateDocumentPdf(params: {
     draw(`${params.type === "QUOTE" ? "Valid Until" : "Due Date"}: ${params.dueOrValidityDate}`, 420, 755);
   }
 
-  draw("Bill To", 40, 730, 11, true);
-  draw(params.clientName ?? "N/A", 40, 715);
-  if (params.clientPhone) draw(params.clientPhone, 40, 700);
+  draw("Bill To", 40, 700, 11, true);
+  draw(params.clientName ?? "N/A", 40, 685);
+  if (params.clientPhone) draw(params.clientPhone, 40, 670);
 
-  let y = 665;
+  let y = 640;
   draw("Description", 40, y, 10, true);
   draw("Qty", 330, y, 10, true);
   draw("Unit Price", 380, y, 10, true);
@@ -107,6 +132,8 @@ export async function generateDocumentPdf(params: {
     y -= 14;
     draw(params.termsOrInstructions.slice(0, 140), 40, y);
   }
+
+  draw(params.footerText ?? "Thank you for your business.", 40, 36, 9);
 
   return await pdfDoc.save();
 }

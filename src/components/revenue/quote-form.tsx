@@ -3,18 +3,32 @@ import { LineItemsFields } from "@/components/revenue/line-items-fields";
 
 const statuses: QuoteStatus[] = ["draft", "sent", "accepted", "rejected", "expired"];
 
+type QuoteFormQuote = {
+  client_id: string | null;
+  deal_id: string | null;
+  issue_date: string;
+  valid_until: string | null;
+  status: QuoteStatus;
+  discount_amount: number;
+  tax_amount: number;
+  notes: string | null;
+  terms: string | null;
+};
+
 export function QuoteForm({
   action,
   clients,
   deals,
   quote,
   items,
+  defaultTerms,
 }: {
   action: (formData: FormData) => void;
   clients: Array<{ id: string; business_name: string }>;
   deals: Array<{ id: string; title: string }>;
-  quote?: any;
+  quote?: QuoteFormQuote;
   items?: Array<{ description: string; quantity: number; unit_price: number; notes?: string | null }>;
+  defaultTerms?: string;
 }) {
   return (
     <form action={action} className="space-y-3">
@@ -45,7 +59,7 @@ export function QuoteForm({
         <input type="number" min="0" step="0.01" name="tax_amount" placeholder="Tax amount" defaultValue={quote?.tax_amount ?? 0} />
       </div>
       <textarea name="notes" placeholder="Notes" defaultValue={quote?.notes ?? ""} rows={3} />
-      <textarea name="terms" placeholder="Terms" defaultValue={quote?.terms ?? ""} rows={3} />
+      <textarea name="terms" placeholder="Terms" defaultValue={quote?.terms ?? defaultTerms ?? ""} rows={3} />
       <button className="w-full bg-emerald-600 text-white">Save quote</button>
     </form>
   );
