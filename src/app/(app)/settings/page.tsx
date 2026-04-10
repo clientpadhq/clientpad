@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import {
+  applyWorkspacePresetAction,
   inviteMemberAction,
   revokeInviteAction,
   transferOwnershipAction,
@@ -14,6 +15,8 @@ import { updateAISettingsAction } from "@/lib/actions/ai";
 import { getWorkspaceBrandingSettings, getWorkspaceInvites, getWorkspaceMembers } from "@/lib/db/workspace";
 import { getPaymentSettings } from "@/lib/db/revenue";
 import { getWorkspaceAISettings, listAIGenerations } from "@/lib/db/ai";
+import { canManageSettings, requireWorkspace } from "@/lib/rbac/permissions";
+import { WORKSPACE_PRESETS } from "@/lib/onboarding/presets";
 import { listPipelineStages } from "@/lib/db/deals";
 import { canManageSettings, getAssignableRoles, requireWorkspace } from "@/lib/rbac/permissions";
 
@@ -230,6 +233,30 @@ export default async function SettingsPage({
               placeholder="Payment instructions shown on invoice PDF"
               rows={3}
             />
+            <textarea
+              name="quote_default_terms"
+              defaultValue={paymentSettings?.quote_default_terms ?? ""}
+              placeholder="Default quote terms for new quotes"
+              rows={3}
+            />
+            <textarea
+              name="invoice_default_terms"
+              defaultValue={paymentSettings?.invoice_default_terms ?? ""}
+              placeholder="Default invoice terms for new invoices"
+              rows={3}
+            />
+            <textarea
+              name="task_placeholders"
+              defaultValue={Array.isArray(paymentSettings?.task_placeholders) ? paymentSettings.task_placeholders.join("\n") : ""}
+              placeholder="Task placeholders (one per line)"
+              rows={3}
+            />
+            <textarea
+              name="reminder_placeholders"
+              defaultValue={Array.isArray(paymentSettings?.reminder_placeholders) ? paymentSettings.reminder_placeholders.join("\n") : ""}
+              placeholder="Reminder placeholders (one per line)"
+              rows={3}
+            />
             <p className="rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
               Webhook verification uses the server environment variable <code>FLUTTERWAVE_WEBHOOK_HASH</code>.
             </p>
@@ -240,6 +267,24 @@ export default async function SettingsPage({
         )}
       </Card>
 
+      <Card title="Onboarding Presets">
+        {canManageSettings(context.role) ? (
+          <form action={applyWorkspacePresetAction} className="space-y-3">
+            <select name="preset_id" defaultValue={paymentSettings?.preset_key ?? ""}>
+              <option value="">Select preset</option>
+              {WORKSPACE_PRESETS.map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-600">
+              Applying a preset is safe to run multiple times. Existing deals are preserved; only missing stages are added when deals already exist.
+            </p>
+            <button className="w-full bg-emerald-700 text-white">Apply preset</button>
+          </form>
+        ) : (
+          <p className="text-sm text-slate-600">Only owners/admins can apply workspace presets.</p>
       <Card title="Branding & Document Defaults">
         {canManageSettings(context.role) ? (
           <form action={updateBrandingSettingsAction} className="space-y-3">

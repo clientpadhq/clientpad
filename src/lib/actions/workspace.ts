@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 import { canAssignRole, requireWorkspace } from "@/lib/rbac/permissions";
 import { logActivity } from "@/lib/db/activity";
+import { applyPresetToWorkspace } from "@/lib/onboarding/apply-preset";
+import { getWorkspacePresetById } from "@/lib/onboarding/presets";
 import { setActiveWorkspaceForUser } from "@/lib/db/workspace";
 import type { Role } from "@/types/database";
 
@@ -65,6 +67,17 @@ export async function createWorkspaceAction(formData: FormData) {
   }
 
   await setActiveWorkspaceForUser(user.id, workspace.id);
+
+  const preset = getWorkspacePresetById(String(formData.get("preset_id") ?? "").trim());
+  if (preset) {
+    await applyPresetToWorkspace({
+      supabase,
+      workspaceId: workspace.id,
+      actorUserId: user.id,
+      preset,
+      source: "onboarding",
+    });
+  }
 
   await logActivity({
     workspaceId: workspace.id,
@@ -226,6 +239,25 @@ export async function resumeOnboardingLaterAction() {
 
   await ensureOnboardingState(workspace.id);
   redirect("/dashboard");
+}
+
+export async function applyWorkspacePresetAction(formData: FormData) {
+  const { workspace, user, role } = await requireWorkspace("staff");
+  if (role === "staff") throw new Error("Staff cannot apply workspace presets.");
+  const supabase = await createClient();
+
+  const preset = getWorkspacePresetById(String(formData.get("preset_id") ?? "").trim());
+  if (!preset) redirect("/settings?error=Select a valid preset");
+
+  await applyPresetToWorkspace({
+    supabase,
+    workspaceId: workspace.id,
+    actorUserId: user.id,
+    preset,
+    source: "settings",
+  });
+
+  redirect("/settings?success=Preset applied");
 }
 
 export async function updateWorkspaceAction(formData: FormData) {

@@ -401,6 +401,16 @@ export async function updatePaymentSettingsAction(formData: FormData) {
     workspace_id: workspace.id,
     flutterwave_public_key: String(formData.get("flutterwave_public_key") ?? "").trim() || null,
     bank_instruction: String(formData.get("bank_instruction") ?? "").trim() || null,
+    quote_default_terms: String(formData.get("quote_default_terms") ?? "").trim() || null,
+    invoice_default_terms: String(formData.get("invoice_default_terms") ?? "").trim() || null,
+    task_placeholders: String(formData.get("task_placeholders") ?? "")
+      .split("\n")
+      .map((value) => value.trim())
+      .filter(Boolean),
+    reminder_placeholders: String(formData.get("reminder_placeholders") ?? "")
+      .split("\n")
+      .map((value) => value.trim())
+      .filter(Boolean),
     updated_at: new Date().toISOString(),
   };
 

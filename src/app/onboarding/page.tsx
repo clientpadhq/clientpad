@@ -6,6 +6,8 @@ import {
   skipOnboardingStepAction,
 } from "@/lib/actions/workspace";
 import { requireUser } from "@/lib/auth/session";
+import { getWorkspaceForUser } from "@/lib/db/workspace";
+import { WORKSPACE_PRESETS } from "@/lib/onboarding/presets";
 import {
   ensureWorkspaceOnboardingState,
   getWorkspaceForUser,
@@ -76,6 +78,20 @@ export default async function OnboardingPage({
 
         {params.error ? <p className="mt-4 rounded bg-red-50 p-2 text-sm text-red-700">{params.error}</p> : null}
 
+        <form action={createWorkspaceAction} className="mt-6 space-y-3">
+          <input name="name" placeholder="Business name" required />
+          <input name="phone" placeholder="Business phone" />
+          <input name="business_type" placeholder="Business type (e.g., Solar installer)" />
+          <select name="preset_id" defaultValue="">
+            <option value="">No preset (start generic)</option>
+            {WORKSPACE_PRESETS.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.label}
+              </option>
+            ))}
+          </select>
+          <div className="rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+            Default currency: <span className="font-medium">NGN</span>
         <ol className="mt-6 space-y-2 text-sm">
           <li className={onboardingState.business_profile_completed ? "text-emerald-700" : "text-slate-700"}>
             1. Business profile basics
