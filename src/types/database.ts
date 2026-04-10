@@ -221,7 +221,9 @@ export type ActivityType =
   | "invoice.overdue"
   | "follow_up.overdue"
   | "invite.accepted"
-  | "invite.expired";
+  | "invite.expired"
+  | "import.started"
+  | "import.completed";
 
 export type Activity = {
   id: string;

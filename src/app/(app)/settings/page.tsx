@@ -14,6 +14,7 @@ import { getWorkspaceInvites, getWorkspaceMembers } from "@/lib/db/workspace";
 import { getPaymentSettings } from "@/lib/db/revenue";
 import { getWorkspaceAISettings, listAIGenerations } from "@/lib/db/ai";
 import { canManageSettings, requireWorkspace } from "@/lib/rbac/permissions";
+import { ImportCsvCard } from "@/components/settings/import-csv-card";
 
 export default async function SettingsPage({
   searchParams,
@@ -31,7 +32,6 @@ export default async function SettingsPage({
     listAIGenerations(context.workspace.id),
   ]);
 
-  const assignableRoles = getAssignableRoles(context.role);
   const transferCandidates = members.filter((member) => member.user_id !== context.user.id);
 
   return (
@@ -172,6 +172,11 @@ export default async function SettingsPage({
         ) : (
           <p className="text-sm text-slate-600">Only owners/admins can edit payment settings.</p>
         )}
+      </Card>
+
+
+      <Card title="Data Import (CSV)">
+        <ImportCsvCard />
       </Card>
 
       <Card title="AI Controls">
