@@ -13,6 +13,7 @@ const navItems = [
   { href: "/jobs", label: "Jobs" },
   { href: "/tasks", label: "Tasks" },
   { href: "/reports", label: "Reports" },
+  { href: "/review", label: "Review" },
   { href: "/ai/history", label: "AI History" },
   { href: "/settings", label: "Settings" },
 ];
@@ -52,6 +53,7 @@ export function BottomNav() {
     { href: "/jobs", label: "Jobs" },
     { href: "/tasks", label: "Tasks" },
     { href: "/reports", label: "Reports" },
+    { href: "/review", label: "Review" },
     { href: "/invoices", label: "Invoices" },
   ];
 

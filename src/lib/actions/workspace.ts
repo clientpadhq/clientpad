@@ -19,6 +19,34 @@ function parseRole(value: FormDataEntryValue | null): Role {
   return role;
 }
 
+type OnboardingStep = "business_profile" | "branding_payment" | "preset_selection" | "data_import";
+
+function parseOnboardingStep(value: FormDataEntryValue | null): OnboardingStep {
+  const step = String(value ?? "").trim();
+  if (step === "business_profile" || step === "branding_payment" || step === "preset_selection" || step === "data_import") {
+    return step;
+  }
+  return "business_profile";
+}
+
+async function ensureOnboardingState(workspaceId: string) {
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+  const { error } = await supabase.from("workspace_onboarding_state").upsert(
+    {
+      workspace_id: workspaceId,
+      current_step: "business_profile",
+      started_at: now,
+      updated_at: now,
+    },
+    { onConflict: "workspace_id" },
+  );
+
+  if (error) {
+    redirect(`/onboarding?error=${encodeURIComponent(error.message)}`);
+  }
+}
+
 export async function createWorkspaceAction(formData: FormData) {
   const user = await requireUser();
   const supabase = await createClient();
@@ -114,6 +142,9 @@ export async function saveOnboardingStepAction(formData: FormData) {
   const phone = String(formData.get("phone") ?? "").trim();
   const defaultCurrency = String(formData.get("default_currency") ?? "").trim();
   const selectedPreset = String(formData.get("selected_preset") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const address = String(formData.get("address") ?? "").trim();
+  const defaultInvoiceTerms = String(formData.get("default_invoice_terms") ?? "").trim();
 
   if (step === "business_profile") {
     const name = String(formData.get("name") ?? "").trim();
@@ -153,6 +184,15 @@ export async function saveOnboardingStepAction(formData: FormData) {
       .eq("id", workspace.id);
     if (workspaceError) redirect(`/onboarding?error=${encodeURIComponent(workspaceError.message)}`);
 
+    const { error: brandingError } = await supabase.from("workspace_branding_settings").upsert({
+      workspace_id: workspace.id,
+      email: email || null,
+      address: address || null,
+      default_invoice_terms: defaultInvoiceTerms || null,
+      updated_at: now,
+    });
+    if (brandingError) redirect(`/onboarding?error=${encodeURIComponent(brandingError.message)}`);
+
     const { error: stateError } = await supabase
       .from("workspace_onboarding_state")
       .update({
@@ -164,14 +204,25 @@ export async function saveOnboardingStepAction(formData: FormData) {
   }
 
   if (step === "preset_selection") {
-    if (!selectedPreset) redirect("/onboarding?error=Please choose a preset");
+    if (selectedPreset) {
+      const preset = getWorkspacePresetById(selectedPreset);
+      if (preset) {
+        await applyPresetToWorkspace({
+          supabase,
+          workspaceId: workspace.id,
+          actorUserId: user.id,
+          preset,
+          source: "onboarding",
+        });
+      }
+    }
 
     const { error: stateError } = await supabase
       .from("workspace_onboarding_state")
       .update({
         current_step: "data_import",
-        preset_selected: true,
-        selected_preset: selectedPreset,
+        preset_selected: Boolean(selectedPreset),
+        selected_preset: selectedPreset || null,
       })
       .eq("workspace_id", workspace.id);
     if (stateError) redirect(`/onboarding?error=${encodeURIComponent(stateError.message)}`);

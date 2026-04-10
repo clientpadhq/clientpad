@@ -15,6 +15,21 @@ The `Plan.md` Phases 1–5 roadmap is implemented on this codebase, including po
 - Reports hardening and conversion metric clarification
 - Persistent active workspace selection + workspace switcher
 
+## Pilot onboarding readiness additions
+- Guided, resumable onboarding flow for owner/admin users at `/onboarding`
+- Workspace branding defaults (logo URL, contact details, footer, quote/invoice defaults) used by quote/invoice PDF generation
+- Pipeline stage management in Settings (create, rename, reorder, archive/restore)
+- Vertical presets for:
+  - Solar / CCTV installers
+  - Printing businesses
+  - Design / agency providers
+- CSV import for leads and clients with templates + dry-run preview
+- CSV export for leads, clients, deals, and invoices
+- Setup readiness card shown to owner/admin to highlight missing launch-critical setup items
+- Weekly review route for owner/admin (`/review`) with deterministic 7-day pilot operations metrics
+- Workspace health + attention surfacing (stalled deals, overdue invoices, at-risk jobs, overdue tasks)
+- Invoice aging bands for collection pressure visibility (current, overdue 1–7, 8–30, 30+ days)
+
 ## Local setup
 1. Install dependencies:
    ```bash
@@ -55,6 +70,10 @@ Apply files exactly in this order:
 9. `supabase/migrations/202604090006_invite_acceptance_guard.sql`
 10. `supabase/migrations/202604090006_owner_role_hardening.sql`
 11. `supabase/migrations/202604090006_document_number_counters.sql`
+12. `supabase/migrations/202604100001_workspace_onboarding_state.sql`
+13. `supabase/migrations/202604100001_workspace_branding_settings.sql`
+14. `supabase/migrations/202604100001_pipeline_stage_archive_support.sql`
+15. `supabase/migrations/202604100001_onboarding_presets.sql`
 
 > Note: several hardening migrations share the `202604090006` prefix. Preserve the order above for deterministic local bootstrap.
 
@@ -81,6 +100,28 @@ Apply files exactly in this order:
 - AI outputs are review-only drafts/suggestions.
 - If AI provider config is missing, disabled, or cap is reached, requests degrade gracefully and are still logged in `ai_generations`.
 - Workspace-level AI settings include provider/model/default enablement and monthly cap.
+
+### Onboarding, setup, and data portability
+- Onboarding route (`/onboarding`) is workspace-aware and resumable.
+- Presets are optional and can be applied again from Settings.
+- CSV import templates:
+  - `public/templates/leads-import-template.csv`
+  - `public/templates/clients-import-template.csv`
+- CSV exports are available via:
+  - `/api/exports/leads`
+  - `/api/exports/clients`
+  - `/api/exports/deals`
+  - `/api/exports/invoices`
+
+### Pilot success review workflow
+- Owner/admin users can open `/review` for a weekly operational review window.
+- The review page is deterministic-first and includes:
+  - leads/deals/quotes/invoices/jobs/tasks/reminders weekly metrics
+  - stalled deal detection (no deal update for 14+ days, excluding closed stages)
+  - jobs at risk (blocked, overdue, or due within 3 days while not started)
+  - overdue task and overdue invoice attention lists
+  - invoice aging bands for collection pressure follow-up
+- AI weekly summary is optional and secondary to deterministic metrics.
 
 ### Reports behavior
 - Reporting route: `/reports`.

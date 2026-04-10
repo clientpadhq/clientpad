@@ -1,51 +1,52 @@
-import { Card } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
-import { ActivityList } from "@/components/ui/activity-list";
-import { ReminderList } from "@/components/execution/reminder-list";
 import { AIHistoryList } from "@/components/ai/ai-history-list";
+import { ReminderList } from "@/components/execution/reminder-list";
+import { Card } from "@/components/ui/card";
+import { ActivityList } from "@/components/ui/activity-list";
 import { SetupReadinessCard } from "@/components/onboarding/setup-readiness-card";
-import { requireWorkspace, canManageSettings } from "@/lib/rbac/permissions";
-import { getDashboardStats } from "@/lib/db/dashboard";
-import { getRevenueMetrics } from "@/lib/db/revenue";
-import { getExecutionMetrics, listOpenReminders } from "@/lib/db/execution";
-import { formatNaira } from "@/lib/revenue/calculations";
-import { createReminderAction } from "@/lib/actions/execution";
+import { PageHeader } from "@/components/ui/page-header";
 import { generateWeeklyDigestAction } from "@/lib/actions/ai";
+import { createReminderAction } from "@/lib/actions/execution";
 import { listAIGenerations } from "@/lib/db/ai";
+import { getDashboardStats } from "@/lib/db/dashboard";
+import { getExecutionMetrics, listOpenReminders } from "@/lib/db/execution";
+import { getRevenueMetrics } from "@/lib/db/revenue";
+import { getWeeklyReviewSnapshot } from "@/lib/db/review";
 import { getSetupReadiness } from "@/lib/onboarding/readiness";
+import { canManageSettings, requireWorkspace } from "@/lib/rbac/permissions";
+import { formatNaira } from "@/lib/revenue/calculations";
 
 export default async function DashboardPage() {
   const { workspace, user, role } = await requireWorkspace();
-  const [stats, revenue, execution, reminders, digestRows, readiness] = await Promise.all([
-import { AIHistoryList } from "@/components/ai/ai-history-list";
-
-export default async function DashboardPage() {
-  const { workspace, user } = await requireWorkspace();
-  const [stats, revenue, execution, reminders, digestRows] = await Promise.all([
+  const [stats, revenue, execution, reminders, digestRows, readiness, weeklyReview] = await Promise.all([
     getDashboardStats(workspace.id),
     getRevenueMetrics(workspace.id),
     getExecutionMetrics(workspace.id, user.id),
     listOpenReminders(workspace.id),
     listAIGenerations(workspace.id),
     canManageSettings(role) ? getSetupReadiness(workspace.id) : Promise.resolve(null),
+    canManageSettings(role) ? getWeeklyReviewSnapshot(workspace.id) : Promise.resolve(null),
   ]);
 
   return (
     <div className="space-y-4">
       <PageHeader title="Dashboard" description="Track lead, revenue, and execution operations." />
-
       {readiness ? <SetupReadinessCard readiness={readiness} /> : null}
+      {weeklyReview ? (
+        <Card title="Workspace Health This Week">
+          <p className="text-sm">Stalled deals: {weeklyReview.topAttention.stalledDeals}</p>
+          <p className="text-sm">Overdue invoices: {weeklyReview.topAttention.overdueInvoices}</p>
+          <p className="text-sm">Jobs at risk: {weeklyReview.topAttention.jobsAtRisk}</p>
+          <p className="text-sm">Overdue tasks: {weeklyReview.topAttention.overdueTasks}</p>
+          <a href="/review" className="mt-2 inline-block text-sm font-medium text-emerald-700 underline">
+            Open weekly review
+          </a>
+        </Card>
+      ) : null}
 
       <div className="grid gap-3 md:grid-cols-3">
-        <Card title="Total Leads">
-          <p className="text-2xl font-semibold">{stats.totalLeads}</p>
-        </Card>
-        <Card title="Active Deals">
-          <p className="text-2xl font-semibold">{stats.activeDeals}</p>
-        </Card>
-        <Card title="Pipeline Value">
-          <p className="text-2xl font-semibold">{formatNaira(stats.pipelineValue)}</p>
-        </Card>
+        <Card title="Total Leads"><p className="text-2xl font-semibold">{stats.totalLeads}</p></Card>
+        <Card title="Active Deals"><p className="text-2xl font-semibold">{stats.activeDeals}</p></Card>
+        <Card title="Pipeline Value"><p className="text-2xl font-semibold">{formatNaira(stats.pipelineValue)}</p></Card>
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
@@ -87,21 +88,16 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <Card title="Open Reminders">
-        <ReminderList reminders={reminders} />
-      </Card>
+      <Card title="Open Reminders"><ReminderList reminders={reminders} /></Card>
+
       <Card title="Weekly AI Digest (Optional)">
         <form action={generateWeeklyDigestAction} className="mb-3">
           <button className="bg-emerald-700 text-white">Generate weekly digest</button>
         </form>
-        <AIHistoryList rows={(digestRows ?? []).filter((row: any) => row.generation_type === "weekly_digest").slice(0, 3)} />
-        <form action={generateWeeklyDigestAction} className="mb-3"><button className="bg-emerald-700 text-white">Generate weekly digest</button></form>
         <AIHistoryList rows={(digestRows ?? []).filter((row) => row.generation_type === "weekly_digest").slice(0, 3)} />
       </Card>
 
-      <Card title="Recent Activity">
-        <ActivityList items={stats.recentActivity} />
-      </Card>
+      <Card title="Recent Activity"><ActivityList items={stats.recentActivity} /></Card>
     </div>
   );
 }

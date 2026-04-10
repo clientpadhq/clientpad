@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/db/activity";
-import type { Role, Workspace, WorkspaceBrandingSettings } from "@/types/database";
-import type { Role, Workspace, WorkspaceOnboardingState } from "@/types/database";
+import type { Role, Workspace, WorkspaceBrandingSettings, WorkspaceOnboardingState } from "@/types/database";
 
 type WorkspaceMembership = {
   role: Role;
@@ -154,7 +153,7 @@ export async function ensureWorkspaceOnboardingState(workspaceId: string) {
 export function isWorkspaceOnboardingRequired(role: Role, state: WorkspaceOnboardingState | null) {
   if (role !== "owner" && role !== "admin") return false;
   if (!state) return true;
-  return !(state.business_profile_completed && state.branding_payment_completed && state.preset_selected);
+  return !Boolean(state.completed_at);
 }
 
 export async function getWorkspaceBrandingSettings(workspaceId: string) {

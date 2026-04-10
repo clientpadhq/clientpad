@@ -259,14 +259,14 @@ export type ActivityType =
   | "follow_up.overdue"
   | "invite.accepted"
   | "invite.expired"
-  | "export.triggered";
+  | "export.triggered"
   | "import.started"
-  | "import.completed";
-  | "preset.applied";
+  | "import.completed"
+  | "preset.applied"
   | "pipeline_stage.created"
   | "pipeline_stage.updated"
-  | "pipeline_stage.archived";
-  | "branding.updated";
+  | "pipeline_stage.archived"
+  | "branding.updated"
   | "onboarding.started"
   | "onboarding.completed";
 
