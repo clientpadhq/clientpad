@@ -259,6 +259,7 @@ export type ActivityType =
   | "follow_up.overdue"
   | "invite.accepted"
   | "invite.expired"
+  | "export.triggered";
   | "import.started"
   | "import.completed";
   | "preset.applied";

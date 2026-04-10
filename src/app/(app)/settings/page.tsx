@@ -15,6 +15,7 @@ import { updateAISettingsAction } from "@/lib/actions/ai";
 import { getWorkspaceBrandingSettings, getWorkspaceInvites, getWorkspaceMembers } from "@/lib/db/workspace";
 import { getPaymentSettings } from "@/lib/db/revenue";
 import { getWorkspaceAISettings, listAIGenerations } from "@/lib/db/ai";
+import { canManageSettings, getAssignableRoles, requireWorkspace } from "@/lib/rbac/permissions";
 import { canManageSettings, requireWorkspace } from "@/lib/rbac/permissions";
 import { ImportCsvCard } from "@/components/settings/import-csv-card";
 import { WORKSPACE_PRESETS } from "@/lib/onboarding/presets";
@@ -51,6 +52,9 @@ export default async function SettingsPage({
   ]);
 
   const transferCandidates = members.filter((member) => member.user_id !== context.user.id);
+  const monthlyUsage = aiRows.length;
+  const monthlyCap = aiSettings?.monthly_cap ?? null;
+  const capReached = monthlyCap ? monthlyUsage >= monthlyCap : false;
   const monthlyUsage = aiRows.filter((row) => row.created_at.startsWith(new Date().toISOString().slice(0, 7))).length;
   const monthlyCap = aiSettings?.monthly_cap ?? null;
   const capReached = monthlyCap !== null && monthlyUsage >= monthlyCap;
@@ -132,6 +136,9 @@ export default async function SettingsPage({
             <form action={inviteMemberAction} className="grid gap-2 md:grid-cols-3">
               <input name="email" type="email" placeholder="Invite email" required />
               <select name="role" defaultValue="staff">
+                {assignableRoles.includes("owner") ? <option value="owner">owner</option> : null}
+                {assignableRoles.includes("admin") ? <option value="admin">admin</option> : null}
+                {assignableRoles.includes("staff") ? <option value="staff">staff</option> : null}
                 {assignableRoles.map((allowedRole) => <option key={allowedRole} value={allowedRole}>{allowedRole}</option>)}
               </select>
               <button className="bg-emerald-700 text-white">Invite member</button>
@@ -150,6 +157,9 @@ export default async function SettingsPage({
                       <form action={updateMemberRoleAction} className="flex items-center gap-2">
                         <input type="hidden" name="member_user_id" value={member.user_id} />
                         <select name="role" defaultValue={member.role}>
+                          {assignableRoles.includes("owner") ? <option value="owner">owner</option> : null}
+                          {assignableRoles.includes("admin") ? <option value="admin">admin</option> : null}
+                          {assignableRoles.includes("staff") ? <option value="staff">staff</option> : null}
                           {assignableRoles.map((role) => (
                             <option key={role} value={role}>
                               {role}
@@ -268,6 +278,14 @@ export default async function SettingsPage({
         )}
       </Card>
 
+      <Card title="Onboarding tools">
+        <p className="text-sm text-slate-600">Quickly export your core records as CSV for migration, backup, or implementation support.</p>
+        <div className="mt-3 grid gap-2 md:grid-cols-2">
+          <Link href="/api/exports/leads" className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Export leads CSV</Link>
+          <Link href="/api/exports/clients" className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Export clients CSV</Link>
+          <Link href="/api/exports/deals" className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Export deals CSV</Link>
+          <Link href="/api/exports/invoices" className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Export invoices CSV</Link>
+        </div>
 
       <Card title="Data Import (CSV)">
         <ImportCsvCard />

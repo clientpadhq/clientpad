@@ -1,11 +1,21 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
+import { ExportButton } from "@/components/ui/export-button";
 import { requireWorkspace } from "@/lib/rbac/permissions";
 import { listClients } from "@/lib/db/clients";
 
-export default async function ClientsPage() {
+export default async function ClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { workspace } = await requireWorkspace();
-  const clients = await listClients(workspace.id);
+  const [clients, params] = await Promise.all([listClients(workspace.id), searchParams]);
+
+  const exportParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string" && value.trim()) exportParams.set(key, value);
+  }
 
   return (
     <div className="space-y-4">
@@ -13,9 +23,12 @@ export default async function ClientsPage() {
         title="Clients"
         description="Manage your customer records and details."
         action={
-          <Link className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white" href="/clients/new">
-            New client
-          </Link>
+          <div className="flex items-center gap-2">
+            <ExportButton href={`/api/exports/clients${exportParams.toString() ? `?${exportParams.toString()}` : ""}`} />
+            <Link className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white" href="/clients/new">
+              New client
+            </Link>
+          </div>
         }
       />
       {clients.length === 0 ? (
