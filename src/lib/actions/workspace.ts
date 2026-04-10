@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 import { canAssignRole, requireWorkspace } from "@/lib/rbac/permissions";
 import { logActivity } from "@/lib/db/activity";
+import { setActiveWorkspaceForUser } from "@/lib/db/workspace";
 import type { Role } from "@/types/database";
 
 function parseRole(value: FormDataEntryValue | null): Role {
@@ -239,4 +240,13 @@ export async function transferOwnershipAction(formData: FormData) {
   if (demoteError) redirect(`/settings?error=${encodeURIComponent(demoteError.message)}`);
 
   redirect("/settings?success=Ownership transferred");
+}
+
+export async function switchActiveWorkspaceAction(formData: FormData) {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspace_id") ?? "").trim();
+  const redirectTo = String(formData.get("redirect_to") ?? "/dashboard").trim() || "/dashboard";
+  if (!workspaceId) redirect(`/dashboard?error=${encodeURIComponent("Workspace is required")}`);
+  await setActiveWorkspaceForUser(user.id, workspaceId);
+  redirect(redirectTo.startsWith("/") ? redirectTo : "/dashboard");
 }

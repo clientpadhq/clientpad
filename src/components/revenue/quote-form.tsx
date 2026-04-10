@@ -3,6 +3,18 @@ import { LineItemsFields } from "@/components/revenue/line-items-fields";
 
 const statuses: QuoteStatus[] = ["draft", "sent", "accepted", "rejected", "expired"];
 
+type QuoteFormQuote = {
+  client_id: string | null;
+  deal_id: string | null;
+  issue_date: string;
+  valid_until: string | null;
+  status: QuoteStatus;
+  discount_amount: number;
+  tax_amount: number;
+  notes: string | null;
+  terms: string | null;
+};
+
 export function QuoteForm({
   action,
   clients,
@@ -13,7 +25,7 @@ export function QuoteForm({
   action: (formData: FormData) => void;
   clients: Array<{ id: string; business_name: string }>;
   deals: Array<{ id: string; title: string }>;
-  quote?: any;
+  quote?: QuoteFormQuote;
   items?: Array<{ description: string; quantity: number; unit_price: number; notes?: string | null }>;
 }) {
   return (

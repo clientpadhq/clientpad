@@ -1,9 +1,47 @@
-import { TaskPriority, JobStatus } from "@/types/database";
+import type { TaskPriority, JobStatus } from "@/types/database";
 
 const statuses: JobStatus[] = ["pending", "scheduled", "in_progress", "blocked", "completed", "cancelled"];
 const priorities: TaskPriority[] = ["low", "medium", "high", "urgent"];
 
-export function JobForm({ action, job, clients, deals, invoices, members }: { action: (formData: FormData) => void; job?: any; clients: any[]; deals: any[]; invoices: any[]; members: any[]; }) {
+type JobFormJob = Partial<{
+  title: string;
+  description: string | null;
+  client_id: string | null;
+  deal_id: string | null;
+  invoice_id: string | null;
+  assignee_user_id: string | null;
+  owner_user_id: string | null;
+  status: JobStatus;
+  priority: TaskPriority;
+  start_date: string | null;
+  due_date: string | null;
+  completion_note: string | null;
+  internal_notes: string | null;
+}>;
+type WorkspaceMemberProfile = {
+  user_id: string;
+  profiles?: { full_name: string | null } | Array<{ full_name: string | null }> | null;
+};
+const memberName = (member: WorkspaceMemberProfile) =>
+  Array.isArray(member.profiles)
+    ? (member.profiles[0]?.full_name ?? member.user_id.slice(0, 8))
+    : (member.profiles?.full_name ?? member.user_id.slice(0, 8));
+
+export function JobForm({
+  action,
+  job,
+  clients,
+  deals,
+  invoices,
+  members,
+}: {
+  action: (formData: FormData) => void;
+  job?: JobFormJob;
+  clients: Array<{ id: string; business_name: string }>;
+  deals: Array<{ id: string; title: string }>;
+  invoices: Array<{ id: string; invoice_number: string }>;
+  members: WorkspaceMemberProfile[];
+}) {
   return (
     <form action={action} className="space-y-3">
       <input name="title" placeholder="Job title" defaultValue={job?.title} required />
@@ -14,8 +52,8 @@ export function JobForm({ action, job, clients, deals, invoices, members }: { ac
         <select name="invoice_id" defaultValue={job?.invoice_id ?? ""}><option value="">No invoice</option>{invoices.map((i) => <option key={i.id} value={i.id}>{i.invoice_number}</option>)}</select>
       </div>
       <div className="grid gap-2 md:grid-cols-2">
-        <select name="assignee_user_id" defaultValue={job?.assignee_user_id ?? ""}><option value="">Unassigned</option>{members.map((m) => <option key={m.user_id} value={m.user_id}>{m.profiles?.full_name ?? m.user_id.slice(0,8)}</option>)}</select>
-        <select name="owner_user_id" defaultValue={job?.owner_user_id ?? ""}><option value="">Owner</option>{members.map((m) => <option key={m.user_id} value={m.user_id}>{m.profiles?.full_name ?? m.user_id.slice(0,8)}</option>)}</select>
+        <select name="assignee_user_id" defaultValue={job?.assignee_user_id ?? ""}><option value="">Unassigned</option>{members.map((m) => <option key={m.user_id} value={m.user_id}>{memberName(m)}</option>)}</select>
+        <select name="owner_user_id" defaultValue={job?.owner_user_id ?? ""}><option value="">Owner</option>{members.map((m) => <option key={m.user_id} value={m.user_id}>{memberName(m)}</option>)}</select>
       </div>
       <div className="grid gap-2 md:grid-cols-4">
         <input type="date" name="start_date" defaultValue={job?.start_date ?? ""} />

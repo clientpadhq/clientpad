@@ -26,7 +26,11 @@ export async function refreshInvoiceAmounts(workspaceId: string, invoiceId: stri
   return refreshInvoiceAmountsWithClient(supabase, workspaceId, invoiceId);
 }
 
-async function refreshInvoiceAmountsWithClient(supabase: any, workspaceId: string, invoiceId: string) {
+async function refreshInvoiceAmountsWithClient(
+  supabase: Awaited<ReturnType<typeof createClient>> | ReturnType<typeof createAdminClient>,
+  workspaceId: string,
+  invoiceId: string,
+) {
   const { data: invoice, error: invoiceError } = await supabase
     .from("invoices")
     .select("total_amount,status,due_date")
@@ -43,7 +47,7 @@ async function refreshInvoiceAmountsWithClient(supabase: any, workspaceId: strin
     .in("status", ["successful", "partially_paid", "manually_recorded"]);
   if (paymentsError) throw paymentsError;
 
-  const paidAmount = (payments ?? []).reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+  const paidAmount = (payments ?? []).reduce((sum: number, p: { amount: number | null }) => sum + Number(p.amount || 0), 0);
   const totalAmount = Number(invoice.total_amount || 0);
   const balanceAmount = Math.max(0, totalAmount - paidAmount);
   const status = computeInvoiceStatus({

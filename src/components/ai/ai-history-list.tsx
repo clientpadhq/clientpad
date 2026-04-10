@@ -1,4 +1,15 @@
-export function AIHistoryList({ rows }: { rows: any[] }) {
+type AIHistoryRow = {
+  id: string;
+  generation_type: string;
+  status: string;
+  created_at: string;
+  provider: string | null;
+  model: string | null;
+  output_text: string | null;
+  error_message: string | null;
+};
+
+export function AIHistoryList({ rows }: { rows: AIHistoryRow[] }) {
   if (!rows.length) return <p className="text-sm text-slate-600">No AI history yet.</p>;
 
   return (

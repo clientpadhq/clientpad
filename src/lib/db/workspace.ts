@@ -29,7 +29,7 @@ export async function getWorkspacesForUser(userId: string) {
     .map((row) => ({
       role: row.role as Role,
       created_at: row.created_at,
-      workspace: row.workspace as Workspace,
+      workspace: row.workspace as unknown as Workspace,
     }));
 }
 
@@ -120,7 +120,7 @@ export async function getWorkspaceById(workspaceId: string) {
   const { data, error } = await supabase.from("workspaces").select("*").eq("id", workspaceId).single();
 
   if (error) throw error;
-  return data as Workspace;
+  return data as unknown as Workspace;
 }
 
 export async function acceptPendingInvites(userId: string, userEmail?: string | null) {

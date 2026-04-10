@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { requireWorkspace } from "@/lib/rbac/permissions";
 import { logActivity } from "@/lib/db/activity";
 import { ensureSystemReminders } from "@/lib/db/execution";
+import type { Activity } from "@/types/database";
+
+type RelatedActivityEntity = Activity["entity_type"];
 
 async function validateWorkspaceRecord(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -159,7 +162,7 @@ export async function createTaskAction(formData: FormData) {
 
   await logActivity({ workspaceId: workspace.id, actorUserId: user.id, entityType: "task", entityId: data.id, type: "task.created", description: `Task created: ${payload.title}` });
   if (payload.related_entity_type && payload.related_entity_id && ["lead","deal","invoice","job"].includes(payload.related_entity_type)) {
-    await logActivity({ workspaceId: workspace.id, actorUserId: user.id, entityType: payload.related_entity_type as any, entityId: payload.related_entity_id, type: "task.created", description: `Task linked: ${payload.title}`, metadata: { task_id: data.id } });
+    await logActivity({ workspaceId: workspace.id, actorUserId: user.id, entityType: payload.related_entity_type as RelatedActivityEntity, entityId: payload.related_entity_id, type: "task.created", description: `Task linked: ${payload.title}`, metadata: { task_id: data.id } });
   }
   await ensureSystemReminders(workspace.id);
   if (payload.related_entity_type && payload.related_entity_id) redirect(`/${payload.related_entity_type}s/${payload.related_entity_id}`);
@@ -200,7 +203,7 @@ export async function updateTaskAction(taskId: string, formData: FormData) {
 
   await logActivity({ workspaceId: workspace.id, actorUserId: user.id, entityType: "task", entityId: taskId, type: payload.status === "done" ? "task.done" : "task.updated", description: payload.status === "done" ? "Task marked done" : `Task updated: ${payload.title}` });
   if (payload.related_entity_type && payload.related_entity_id && ["lead","deal","invoice","job"].includes(payload.related_entity_type)) {
-    await logActivity({ workspaceId: workspace.id, actorUserId: user.id, entityType: payload.related_entity_type as any, entityId: payload.related_entity_id, type: payload.status === "done" ? "task.done" : "task.updated", description: `Task update linked: ${payload.title}`, metadata: { task_id: taskId } });
+    await logActivity({ workspaceId: workspace.id, actorUserId: user.id, entityType: payload.related_entity_type as RelatedActivityEntity, entityId: payload.related_entity_id, type: payload.status === "done" ? "task.done" : "task.updated", description: `Task update linked: ${payload.title}`, metadata: { task_id: taskId } });
   }
   if (previous?.assignee_user_id !== payload.assignee_user_id) await logActivity({ workspaceId: workspace.id, actorUserId: user.id, entityType: "task", entityId: taskId, type: "task.reassigned", description: "Task reassigned" });
 
@@ -235,7 +238,7 @@ export async function createReminderAction(formData: FormData) {
 
   await logActivity({ workspaceId: workspace.id, actorUserId: user.id, entityType: "reminder", entityId: data.id, type: "reminder.created", description: `Reminder created: ${payload.title}` });
   if (payload.related_entity_type && payload.related_entity_id && ["lead","deal","invoice","job"].includes(payload.related_entity_type)) {
-    await logActivity({ workspaceId: workspace.id, actorUserId: user.id, entityType: payload.related_entity_type as any, entityId: payload.related_entity_id, type: "reminder.created", description: `Reminder linked: ${payload.title}`, metadata: { reminder_id: data.id } });
+    await logActivity({ workspaceId: workspace.id, actorUserId: user.id, entityType: payload.related_entity_type as RelatedActivityEntity, entityId: payload.related_entity_id, type: "reminder.created", description: `Reminder linked: ${payload.title}`, metadata: { reminder_id: data.id } });
   }
   redirect("/dashboard?success=Reminder created");
 }
@@ -256,7 +259,7 @@ export async function updateReminderStatusAction(reminderId: string, status: "do
 
   await logActivity({ workspaceId: workspace.id, actorUserId: user.id, entityType: "reminder", entityId: reminderId, type: status === "done" ? "reminder.completed" : "reminder.dismissed", description: `Reminder ${status}` });
   if (reminder?.related_entity_type && reminder?.related_entity_id && ["lead","deal","invoice","job"].includes(reminder.related_entity_type)) {
-    await logActivity({ workspaceId: workspace.id, actorUserId: user.id, entityType: reminder.related_entity_type as any, entityId: reminder.related_entity_id, type: status === "done" ? "reminder.completed" : "reminder.dismissed", description: `Reminder ${status}: ${reminder.title}`, metadata: { reminder_id: reminderId } });
+    await logActivity({ workspaceId: workspace.id, actorUserId: user.id, entityType: reminder.related_entity_type as RelatedActivityEntity, entityId: reminder.related_entity_id, type: status === "done" ? "reminder.completed" : "reminder.dismissed", description: `Reminder ${status}: ${reminder.title}`, metadata: { reminder_id: reminderId } });
   }
 }
 

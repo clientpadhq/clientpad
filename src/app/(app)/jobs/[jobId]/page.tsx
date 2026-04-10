@@ -12,11 +12,16 @@ import { listAIGenerations } from "@/lib/db/ai";
 import { getJob } from "@/lib/db/execution";
 import { createClient } from "@/lib/supabase/server";
 import { addNoteAction } from "@/lib/actions/execution";
+import type { Task } from "@/types/database";
+
+type JobRelations = { client?: { business_name: string | null } | null; deal?: { title: string | null } | null; invoice?: { invoice_number: string | null } | null };
+type JobNote = { id: string; body: string; created_at: string };
 
 export default async function JobDetailPage({ params }: { params: Promise<{ jobId: string }> }) {
   const { workspace } = await requireWorkspace();
   const { jobId } = await params;
   const jobData = await getJob(workspace.id, jobId);
+  const job = jobData.job as typeof jobData.job & JobRelations;
   const aiRows = await listAIGenerations(workspace.id, "job", jobId);
 
   const supabase = await createClient();
@@ -26,10 +31,10 @@ export default async function JobDetailPage({ params }: { params: Promise<{ jobI
     <div className="space-y-4">
       <PageHeader title={jobData.job.title} description="Execution detail" action={<Link className="rounded-md border border-slate-300 px-4 py-2 text-sm" href={`/jobs/${jobId}/edit`}>Edit</Link>} />
       <Card title="Job Summary"><p className="text-sm">Status: <StatusBadge status={jobData.job.status} /></p><p className="text-sm">Priority: {jobData.job.priority}</p><p className="text-sm">Assignee: {jobData.job.assignee_user_id ?? 'Unassigned'}</p><p className="text-sm">Due: {jobData.job.due_date ?? '-'}</p><p className="text-sm">Completion note: {jobData.job.completion_note ?? '-'}</p></Card>
-      <Card title="Related Records"><ul className="text-sm space-y-1"><li>Client: {(jobData.job as any).client?.business_name ?? '-'}</li><li>Deal: {(jobData.job as any).deal?.title ?? '-'}</li><li>Invoice: {(jobData.job as any).invoice?.invoice_number ?? '-'}</li></ul></Card>
-      <Card title="Tasks"><QuickTaskForm entityType="job" entityId={jobId} titlePrefix={jobData.job.title} /><ul className="mt-3 space-y-2">{jobData.tasks.map((task:any)=><li key={task.id} className="rounded border border-slate-200 p-2 text-sm"><Link href={`/tasks/${task.id}`} className="font-medium">{task.title}</Link><p className="text-slate-600">{task.status} • {task.priority}</p></li>)}</ul></Card>
+      <Card title="Related Records"><ul className="text-sm space-y-1"><li>Client: {job.client?.business_name ?? "-"}</li><li>Deal: {job.deal?.title ?? "-"}</li><li>Invoice: {job.invoice?.invoice_number ?? "-"}</li></ul></Card>
+      <Card title="Tasks"><QuickTaskForm entityType="job" entityId={jobId} titlePrefix={jobData.job.title} /><ul className="mt-3 space-y-2">{jobData.tasks.map((task: Task) => <li key={task.id} className="rounded border border-slate-200 p-2 text-sm"><Link href={`/tasks/${task.id}`} className="font-medium">{task.title}</Link><p className="text-slate-600">{task.status} • {task.priority}</p></li>)}</ul></Card>
       <Card title="Reminders"><ReminderList reminders={jobData.reminders} /></Card>
-      <Card title="Internal Notes"><form action={addNoteAction} className="space-y-2"><input type="hidden" name="related_entity_type" value="job" /><input type="hidden" name="related_entity_id" value={jobId} /><textarea name="body" rows={3} placeholder="Add internal note" required /><button className="bg-slate-800 text-white">Add note</button></form><ul className="mt-3 space-y-2 text-sm">{jobData.notes.map((note:any)=><li key={note.id} className="rounded border border-slate-200 p-2">{note.body}<p className="text-xs text-slate-500">{new Date(note.created_at).toLocaleString()}</p></li>)}</ul></Card>
+      <Card title="Internal Notes"><form action={addNoteAction} className="space-y-2"><input type="hidden" name="related_entity_type" value="job" /><input type="hidden" name="related_entity_id" value={jobId} /><textarea name="body" rows={3} placeholder="Add internal note" required /><button className="bg-slate-800 text-white">Add note</button></form><ul className="mt-3 space-y-2 text-sm">{jobData.notes.map((note: JobNote) => <li key={note.id} className="rounded border border-slate-200 p-2">{note.body}<p className="text-xs text-slate-500">{new Date(note.created_at).toLocaleString()}</p></li>)}</ul></Card>
 
       <Card title="AI Copilot (Optional)">
         <AIGenerateCard

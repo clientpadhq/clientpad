@@ -15,6 +15,17 @@ import { getPaymentSettings } from "@/lib/db/revenue";
 import { getWorkspaceAISettings, listAIGenerations } from "@/lib/db/ai";
 import { canManageSettings, requireWorkspace } from "@/lib/rbac/permissions";
 
+function getAssignableRoles(role: "owner" | "admin" | "staff") {
+  return role === "owner" ? ["owner", "admin", "staff"] : ["admin", "staff"];
+}
+
+function memberFullName(member: { user_id: string; profiles?: { full_name: string | null } | Array<{ full_name: string | null }> | null }) {
+  if (!member.profiles) return member.user_id;
+  return Array.isArray(member.profiles)
+    ? (member.profiles[0]?.full_name ?? member.user_id)
+    : (member.profiles.full_name ?? member.user_id);
+}
+
 export default async function SettingsPage({
   searchParams,
 }: {
@@ -33,6 +44,9 @@ export default async function SettingsPage({
 
   const assignableRoles = getAssignableRoles(context.role);
   const transferCandidates = members.filter((member) => member.user_id !== context.user.id);
+  const monthlyUsage = aiRows.filter((row) => row.created_at.startsWith(new Date().toISOString().slice(0, 7))).length;
+  const monthlyCap = aiSettings?.monthly_cap ?? null;
+  const capReached = monthlyCap !== null && monthlyUsage >= monthlyCap;
 
   return (
     <div className="space-y-4">
@@ -63,9 +77,7 @@ export default async function SettingsPage({
             <form action={inviteMemberAction} className="grid gap-2 md:grid-cols-3">
               <input name="email" type="email" placeholder="Invite email" required />
               <select name="role" defaultValue="staff">
-                <option value="owner">owner</option>
-                <option value="admin">admin</option>
-                <option value="staff">staff</option>
+                {assignableRoles.map((allowedRole) => <option key={allowedRole} value={allowedRole}>{allowedRole}</option>)}
               </select>
               <button className="bg-emerald-700 text-white">Invite member</button>
             </form>
@@ -77,15 +89,13 @@ export default async function SettingsPage({
                   <li key={member.user_id} className="rounded border border-slate-200 p-3 text-sm">
                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                       <div>
-                        <p className="font-medium text-slate-900">{member.profiles?.full_name ?? member.user_id}</p>
+                        <p className="font-medium text-slate-900">{memberFullName(member)}</p>
                         <p className="text-xs text-slate-500">{member.user_id}</p>
                       </div>
                       <form action={updateMemberRoleAction} className="flex items-center gap-2">
                         <input type="hidden" name="member_user_id" value={member.user_id} />
                         <select name="role" defaultValue={member.role}>
-                          <option value="owner">owner</option>
-                          <option value="admin">admin</option>
-                          <option value="staff">staff</option>
+                          {assignableRoles.map((allowedRole) => <option key={allowedRole} value={allowedRole}>{allowedRole}</option>)}
                         </select>
                         <button className="border border-slate-300">Update role</button>
                       </form>
@@ -108,7 +118,7 @@ export default async function SettingsPage({
                     </option>
                     {transferCandidates.map((member) => (
                       <option key={member.user_id} value={member.user_id}>
-                        {(member.profiles?.full_name ?? member.user_id) + ` (${member.role})`}
+                        {memberFullName(member) + ` (${member.role})`}
                       </option>
                     ))}
                   </select>
