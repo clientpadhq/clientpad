@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/db/activity";
-import type { Role, Workspace } from "@/types/database";
+import type { Role, Workspace, WorkspaceOnboardingState } from "@/types/database";
 
 type WorkspaceMembership = {
   role: Role;
@@ -121,6 +121,39 @@ export async function getWorkspaceById(workspaceId: string) {
 
   if (error) throw error;
   return data as Workspace;
+}
+
+export async function getWorkspaceOnboardingState(workspaceId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("workspace_onboarding_state")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data as WorkspaceOnboardingState | null) ?? null;
+}
+
+export async function ensureWorkspaceOnboardingState(workspaceId: string) {
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+  const { error } = await supabase.from("workspace_onboarding_state").upsert(
+    {
+      workspace_id: workspaceId,
+      current_step: "business_profile",
+      started_at: now,
+      updated_at: now,
+    },
+    { onConflict: "workspace_id" },
+  );
+  if (error) throw error;
+}
+
+export function isWorkspaceOnboardingRequired(role: Role, state: WorkspaceOnboardingState | null) {
+  if (role !== "owner" && role !== "admin") return false;
+  if (!state) return true;
+  return !(state.business_profile_completed && state.branding_payment_completed && state.preset_selected);
 }
 
 export async function acceptPendingInvites(userId: string, userEmail?: string | null) {
