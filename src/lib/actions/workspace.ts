@@ -89,6 +89,38 @@ export async function updateWorkspaceAction(formData: FormData) {
   redirect("/settings?success=Workspace updated");
 }
 
+export async function updateBrandingSettingsAction(formData: FormData) {
+  const { workspace, user, role } = await requireWorkspace("staff");
+  if (role === "staff") throw new Error("Staff cannot update branding settings.");
+
+  const supabase = await createClient();
+  const payload = {
+    workspace_id: workspace.id,
+    email: String(formData.get("email") ?? "").trim() || null,
+    address: String(formData.get("address") ?? "").trim() || null,
+    website_or_social: String(formData.get("website_or_social") ?? "").trim() || null,
+    logo_url: String(formData.get("logo_url") ?? "").trim() || null,
+    default_footer_text: String(formData.get("default_footer_text") ?? "").trim() || null,
+    default_quote_terms: String(formData.get("default_quote_terms") ?? "").trim() || null,
+    default_invoice_terms: String(formData.get("default_invoice_terms") ?? "").trim() || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase.from("workspace_branding_settings").upsert(payload);
+  if (error) redirect(`/settings?error=${encodeURIComponent(error.message)}`);
+
+  await logActivity({
+    workspaceId: workspace.id,
+    actorUserId: user.id,
+    entityType: "workspace",
+    entityId: workspace.id,
+    type: "branding.updated",
+    description: "Workspace branding settings updated",
+  });
+
+  redirect("/settings?success=Branding settings updated");
+}
+
 export async function inviteMemberAction(formData: FormData) {
   const { workspace, user, role } = await requireWorkspace("admin");
   const supabase = await createClient();

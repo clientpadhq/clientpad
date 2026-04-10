@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/db/activity";
-import type { Role, Workspace } from "@/types/database";
+import type { Role, Workspace, WorkspaceBrandingSettings } from "@/types/database";
 
 type WorkspaceMembership = {
   role: Role;
@@ -121,6 +121,18 @@ export async function getWorkspaceById(workspaceId: string) {
 
   if (error) throw error;
   return data as Workspace;
+}
+
+export async function getWorkspaceBrandingSettings(workspaceId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("workspace_branding_settings")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as WorkspaceBrandingSettings | null;
 }
 
 export async function acceptPendingInvites(userId: string, userEmail?: string | null) {

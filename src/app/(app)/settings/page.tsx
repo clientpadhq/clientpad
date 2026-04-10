@@ -5,12 +5,13 @@ import {
   inviteMemberAction,
   revokeInviteAction,
   transferOwnershipAction,
+  updateBrandingSettingsAction,
   updateMemberRoleAction,
   updateWorkspaceAction,
 } from "@/lib/actions/workspace";
 import { updatePaymentSettingsAction } from "@/lib/actions/revenue";
 import { updateAISettingsAction } from "@/lib/actions/ai";
-import { getWorkspaceInvites, getWorkspaceMembers } from "@/lib/db/workspace";
+import { getWorkspaceBrandingSettings, getWorkspaceInvites, getWorkspaceMembers } from "@/lib/db/workspace";
 import { getPaymentSettings } from "@/lib/db/revenue";
 import { getWorkspaceAISettings, listAIGenerations } from "@/lib/db/ai";
 import { canManageSettings, requireWorkspace } from "@/lib/rbac/permissions";
@@ -23,15 +24,15 @@ export default async function SettingsPage({
   const context = await requireWorkspace();
   const params = await searchParams;
 
-  const [members, invites, paymentSettings, aiSettings, aiRows] = await Promise.all([
+  const [members, invites, paymentSettings, brandingSettings, aiSettings, aiRows] = await Promise.all([
     getWorkspaceMembers(context.workspace.id),
     getWorkspaceInvites(context.workspace.id),
     getPaymentSettings(context.workspace.id),
+    getWorkspaceBrandingSettings(context.workspace.id),
     getWorkspaceAISettings(context.workspace.id),
     listAIGenerations(context.workspace.id),
   ]);
 
-  const assignableRoles = getAssignableRoles(context.role);
   const transferCandidates = members.filter((member) => member.user_id !== context.user.id);
 
   return (
@@ -171,6 +172,42 @@ export default async function SettingsPage({
           </form>
         ) : (
           <p className="text-sm text-slate-600">Only owners/admins can edit payment settings.</p>
+        )}
+      </Card>
+
+      <Card title="Branding & Document Defaults">
+        {canManageSettings(context.role) ? (
+          <form action={updateBrandingSettingsAction} className="space-y-3">
+            <input name="email" defaultValue={brandingSettings?.email ?? ""} placeholder="Public email for documents" />
+            <textarea name="address" defaultValue={brandingSettings?.address ?? ""} placeholder="Business address" rows={2} />
+            <input
+              name="website_or_social"
+              defaultValue={brandingSettings?.website_or_social ?? ""}
+              placeholder="Website or social handle"
+            />
+            <input name="logo_url" defaultValue={brandingSettings?.logo_url ?? ""} placeholder="Logo URL (PNG/JPG)" />
+            <textarea
+              name="default_footer_text"
+              defaultValue={brandingSettings?.default_footer_text ?? ""}
+              placeholder="Default footer text for PDFs"
+              rows={2}
+            />
+            <textarea
+              name="default_quote_terms"
+              defaultValue={brandingSettings?.default_quote_terms ?? ""}
+              placeholder="Default quote terms (used when quote terms are empty)"
+              rows={3}
+            />
+            <textarea
+              name="default_invoice_terms"
+              defaultValue={brandingSettings?.default_invoice_terms ?? ""}
+              placeholder="Default invoice terms (used when invoice instructions are empty)"
+              rows={3}
+            />
+            <button className="w-full bg-indigo-700 text-white">Save branding defaults</button>
+          </form>
+        ) : (
+          <p className="text-sm text-slate-600">Only owners/admins can edit branding settings.</p>
         )}
       </Card>
 
