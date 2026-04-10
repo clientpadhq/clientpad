@@ -9,12 +9,14 @@ export function QuoteForm({
   deals,
   quote,
   items,
+  defaultTerms,
 }: {
   action: (formData: FormData) => void;
   clients: Array<{ id: string; business_name: string }>;
   deals: Array<{ id: string; title: string }>;
   quote?: any;
   items?: Array<{ description: string; quantity: number; unit_price: number; notes?: string | null }>;
+  defaultTerms?: string;
 }) {
   return (
     <form action={action} className="space-y-3">
@@ -45,7 +47,7 @@ export function QuoteForm({
         <input type="number" min="0" step="0.01" name="tax_amount" placeholder="Tax amount" defaultValue={quote?.tax_amount ?? 0} />
       </div>
       <textarea name="notes" placeholder="Notes" defaultValue={quote?.notes ?? ""} rows={3} />
-      <textarea name="terms" placeholder="Terms" defaultValue={quote?.terms ?? ""} rows={3} />
+      <textarea name="terms" placeholder="Terms" defaultValue={quote?.terms ?? defaultTerms ?? ""} rows={3} />
       <button className="w-full bg-emerald-600 text-white">Save quote</button>
     </form>
   );

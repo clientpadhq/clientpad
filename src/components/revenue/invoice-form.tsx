@@ -10,6 +10,7 @@ export function InvoiceForm({
   quotes,
   invoice,
   items,
+  defaultNotes,
 }: {
   action: (formData: FormData) => void;
   clients: Array<{ id: string; business_name: string }>;
@@ -17,6 +18,7 @@ export function InvoiceForm({
   quotes: Array<{ id: string; quote_number: string }>;
   invoice?: any;
   items?: Array<{ description: string; quantity: number; unit_price: number; notes?: string | null }>;
+  defaultNotes?: string;
 }) {
   return (
     <form action={action} className="space-y-3">
@@ -55,7 +57,7 @@ export function InvoiceForm({
         <input type="number" min="0" step="0.01" name="tax_amount" placeholder="Tax amount" defaultValue={invoice?.tax_amount ?? 0} />
       </div>
 
-      <textarea name="notes" placeholder="Notes" defaultValue={invoice?.notes ?? ""} rows={3} />
+      <textarea name="notes" placeholder="Notes" defaultValue={invoice?.notes ?? defaultNotes ?? ""} rows={3} />
       <button className="w-full bg-emerald-600 text-white">Save invoice</button>
     </form>
   );
