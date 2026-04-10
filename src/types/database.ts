@@ -31,6 +31,28 @@ export type WorkspaceMember = {
   created_at: string;
 };
 
+export type WorkspaceOnboardingStep =
+  | "business_profile"
+  | "branding_payment"
+  | "preset_selection"
+  | "data_import"
+  | "completed";
+
+export type WorkspaceOnboardingState = {
+  workspace_id: string;
+  current_step: WorkspaceOnboardingStep;
+  business_profile_completed: boolean;
+  branding_payment_completed: boolean;
+  preset_selected: boolean;
+  data_import_completed: boolean;
+  selected_preset: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  last_skipped_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type LeadStatus = "new" | "contacted" | "qualified" | "unqualified";
 
 export type Lead = {
@@ -236,6 +258,8 @@ export type ActivityType =
   | "invite.accepted"
   | "invite.expired"
   | "branding.updated";
+  | "onboarding.started"
+  | "onboarding.completed";
 
 export type Activity = {
   id: string;

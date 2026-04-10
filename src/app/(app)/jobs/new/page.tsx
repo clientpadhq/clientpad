@@ -6,6 +6,7 @@ import { listClients } from "@/lib/db/clients";
 import { listDeals } from "@/lib/db/deals";
 import { listInvoices } from "@/lib/db/revenue";
 import { getWorkspaceMembers } from "@/lib/db/workspace";
+type InvoiceOption = { id: string; invoice_number: string };
 
 export default async function NewJobPage({ searchParams }: { searchParams: Promise<{ dealId?: string; clientId?: string; invoiceId?: string }> }) {
   const { workspace } = await requireWorkspace();
@@ -23,5 +24,5 @@ export default async function NewJobPage({ searchParams }: { searchParams: Promi
     invoice_id: params.invoiceId ?? "",
   };
 
-  return <div className="space-y-4"><PageHeader title="New Job" description="Create execution job." /><div className="rounded-lg border border-slate-200 bg-white p-4"><JobForm action={createJobAction} job={initial} clients={clients} deals={deals} invoices={invoices as any} members={members} /></div></div>;
+  return <div className="space-y-4"><PageHeader title="New Job" description="Create execution job." /><div className="rounded-lg border border-slate-200 bg-white p-4"><JobForm action={createJobAction} job={initial} clients={clients} deals={deals} invoices={invoices as InvoiceOption[]} members={members} /></div></div>;
 }

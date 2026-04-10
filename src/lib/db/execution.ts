@@ -125,7 +125,17 @@ export async function ensureSystemReminders(workspaceId: string) {
       .eq("workspace_id", workspaceId),
   ]);
 
-  const reminderRows: any[] = [];
+  type ReminderUpsertRow = {
+    workspace_id: string;
+    type: string;
+    title: string;
+    related_entity_type: string;
+    related_entity_id: string;
+    assignee_user_id?: string | null;
+    due_at: string;
+    system_generated: boolean;
+  };
+  const reminderRows: ReminderUpsertRow[] = [];
 
   (leads ?? []).forEach((lead) => {
     if (lead.next_follow_up_at && new Date(lead.next_follow_up_at) <= now) {
@@ -190,7 +200,7 @@ export async function ensureSystemReminders(workspaceId: string) {
       .eq("workspace_id", workspaceId)
       .eq("activity_type", "invoice.overdue")
       .in("entity_id", overdueInvoiceIds);
-    const existingSet = new Set((existingInvoiceActivities ?? []).map((a:any)=>a.entity_id));
+    const existingSet = new Set((existingInvoiceActivities ?? []).map((a: { entity_id: string }) => a.entity_id));
     const newRows = overdueInvoiceIds.filter((id) => !existingSet.has(id)).map((id) => ({
       workspace_id: workspaceId,
       entity_type: "invoice",
@@ -208,7 +218,7 @@ export async function ensureSystemReminders(workspaceId: string) {
       .eq("workspace_id", workspaceId)
       .eq("activity_type", "follow_up.overdue")
       .in("entity_id", overdueLeadIds);
-    const existingSet = new Set((existingLeadActivities ?? []).map((a:any)=>a.entity_id));
+    const existingSet = new Set((existingLeadActivities ?? []).map((a: { entity_id: string }) => a.entity_id));
     const newRows = overdueLeadIds.filter((id) => !existingSet.has(id)).map((id) => ({
       workspace_id: workspaceId,
       entity_type: "lead",

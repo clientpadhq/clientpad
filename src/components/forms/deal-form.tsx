@@ -1,7 +1,14 @@
 import type { PipelineStage } from "@/types/database";
 
 type Item = { id: string; name?: string | null; business_name?: string | null };
-type Member = { user_id: string; role: string; profiles: { full_name: string | null } | null };
+type Member = { user_id: string; role: string; profiles: { full_name: string | null } | Array<{ full_name: string | null }> | null };
+
+function memberName(member: Member) {
+  if (!member.profiles) return member.user_id.slice(0, 8);
+  return Array.isArray(member.profiles)
+    ? (member.profiles[0]?.full_name ?? member.user_id.slice(0, 8))
+    : (member.profiles.full_name ?? member.user_id.slice(0, 8));
+}
 
 type DealValues = {
   title?: string;
@@ -55,7 +62,7 @@ export function DealForm({
         <option value="">Select owner</option>
         {members.map((member) => (
           <option key={member.user_id} value={member.user_id}>
-            {member.profiles?.full_name ?? member.user_id.slice(0, 8)} ({member.role})
+            {memberName(member)} ({member.role})
           </option>
         ))}
       </select>

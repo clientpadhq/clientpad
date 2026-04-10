@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/auth/session";
 import { canAssignRole, requireWorkspace } from "@/lib/rbac/permissions";
 import { logActivity } from "@/lib/db/activity";
+import { setActiveWorkspaceForUser } from "@/lib/db/workspace";
 import type { Role } from "@/types/database";
 
 function parseRole(value: FormDataEntryValue | null): Role {
@@ -53,6 +54,16 @@ export async function createWorkspaceAction(formData: FormData) {
     redirect(`/onboarding?error=${encodeURIComponent(memberError.message)}`);
   }
 
+  const now = new Date().toISOString();
+  const { error: onboardingStateError } = await supabase.from("workspace_onboarding_state").insert({
+    workspace_id: workspace.id,
+    current_step: "business_profile",
+    started_at: now,
+  });
+  if (onboardingStateError) {
+    redirect(`/onboarding?error=${encodeURIComponent(onboardingStateError.message)}`);
+  }
+
   await setActiveWorkspaceForUser(user.id, workspace.id);
 
   await logActivity({
@@ -64,6 +75,156 @@ export async function createWorkspaceAction(formData: FormData) {
     description: "Workspace created",
   });
 
+  await logActivity({
+    workspaceId: workspace.id,
+    actorUserId: user.id,
+    entityType: "workspace",
+    entityId: workspace.id,
+    type: "onboarding.started",
+    description: "Workspace onboarding started",
+  });
+
+  redirect("/onboarding");
+}
+
+export async function saveOnboardingStepAction(formData: FormData) {
+  const { workspace, user, role } = await requireWorkspace("admin");
+  if (role !== "owner" && role !== "admin") redirect("/dashboard");
+
+  await ensureOnboardingState(workspace.id);
+
+  const step = parseOnboardingStep(formData.get("step"));
+  const now = new Date().toISOString();
+  const supabase = await createClient();
+
+  const businessType = String(formData.get("business_type") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
+  const defaultCurrency = String(formData.get("default_currency") ?? "").trim();
+  const selectedPreset = String(formData.get("selected_preset") ?? "").trim();
+
+  if (step === "business_profile") {
+    const name = String(formData.get("name") ?? "").trim();
+    if (!name) redirect("/onboarding?error=Business name is required");
+
+    const { error: workspaceError } = await supabase
+      .from("workspaces")
+      .update({
+        name,
+        phone: phone || null,
+        business_type: businessType || null,
+        updated_at: now,
+      })
+      .eq("id", workspace.id);
+    if (workspaceError) redirect(`/onboarding?error=${encodeURIComponent(workspaceError.message)}`);
+
+    const { error: stateError } = await supabase
+      .from("workspace_onboarding_state")
+      .update({
+        current_step: "branding_payment",
+        business_profile_completed: true,
+        started_at: now,
+      })
+      .eq("workspace_id", workspace.id);
+    if (stateError) redirect(`/onboarding?error=${encodeURIComponent(stateError.message)}`);
+  }
+
+  if (step === "branding_payment") {
+    const { error: workspaceError } = await supabase
+      .from("workspaces")
+      .update({
+        phone: phone || workspace.phone || null,
+        business_type: businessType || workspace.business_type || null,
+        default_currency: defaultCurrency || workspace.default_currency || "NGN",
+        updated_at: now,
+      })
+      .eq("id", workspace.id);
+    if (workspaceError) redirect(`/onboarding?error=${encodeURIComponent(workspaceError.message)}`);
+
+    const { error: stateError } = await supabase
+      .from("workspace_onboarding_state")
+      .update({
+        current_step: "preset_selection",
+        branding_payment_completed: true,
+      })
+      .eq("workspace_id", workspace.id);
+    if (stateError) redirect(`/onboarding?error=${encodeURIComponent(stateError.message)}`);
+  }
+
+  if (step === "preset_selection") {
+    if (!selectedPreset) redirect("/onboarding?error=Please choose a preset");
+
+    const { error: stateError } = await supabase
+      .from("workspace_onboarding_state")
+      .update({
+        current_step: "data_import",
+        preset_selected: true,
+        selected_preset: selectedPreset,
+      })
+      .eq("workspace_id", workspace.id);
+    if (stateError) redirect(`/onboarding?error=${encodeURIComponent(stateError.message)}`);
+  }
+
+  if (step === "data_import") {
+    const importCompleted = String(formData.get("data_import_completed") ?? "false") === "true";
+    const { error: stateError } = await supabase
+      .from("workspace_onboarding_state")
+      .update({
+        current_step: "completed",
+        data_import_completed: importCompleted,
+        completed_at: now,
+      })
+      .eq("workspace_id", workspace.id);
+    if (stateError) redirect(`/onboarding?error=${encodeURIComponent(stateError.message)}`);
+
+    await logActivity({
+      workspaceId: workspace.id,
+      actorUserId: user.id,
+      entityType: "workspace",
+      entityId: workspace.id,
+      type: "onboarding.completed",
+      description: "Workspace onboarding completed",
+    });
+  }
+
+  redirect("/onboarding");
+}
+
+export async function skipOnboardingStepAction(formData: FormData) {
+  const { workspace, role } = await requireWorkspace("admin");
+  if (role !== "owner" && role !== "admin") redirect("/dashboard");
+
+  await ensureOnboardingState(workspace.id);
+  const step = parseOnboardingStep(formData.get("step"));
+  const now = new Date().toISOString();
+  const supabase = await createClient();
+
+  if (step === "data_import") {
+    const { error } = await supabase
+      .from("workspace_onboarding_state")
+      .update({
+        current_step: "completed",
+        data_import_completed: false,
+        completed_at: now,
+        last_skipped_at: now,
+      })
+      .eq("workspace_id", workspace.id);
+    if (error) redirect(`/onboarding?error=${encodeURIComponent(error.message)}`);
+  } else {
+    const { error } = await supabase
+      .from("workspace_onboarding_state")
+      .update({ last_skipped_at: now })
+      .eq("workspace_id", workspace.id);
+    if (error) redirect(`/onboarding?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect("/onboarding");
+}
+
+export async function resumeOnboardingLaterAction() {
+  const { workspace, role } = await requireWorkspace("admin");
+  if (role !== "owner" && role !== "admin") redirect("/dashboard");
+
+  await ensureOnboardingState(workspace.id);
   redirect("/dashboard");
 }
 
@@ -271,4 +432,13 @@ export async function transferOwnershipAction(formData: FormData) {
   if (demoteError) redirect(`/settings?error=${encodeURIComponent(demoteError.message)}`);
 
   redirect("/settings?success=Ownership transferred");
+}
+
+export async function switchActiveWorkspaceAction(formData: FormData) {
+  const user = await requireUser();
+  const workspaceId = String(formData.get("workspace_id") ?? "").trim();
+  const redirectTo = String(formData.get("redirect_to") ?? "/dashboard").trim() || "/dashboard";
+  if (!workspaceId) redirect(`/dashboard?error=${encodeURIComponent("Workspace is required")}`);
+  await setActiveWorkspaceForUser(user.id, workspaceId);
+  redirect(redirectTo.startsWith("/") ? redirectTo : "/dashboard");
 }

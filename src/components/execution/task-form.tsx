@@ -1,9 +1,26 @@
-import { TaskPriority, TaskStatus } from "@/types/database";
+import type { Task, TaskPriority, TaskStatus } from "@/types/database";
 
 const statuses: TaskStatus[] = ["open", "in_progress", "done", "cancelled"];
 const priorities: TaskPriority[] = ["low", "medium", "high", "urgent"];
 
-export function TaskForm({ action, task, members }: { action: (formData: FormData) => void; task?: any; members: any[]; }) {
+type WorkspaceMemberProfile = {
+  user_id: string;
+  profiles?: { full_name: string | null } | Array<{ full_name: string | null }> | null;
+};
+const memberName = (member: WorkspaceMemberProfile) =>
+  Array.isArray(member.profiles)
+    ? (member.profiles[0]?.full_name ?? member.user_id.slice(0, 8))
+    : (member.profiles?.full_name ?? member.user_id.slice(0, 8));
+
+export function TaskForm({
+  action,
+  task,
+  members,
+}: {
+  action: (formData: FormData) => void;
+  task?: Task;
+  members: WorkspaceMemberProfile[];
+}) {
   return (
     <form action={action} className="space-y-3">
       <input name="title" placeholder="Task title" defaultValue={task?.title} required />
@@ -19,8 +36,8 @@ export function TaskForm({ action, task, members }: { action: (formData: FormDat
         <input name="related_entity_id" placeholder="Related entity ID (optional)" defaultValue={task?.related_entity_id ?? ""} />
       </div>
       <div className="grid gap-2 md:grid-cols-2">
-        <select name="assignee_user_id" defaultValue={task?.assignee_user_id ?? ""}><option value="">Unassigned</option>{members.map((m)=><option key={m.user_id} value={m.user_id}>{m.profiles?.full_name ?? m.user_id.slice(0,8)}</option>)}</select>
-        <select name="owner_user_id" defaultValue={task?.owner_user_id ?? ""}><option value="">Owner</option>{members.map((m)=><option key={m.user_id} value={m.user_id}>{m.profiles?.full_name ?? m.user_id.slice(0,8)}</option>)}</select>
+        <select name="assignee_user_id" defaultValue={task?.assignee_user_id ?? ""}><option value="">Unassigned</option>{members.map((m)=><option key={m.user_id} value={m.user_id}>{memberName(m)}</option>)}</select>
+        <select name="owner_user_id" defaultValue={task?.owner_user_id ?? ""}><option value="">Owner</option>{members.map((m)=><option key={m.user_id} value={m.user_id}>{memberName(m)}</option>)}</select>
       </div>
       <div className="grid gap-2 md:grid-cols-4">
         <input type="datetime-local" name="due_at" defaultValue={task?.due_at ? task.due_at.slice(0,16) : ""} />
