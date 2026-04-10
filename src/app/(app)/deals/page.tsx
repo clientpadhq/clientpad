@@ -1,14 +1,25 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
+import { ExportButton } from "@/components/ui/export-button";
 import { requireWorkspace } from "@/lib/rbac/permissions";
 import { listDeals, listPipelineStages } from "@/lib/db/deals";
 
-export default async function DealsPage() {
+export default async function DealsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { workspace } = await requireWorkspace();
-  const [deals, stages] = await Promise.all([
+  const [deals, stages, params] = await Promise.all([
     listDeals(workspace.id),
     listPipelineStages(workspace.id),
+    searchParams,
   ]);
+
+  const exportParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string" && value.trim()) exportParams.set(key, value);
+  }
 
   const grouped = stages.map((stage) => ({
     stage,
@@ -21,9 +32,12 @@ export default async function DealsPage() {
         title="Deals"
         description="Track opportunities by pipeline stage."
         action={
-          <Link className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white" href="/deals/new">
-            New deal
-          </Link>
+          <div className="flex items-center gap-2">
+            <ExportButton href={`/api/exports/deals${exportParams.toString() ? `?${exportParams.toString()}` : ""}`} />
+            <Link className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white" href="/deals/new">
+              New deal
+            </Link>
+          </div>
         }
       />
 
