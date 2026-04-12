@@ -18,7 +18,6 @@ import { formatNaira } from "@/lib/revenue/calculations";
 export default async function DashboardPage() {
   const { workspace, user, role } = await requireWorkspace();
   const [stats, revenue, execution, reminders, digestRows, readiness, weeklyReview] = await Promise.all([
-  const [stats, revenue, execution, reminders, digestRows, readiness] = await Promise.all([
     getDashboardStats(workspace.id),
     getRevenueMetrics(workspace.id),
     getExecutionMetrics(workspace.id, user.id),

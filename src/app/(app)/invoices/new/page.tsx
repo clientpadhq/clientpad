@@ -24,10 +24,9 @@ export default async function NewInvoicePage() {
           action={createInvoiceAction}
           clients={clients}
           deals={deals}
-          quotes={quotes as any}
+          quotes={quotes as QuoteOption[]}
           defaultNotes={paymentSettings?.invoice_default_terms ?? ""}
         />
-        <InvoiceForm action={createInvoiceAction} clients={clients} deals={deals} quotes={quotes as QuoteOption[]} />
       </div>
     </div>
   );
