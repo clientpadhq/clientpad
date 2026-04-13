@@ -45,6 +45,15 @@ function withInsightsQuery(params: Record<string, string | null | undefined>) {
   return suffix ? `/insights?${suffix}` : "/insights";
 }
 
+function withPilotsQuery(params: Record<string, string | null | undefined>) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) query.set(key, value);
+  }
+  const suffix = query.toString();
+  return suffix ? `/pilots?${suffix}` : "/pilots";
+}
+
 function parsePilotStatus(value: FormDataEntryValue | null): PilotStatus {
   const parsed = String(value ?? "").trim() as PilotStatus;
   return pilotStatuses.has(parsed) ? parsed : "onboarding";
@@ -144,6 +153,8 @@ export async function updatePilotProfileAction(formData: FormData) {
     permission_to_use_name: parseCheckbox(formData.get("permission_to_use_name")),
     permission_to_use_logo: parseCheckbox(formData.get("permission_to_use_logo")),
     case_study_status: nextCaseStudyStatus,
+    next_follow_up_date: parseOptionalDate(formData.get("next_follow_up_date")),
+    follow_up_focus_note: parseOptionalText(formData.get("follow_up_focus_note")),
     updated_at: new Date().toISOString(),
   };
 
@@ -188,7 +199,68 @@ export async function updatePilotProfileAction(formData: FormData) {
     });
   }
 
+  if (
+    currentProfile?.next_follow_up_date !== payload.next_follow_up_date ||
+    currentProfile?.follow_up_focus_note !== payload.follow_up_focus_note
+  ) {
+    await logActivity({
+      workspaceId: workspace.id,
+      actorUserId: user.id,
+      entityType: "pilot_profile",
+      entityId: workspace.id,
+      type: "pilot_follow_up.updated",
+      description: "Pilot follow-up cadence updated",
+      metadata: {
+        next_follow_up_date: payload.next_follow_up_date,
+      },
+    });
+  }
+
   redirect(withInsightsQuery({ success: "Pilot profile updated" }));
+}
+
+export async function updatePilotFollowUpAction(formData: FormData) {
+  const { user } = await requireWorkspace("admin");
+  const supabase = await createClient();
+
+  const workspaceId = String(formData.get("workspace_id") ?? "").trim();
+  if (!workspaceId) redirect(withPilotsQuery({ error: "Workspace is required" }));
+
+  const { data: profile, error: profileError } = await supabase
+    .from("workspace_pilot_profiles")
+    .select("workspace_id,next_follow_up_date,follow_up_focus_note")
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+  if (profileError) redirect(withPilotsQuery({ error: profileError.message }));
+  if (!profile) redirect(withPilotsQuery({ error: "Pilot profile not found" }));
+
+  const nextFollowUpDate = parseOptionalDate(formData.get("next_follow_up_date"));
+  const followUpFocusNote = parseOptionalText(formData.get("follow_up_focus_note"));
+
+  const { error } = await supabase
+    .from("workspace_pilot_profiles")
+    .update({
+      next_follow_up_date: nextFollowUpDate,
+      follow_up_focus_note: followUpFocusNote,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("workspace_id", workspaceId);
+  if (error) redirect(withPilotsQuery({ error: error.message }));
+
+  await logActivity({
+    workspaceId,
+    actorUserId: user.id,
+    entityType: "pilot_profile",
+    entityId: workspaceId,
+    type: "pilot_follow_up.updated",
+    description: "Pilot follow-up cadence updated",
+    metadata: {
+      previous_next_follow_up_date: profile.next_follow_up_date,
+      next_follow_up_date: nextFollowUpDate,
+    },
+  });
+
+  redirect(withPilotsQuery({ success: "Pilot follow-up updated" }));
 }
 
 export async function createFeedbackItemAction(formData: FormData) {

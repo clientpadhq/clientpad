@@ -14,6 +14,7 @@ const navItems = [
   { href: "/tasks", label: "Tasks" },
   { href: "/reports", label: "Reports" },
   { href: "/review", label: "Review" },
+  { href: "/pilots", label: "Pilots" },
   { href: "/insights", label: "Insights" },
   { href: "/ai/history", label: "AI History" },
   { href: "/settings", label: "Settings" },
@@ -55,13 +56,13 @@ export function BottomNav() {
     { href: "/tasks", label: "Tasks" },
     { href: "/reports", label: "Reports" },
     { href: "/review", label: "Review" },
-    { href: "/insights", label: "Insights" },
+    { href: "/pilots", label: "Pilots" },
     { href: "/invoices", label: "Invoices" },
   ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-2 md:hidden">
-      <ul className="grid grid-cols-8 gap-1">
+      <ul className="grid grid-cols-9 gap-1">
         {mobileItems.map((item) => (
           <li key={item.href}>
             <Link

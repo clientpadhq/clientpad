@@ -59,6 +59,8 @@ export type WorkspacePilotProfile = {
   permission_to_use_name: boolean;
   permission_to_use_logo: boolean;
   case_study_status: CaseStudyStatus;
+  next_follow_up_date: string | null;
+  follow_up_focus_note: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -374,7 +376,8 @@ export type ActivityType =
   | "feedback.updated"
   | "feedback.status_changed"
   | "check_in.created"
-  | "check_in.updated";
+  | "check_in.updated"
+  | "pilot_follow_up.updated";
 
 export type Activity = {
   id: string;

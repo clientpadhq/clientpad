@@ -18,6 +18,7 @@ import {
   PILOT_STATUS_OPTIONS,
   getPilotInsightsSnapshot,
   getWorkspaceFeedbackSummary,
+  getWorkspacePortfolioSummary,
   getWorkspacePilotProfile,
   listPilotWorkspacePortfolio,
   listWorkspaceCheckInNotes,
@@ -76,11 +77,11 @@ export default async function InsightsPage({
     success?: string;
   }>;
 }) {
-  const { workspace, user } = await requireWorkspace("admin");
+  const { workspace, user, role } = await requireWorkspace("admin");
   const params = await searchParams;
   const range = parseRange(params.range);
 
-  const [pilotProfile, insights, weeklyReview, feedbackSummary, feedbackItems, checkInNotes, portfolio] = await Promise.all([
+  const [pilotProfile, insights, weeklyReview, feedbackSummary, feedbackItems, checkInNotes, portfolio, workspaceSummary] = await Promise.all([
     getWorkspacePilotProfile(workspace.id),
     getPilotInsightsSnapshot(workspace.id, range),
     getWeeklyReviewSnapshot(workspace.id),
@@ -90,8 +91,15 @@ export default async function InsightsPage({
     listPilotWorkspacePortfolio(
       user.id,
       range,
-      params.pilot_status && params.pilot_status !== "all" ? (params.pilot_status as PilotStatus) : "all",
+      { pilotStatus: params.pilot_status && params.pilot_status !== "all" ? (params.pilot_status as PilotStatus) : "all" },
     ),
+    getWorkspacePortfolioSummary({
+      workspaceId: workspace.id,
+      workspaceName: workspace.name,
+      businessType: workspace.business_type,
+      role,
+      range,
+    }),
   ]);
 
   const filteredFeedback = feedbackItems.filter((item) => {
@@ -189,6 +197,33 @@ export default async function InsightsPage({
         <p className="text-sm text-slate-700">Comparison window: {insights.previousWindowLabel}</p>
         <p className="text-xs text-slate-500">Generated at {new Date(insights.generatedAt).toLocaleString()}</p>
       </Card>
+
+      <div className="grid gap-3 lg:grid-cols-[1fr_1fr]">
+        <Card title="Current workspace health">
+          <p className={`text-lg font-semibold ${workspaceSummary.attentionLevel === "healthy" ? "text-emerald-700" : workspaceSummary.attentionLevel === "watch" ? "text-amber-700" : workspaceSummary.attentionLevel === "needs_attention" ? "text-orange-700" : "text-red-700"}`}>
+            {toTitleCase(workspaceSummary.attentionLevel)}
+          </p>
+          <p className="text-xs text-slate-500">Health score {workspaceSummary.healthScore}</p>
+          <ul className="mt-2 space-y-1 text-sm text-slate-700">
+            <li>Setup readiness: {workspaceSummary.readinessCompletionPercent}%</li>
+            <li>Recent activity: {workspaceSummary.recentActivityAt ? new Date(workspaceSummary.recentActivityAt).toLocaleDateString() : "No activity yet"}</li>
+            <li>Overdue work: {workspaceSummary.overdueWorkCount}</li>
+            <li>Critical open feedback: {workspaceSummary.criticalOpenFeedback}</li>
+          </ul>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            <Link className="rounded border border-slate-300 px-2 py-1" href="/pilots">
+              Open portfolio cockpit
+            </Link>
+          </div>
+        </Card>
+
+        <Card title="Founder follow-up cadence">
+          <p className="text-sm text-slate-700">Last check-in: {workspaceSummary.latestCheckInDate ?? "—"}</p>
+          <p className="text-sm text-slate-700">Next follow-up: {workspaceSummary.nextFollowUpDate ?? "—"}</p>
+          <p className="text-sm text-slate-700">Status: {toTitleCase(workspaceSummary.followUpStatus)}</p>
+          {workspaceSummary.followUpFocusNote ? <p className="mt-2 text-sm text-slate-700">{workspaceSummary.followUpFocusNote}</p> : null}
+        </Card>
+      </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {metricCards.map((metric) => (
@@ -306,6 +341,13 @@ export default async function InsightsPage({
               <input type="checkbox" name="permission_to_use_logo" defaultChecked={pilotProfile?.permission_to_use_logo ?? false} className="h-4 w-4" />
               Permission to use customer logo
             </label>
+            <input name="next_follow_up_date" type="date" defaultValue={pilotProfile?.next_follow_up_date ?? ""} />
+            <textarea
+              name="follow_up_focus_note"
+              defaultValue={pilotProfile?.follow_up_focus_note ?? ""}
+              placeholder="Next founder/operator follow-up focus"
+              rows={2}
+            />
             <button className="w-full bg-emerald-700 text-white">Save pilot profile</button>
           </form>
         </Card>

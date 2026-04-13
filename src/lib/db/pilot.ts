@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { getWorkspacesForUser } from "@/lib/db/workspace";
+import { getSetupReadiness } from "@/lib/onboarding/readiness";
 import { getWeeklyReviewSnapshot } from "@/lib/db/review";
+import { getWorkspacesForUser } from "@/lib/db/workspace";
 import type {
   CaseStudyStatus,
   CheckInConfidenceLevel,
@@ -15,9 +16,10 @@ import type {
 } from "@/types/database";
 
 export type InsightsRange = "7d" | "30d" | "month";
+export type PortfolioAttentionLevel = "healthy" | "watch" | "needs_attention" | "at_risk";
+export type PortfolioFollowUpStatus = "recently_checked_in" | "scheduled" | "due_this_week" | "overdue" | "unplanned";
 
 type DateWindow = {
-  key: InsightsRange;
   currentStart: Date;
   currentEnd: Date;
   previousStart: Date;
@@ -26,12 +28,12 @@ type DateWindow = {
 
 type TimePaymentRow = {
   paid_at: string | null;
-  status: string | null;
   invoice: { issue_date: string | null } | Array<{ issue_date: string | null }> | null;
 };
 
 type PilotMetricKey =
   | "leadsCreated"
+  | "dealsCreated"
   | "leadToDealConversion"
   | "quotesSent"
   | "invoicePaymentRate"
@@ -41,8 +43,15 @@ type PilotMetricKey =
   | "reminderCompletionRate"
   | "taskCompletionRate";
 
+type WorkspaceReference = {
+  id: string;
+  name: string;
+  business_type: string | null;
+};
+
 type MetricResult = {
   leadsCreated: number;
+  dealsCreated: number;
   leadToDealConversion: number;
   quotesSent: number;
   invoicePaymentRate: number;
@@ -83,6 +92,24 @@ export type CheckInNoteWithLinks = WorkspaceCheckInNote & {
   linkedFeedback: Array<Pick<WorkspaceFeedbackItem, "id" | "title" | "status" | "category">>;
 };
 
+export type CaseStudyReadinessSummary = {
+  signalCount: number;
+  positiveSignalCount: number;
+  hasOutcomeNotes: boolean;
+  hasTestimonialQuote: boolean;
+  permissionsReady: boolean;
+  isCandidate: boolean;
+  summary: string[];
+};
+
+export type WorkspaceFollowUpSnapshot = {
+  lastCheckInDate: string | null;
+  nextFollowUpDate: string | null;
+  suggestedNextFollowUpDate: string | null;
+  followUpStatus: PortfolioFollowUpStatus;
+  followUpFocusNote: string | null;
+};
+
 export type PilotPortfolioRow = {
   workspaceId: string;
   workspaceName: string;
@@ -91,13 +118,49 @@ export type PilotPortfolioRow = {
   pilotStatus: PilotStatus;
   customerStage: CustomerStage;
   caseStudyStatus: CaseStudyStatus;
+  attentionLevel: PortfolioAttentionLevel;
+  healthScore: number;
+  attentionReasons: string[];
+  readinessCompletionPercent: number;
+  readinessThresholdReached: boolean;
+  recentActivityAt: string | null;
+  latestCheckInDate: string | null;
+  nextFollowUpDate: string | null;
+  followUpStatus: PortfolioFollowUpStatus;
+  followUpFocusNote: string | null;
   activeSeats: number;
   leadsCreated: number;
+  dealsCreated: number;
   leadToDealConversion: number;
+  quotesSent: number;
+  invoicesIssued: number;
   invoicePaymentRate: number;
-  openFeedback: number;
+  jobsCompletedOnTime: number;
   overdueInvoices: number;
+  stalledDeals: number;
   jobsAtRisk: number;
+  overdueTasks: number;
+  outstandingBalance: number;
+  overdueWorkCount: number;
+  openFeedback: number;
+  criticalOpenFeedback: number;
+  feedbackFollowUpDue: number;
+  caseStudyReadiness: CaseStudyReadinessSummary;
+};
+
+export type PortfolioFeedbackQueueItem = {
+  id: string;
+  workspaceId: string;
+  workspaceName: string;
+  businessType: string | null;
+  title: string;
+  category: FeedbackCategory;
+  importance: FeedbackImportance;
+  relatedModule: string | null;
+  status: FeedbackStatus;
+  followUpDate: string | null;
+  contactName: string | null;
+  createdAt: string;
 };
 
 export const PILOT_STATUS_OPTIONS: Array<{ value: PilotStatus; label: string }> = [
@@ -160,12 +223,24 @@ export const CHECK_IN_CONFIDENCE_OPTIONS: Array<{ value: CheckInConfidenceLevel;
   { value: "high", label: "High confidence" },
 ];
 
+export const PORTFOLIO_ATTENTION_OPTIONS: Array<{ value: PortfolioAttentionLevel | "all"; label: string }> = [
+  { value: "all", label: "All attention levels" },
+  { value: "healthy", label: "Healthy" },
+  { value: "watch", label: "Watch" },
+  { value: "needs_attention", label: "Needs attention" },
+  { value: "at_risk", label: "At risk" },
+];
+
 function startOfMonth(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
 }
 
 function formatDate(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function normalizeStatus(value: string | null | undefined) {
+  return String(value ?? "").trim().toLowerCase();
 }
 
 function getDateWindow(range: InsightsRange, now = new Date()): DateWindow {
@@ -175,22 +250,18 @@ function getDateWindow(range: InsightsRange, now = new Date()): DateWindow {
     const currentStart = startOfMonth(now);
     const previousEnd = new Date(currentStart);
     const previousStart = new Date(Date.UTC(previousEnd.getUTCFullYear(), previousEnd.getUTCMonth() - 1, 1));
-    return { key: range, currentStart, currentEnd, previousStart, previousEnd };
+    return { currentStart, currentEnd, previousStart, previousEnd };
   }
 
   const days = range === "7d" ? 7 : 30;
   const currentStart = new Date(currentEnd.getTime() - days * 24 * 60 * 60 * 1000);
   const previousEnd = new Date(currentStart);
   const previousStart = new Date(previousEnd.getTime() - days * 24 * 60 * 60 * 1000);
-  return { key: range, currentStart, currentEnd, previousStart, previousEnd };
+  return { currentStart, currentEnd, previousStart, previousEnd };
 }
 
 function windowLabel(start: Date, end: Date) {
   return `${formatDate(start)} to ${formatDate(end)}`;
-}
-
-function normalizeStatus(value: string | null | undefined) {
-  return String(value ?? "").trim().toLowerCase();
 }
 
 function averageDaysToPayment(rows: TimePaymentRow[]) {
@@ -206,6 +277,125 @@ function averageDaysToPayment(rows: TimePaymentRow[]) {
 
   if (!durations.length) return null;
   return Math.round((durations.reduce((sum, value) => sum + value, 0) / durations.length) * 10) / 10;
+}
+
+function metricDelta(current: number | null, previous: number | null) {
+  if (current === null || previous === null) return null;
+  return Math.round((current - previous) * 10) / 10;
+}
+
+function formatDelta(delta: number, suffix = "") {
+  const sign = delta > 0 ? "+" : "";
+  return `${sign}${delta}${suffix}`;
+}
+
+function buildWhatChanged(current: MetricResult, previous: MetricResult) {
+  const candidates: Array<{ label: string; delta: number; type: "count" | "points" | "days" }> = [
+    { label: "Lead-to-deal conversion", delta: current.leadToDealConversion - previous.leadToDealConversion, type: "points" },
+    { label: "Invoice payment rate", delta: current.invoicePaymentRate - previous.invoicePaymentRate, type: "points" },
+    { label: "Active seats", delta: current.activeSeats - previous.activeSeats, type: "count" },
+    { label: "Quotes sent", delta: current.quotesSent - previous.quotesSent, type: "count" },
+    { label: "On-time jobs completed", delta: current.jobsCompletedOnTime - previous.jobsCompletedOnTime, type: "count" },
+  ]
+    .filter((item) => item.delta !== 0)
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+    .slice(0, 4);
+
+  if (current.avgDaysToPayment !== null && previous.avgDaysToPayment !== null && current.avgDaysToPayment !== previous.avgDaysToPayment) {
+    candidates.push({
+      label: "Average days to payment",
+      delta: Math.round((current.avgDaysToPayment - previous.avgDaysToPayment) * 10) / 10,
+      type: "days",
+    });
+  }
+
+  return candidates.slice(0, 4).map((item) => {
+    if (item.type === "points") return `${item.label} changed ${formatDelta(item.delta, " pts")} versus the previous period.`;
+    if (item.type === "days") return `${item.label} changed ${formatDelta(item.delta, " days")} versus the previous period.`;
+    return `${item.label} changed ${formatDelta(item.delta)} versus the previous period.`;
+  });
+}
+
+function addDays(dateValue: string, days: number) {
+  const next = new Date(`${dateValue}T00:00:00.000Z`);
+  next.setUTCDate(next.getUTCDate() + days);
+  return formatDate(next);
+}
+
+function deriveFollowUpStatus(params: {
+  lastCheckInDate: string | null;
+  explicitNextFollowUpDate: string | null;
+  followUpFocusNote: string | null;
+}) {
+  const today = formatDate(new Date());
+  const sevenDaysOut = addDays(today, 7);
+  const suggestedNextFollowUpDate = params.lastCheckInDate ? addDays(params.lastCheckInDate, 7) : null;
+  const nextFollowUpDate = params.explicitNextFollowUpDate ?? suggestedNextFollowUpDate;
+
+  let followUpStatus: PortfolioFollowUpStatus = "unplanned";
+  if (nextFollowUpDate) {
+    if (nextFollowUpDate < today) followUpStatus = "overdue";
+    else if (nextFollowUpDate <= sevenDaysOut) followUpStatus = "due_this_week";
+    else if (params.lastCheckInDate && params.lastCheckInDate >= addDays(today, -7)) followUpStatus = "recently_checked_in";
+    else followUpStatus = "scheduled";
+  } else if (params.lastCheckInDate && params.lastCheckInDate >= addDays(today, -7)) {
+    followUpStatus = "recently_checked_in";
+  }
+
+  return {
+    lastCheckInDate: params.lastCheckInDate,
+    nextFollowUpDate,
+    suggestedNextFollowUpDate,
+    followUpStatus,
+    followUpFocusNote: params.followUpFocusNote,
+  } satisfies WorkspaceFollowUpSnapshot;
+}
+
+function computeCaseStudyReadiness(params: {
+  profile: WorkspacePilotProfile | null;
+  positiveSignals: number;
+  attentionLevel: PortfolioAttentionLevel;
+  activeSeats: number;
+}) {
+  const hasOutcomeNotes = Boolean(params.profile?.measurable_outcome_notes?.trim());
+  const hasTestimonialQuote = Boolean(params.profile?.testimonial_quote?.trim());
+  const permissionsReady = Boolean(params.profile?.permission_to_use_name || params.profile?.permission_to_use_logo);
+
+  const signalCount = [
+    hasOutcomeNotes,
+    hasTestimonialQuote,
+    params.profile?.permission_to_use_name ?? false,
+    params.profile?.permission_to_use_logo ?? false,
+    params.positiveSignals > 0,
+    params.attentionLevel === "healthy",
+    params.activeSeats > 0,
+  ].filter(Boolean).length;
+
+  const isCandidate =
+    params.profile?.customer_stage === "case_study_candidate" ||
+    params.profile?.case_study_status === "ready_to_write" ||
+    ((params.profile?.pilot_status === "healthy" || params.profile?.pilot_status === "completed") &&
+      signalCount >= 4 &&
+      params.positiveSignals > 0 &&
+      params.attentionLevel !== "at_risk");
+
+  const summary = [
+    hasOutcomeNotes ? "Outcome notes present" : null,
+    hasTestimonialQuote ? "Testimonial quote captured" : null,
+    params.profile?.permission_to_use_name ? "Name permission recorded" : null,
+    params.profile?.permission_to_use_logo ? "Logo permission recorded" : null,
+    params.positiveSignals > 0 ? `${params.positiveSignals} positive signal(s)` : null,
+  ].filter(Boolean) as string[];
+
+  return {
+    signalCount,
+    positiveSignalCount: params.positiveSignals,
+    hasOutcomeNotes,
+    hasTestimonialQuote,
+    permissionsReady,
+    isCandidate,
+    summary,
+  } satisfies CaseStudyReadinessSummary;
 }
 
 async function countLeadConversions(workspaceId: string, leadIds: string[], endIso: string) {
@@ -229,6 +419,7 @@ async function buildMetricResult(workspaceId: string, start: Date, end: Date): P
 
   const [
     leadsQuery,
+    dealsQuery,
     quoteEventsQuery,
     invoicesQuery,
     paymentsQuery,
@@ -238,6 +429,7 @@ async function buildMetricResult(workspaceId: string, start: Date, end: Date): P
     activeSeatsQuery,
   ] = await Promise.all([
     supabase.from("leads").select("id").eq("workspace_id", workspaceId).gte("created_at", startIso).lt("created_at", endIso),
+    supabase.from("deals").select("id").eq("workspace_id", workspaceId).gte("created_at", startIso).lt("created_at", endIso),
     supabase
       .from("activities")
       .select("entity_id")
@@ -253,7 +445,7 @@ async function buildMetricResult(workspaceId: string, start: Date, end: Date): P
       .lt("created_at", endIso),
     supabase
       .from("payments")
-      .select("paid_at,status,invoice:invoices(issue_date)")
+      .select("paid_at,invoice:invoices(issue_date)")
       .eq("workspace_id", workspaceId)
       .gte("paid_at", startIso)
       .lt("paid_at", endIso),
@@ -276,6 +468,7 @@ async function buildMetricResult(workspaceId: string, start: Date, end: Date): P
   ]);
 
   if (leadsQuery.error) throw leadsQuery.error;
+  if (dealsQuery.error) throw dealsQuery.error;
   if (quoteEventsQuery.error) throw quoteEventsQuery.error;
   if (invoicesQuery.error) throw invoicesQuery.error;
   if (paymentsQuery.error) throw paymentsQuery.error;
@@ -300,6 +493,7 @@ async function buildMetricResult(workspaceId: string, start: Date, end: Date): P
 
   return {
     leadsCreated: leads.length,
+    dealsCreated: (dealsQuery.data ?? []).length,
     leadToDealConversion: leads.length > 0 ? Math.round((leadConversions / leads.length) * 100) : 0,
     quotesSent: uniqueQuoteIds.size,
     invoicePaymentRate: invoices.length > 0 ? Math.round((fullyPaidInvoices / invoices.length) * 100) : 0,
@@ -316,61 +510,142 @@ async function buildMetricResult(workspaceId: string, start: Date, end: Date): P
   };
 }
 
-function metricDelta(current: number | null, previous: number | null) {
-  if (current === null || previous === null) return null;
-  return Math.round((current - previous) * 10) / 10;
-}
+async function buildWorkspacePortfolioRow(params: {
+  workspace: WorkspaceReference;
+  role: string;
+  range: InsightsRange;
+}) {
+  const supabase = await createClient();
+  const [profile, insight, feedbackSummary, review, readiness, latestActivityQuery, latestCheckInQuery] = await Promise.all([
+    getWorkspacePilotProfile(params.workspace.id),
+    getPilotInsightsSnapshot(params.workspace.id, params.range),
+    getWorkspaceFeedbackSummary(params.workspace.id),
+    getWeeklyReviewSnapshot(params.workspace.id),
+    getSetupReadiness(params.workspace.id),
+    supabase.from("activities").select("created_at").eq("workspace_id", params.workspace.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase
+      .from("workspace_check_in_notes")
+      .select("note_date")
+      .eq("workspace_id", params.workspace.id)
+      .order("note_date", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
-function formatDelta(delta: number, suffix = "") {
-  const sign = delta > 0 ? "+" : "";
-  return `${sign}${delta}${suffix}`;
-}
+  if (latestActivityQuery.error) throw latestActivityQuery.error;
+  if (latestCheckInQuery.error) throw latestCheckInQuery.error;
 
-function buildWhatChanged(current: MetricResult, previous: MetricResult) {
-  const candidates: Array<{ label: string; delta: number; type: "count" | "points" | "days" }> = [
-    {
-      label: "Lead-to-deal conversion",
-      delta: current.leadToDealConversion - previous.leadToDealConversion,
-      type: "points",
-    },
-    {
-      label: "Invoice payment rate",
-      delta: current.invoicePaymentRate - previous.invoicePaymentRate,
-      type: "points",
-    },
-    {
-      label: "Active seats",
-      delta: current.activeSeats - previous.activeSeats,
-      type: "count",
-    },
-    {
-      label: "Quotes sent",
-      delta: current.quotesSent - previous.quotesSent,
-      type: "count",
-    },
-    {
-      label: "On-time jobs completed",
-      delta: current.jobsCompletedOnTime - previous.jobsCompletedOnTime,
-      type: "count",
-    },
-  ]
-    .filter((item) => item.delta !== 0)
-    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
-    .slice(0, 4);
+  const followUp = deriveFollowUpStatus({
+    lastCheckInDate: latestCheckInQuery.data?.note_date ?? null,
+    explicitNextFollowUpDate: profile?.next_follow_up_date ?? null,
+    followUpFocusNote: profile?.follow_up_focus_note ?? null,
+  });
 
-  if (current.avgDaysToPayment !== null && previous.avgDaysToPayment !== null && current.avgDaysToPayment !== previous.avgDaysToPayment) {
-    candidates.push({
-      label: "Average days to payment",
-      delta: Math.round((current.avgDaysToPayment - previous.avgDaysToPayment) * 10) / 10,
-      type: "days",
-    });
+  const attentionReasons: string[] = [];
+  let healthScore = 100;
+
+  if (!readiness.isThresholdReached) {
+    healthScore -= 15;
+    attentionReasons.push(`Setup readiness ${readiness.completionPercent}%`);
+  }
+  if (insight.metrics.activeSeats === 0) {
+    healthScore -= 20;
+    attentionReasons.push("No active seats this window");
+  } else if (insight.metrics.activeSeats === 1) {
+    healthScore -= 10;
+    attentionReasons.push("Only one active seat this window");
+  }
+  if (review.topAttention.overdueInvoices > 0) {
+    healthScore -= 15;
+    attentionReasons.push(`${review.topAttention.overdueInvoices} overdue invoice(s)`);
+  }
+  if (review.topAttention.stalledDeals > 0) {
+    healthScore -= 12;
+    attentionReasons.push(`${review.topAttention.stalledDeals} stalled deal(s)`);
+  }
+  if (review.topAttention.jobsAtRisk > 0) {
+    healthScore -= 10;
+    attentionReasons.push(`${review.topAttention.jobsAtRisk} job(s) at risk`);
+  }
+  if (review.topAttention.overdueTasks > 0) {
+    healthScore -= 8;
+    attentionReasons.push(`${review.topAttention.overdueTasks} overdue task(s)`);
+  }
+  if (feedbackSummary.criticalOpen > 0) {
+    healthScore -= 15;
+    attentionReasons.push(`${feedbackSummary.criticalOpen} critical feedback item(s)`);
+  }
+  if (followUp.followUpStatus === "overdue") {
+    healthScore -= 20;
+    attentionReasons.push("Founder follow-up overdue");
+  } else if (followUp.followUpStatus === "due_this_week") {
+    healthScore -= 8;
+    attentionReasons.push("Founder follow-up due this week");
+  } else if (followUp.followUpStatus === "unplanned") {
+    healthScore -= 12;
+    attentionReasons.push("No follow-up cadence set");
+  }
+  if (profile?.pilot_status === "at_risk") {
+    healthScore -= 20;
+    attentionReasons.push("Pilot marked at risk");
+  } else if (profile?.pilot_status === "needs_attention") {
+    healthScore -= 10;
+    attentionReasons.push("Pilot marked needs attention");
   }
 
-  return candidates.slice(0, 4).map((item) => {
-    if (item.type === "points") return `${item.label} changed ${formatDelta(item.delta, " pts")} versus the previous period.`;
-    if (item.type === "days") return `${item.label} changed ${formatDelta(item.delta, " days")} versus the previous period.`;
-    return `${item.label} changed ${formatDelta(item.delta)} versus the previous period.`;
+  const attentionLevel: PortfolioAttentionLevel =
+    profile?.pilot_status === "at_risk" || healthScore <= 49
+      ? "at_risk"
+      : healthScore <= 69
+        ? "needs_attention"
+        : healthScore <= 84
+          ? "watch"
+          : "healthy";
+
+  const caseStudyReadiness = computeCaseStudyReadiness({
+    profile,
+    positiveSignals: feedbackSummary.positiveSignals,
+    attentionLevel,
+    activeSeats: insight.metrics.activeSeats,
   });
+
+  return {
+    workspaceId: params.workspace.id,
+    workspaceName: params.workspace.name,
+    role: params.role,
+    businessType: params.workspace.business_type,
+    pilotStatus: profile?.pilot_status ?? "onboarding",
+    customerStage: profile?.customer_stage ?? "trial",
+    caseStudyStatus: profile?.case_study_status ?? "not_started",
+    attentionLevel,
+    healthScore: Math.max(0, healthScore),
+    attentionReasons: attentionReasons.slice(0, 4),
+    readinessCompletionPercent: readiness.completionPercent,
+    readinessThresholdReached: readiness.isThresholdReached,
+    recentActivityAt: latestActivityQuery.data?.created_at ?? null,
+    latestCheckInDate: followUp.lastCheckInDate,
+    nextFollowUpDate: followUp.nextFollowUpDate,
+    followUpStatus: followUp.followUpStatus,
+    followUpFocusNote: followUp.followUpFocusNote,
+    activeSeats: insight.metrics.activeSeats,
+    leadsCreated: insight.metrics.leadsCreated,
+    dealsCreated: insight.metrics.dealsCreated,
+    leadToDealConversion: insight.metrics.leadToDealConversion,
+    quotesSent: insight.metrics.quotesSent,
+    invoicesIssued: insight.metrics.invoicesIssued,
+    invoicePaymentRate: insight.metrics.invoicePaymentRate,
+    jobsCompletedOnTime: insight.metrics.jobsCompletedOnTime,
+    overdueInvoices: review.topAttention.overdueInvoices,
+    stalledDeals: review.topAttention.stalledDeals,
+    jobsAtRisk: review.topAttention.jobsAtRisk,
+    overdueTasks: review.topAttention.overdueTasks,
+    outstandingBalance: review.metrics.outstandingBalance,
+    overdueWorkCount: review.topAttention.overdueInvoices + review.topAttention.jobsAtRisk + review.topAttention.overdueTasks,
+    openFeedback: feedbackSummary.open,
+    criticalOpenFeedback: feedbackSummary.criticalOpen,
+    feedbackFollowUpDue: feedbackSummary.followUpDue,
+    caseStudyReadiness,
+  } satisfies PilotPortfolioRow;
 }
 
 export async function getWorkspacePilotProfile(workspaceId: string) {
@@ -395,6 +670,7 @@ export async function getPilotInsightsSnapshot(workspaceId: string, range: Insig
     metrics: current,
     deltas: {
       leadsCreated: metricDelta(current.leadsCreated, previous.leadsCreated),
+      dealsCreated: metricDelta(current.dealsCreated, previous.dealsCreated),
       leadToDealConversion: metricDelta(current.leadToDealConversion, previous.leadToDealConversion),
       quotesSent: metricDelta(current.quotesSent, previous.quotesSent),
       invoicePaymentRate: metricDelta(current.invoicePaymentRate, previous.invoicePaymentRate),
@@ -406,6 +682,20 @@ export async function getPilotInsightsSnapshot(workspaceId: string, range: Insig
     },
     whatChanged: buildWhatChanged(current, previous),
   };
+}
+
+export async function getWorkspacePortfolioSummary(params: {
+  workspaceId: string;
+  workspaceName: string;
+  businessType: string | null;
+  role: string;
+  range: InsightsRange;
+}) {
+  return buildWorkspacePortfolioRow({
+    workspace: { id: params.workspaceId, name: params.workspaceName, business_type: params.businessType },
+    role: params.role,
+    range: params.range,
+  });
 }
 
 export async function listWorkspaceFeedbackItems(workspaceId: string, filters?: FeedbackFilters) {
@@ -478,36 +768,112 @@ export async function listWorkspaceCheckInNotes(workspaceId: string) {
   }));
 }
 
-export async function listPilotWorkspacePortfolio(userId: string, range: InsightsRange, statusFilter?: PilotStatus | "all") {
+export async function listPilotWorkspacePortfolio(
+  userId: string,
+  range: InsightsRange,
+  filters?: {
+    pilotStatus?: PilotStatus | "all";
+    attentionLevel?: PortfolioAttentionLevel | "all";
+    businessType?: string | "all";
+    caseStudyOnly?: boolean;
+    followUpStatus?: PortfolioFollowUpStatus | "all";
+  },
+) {
   const memberships = (await getWorkspacesForUser(userId)).filter((membership) => membership.role === "owner" || membership.role === "admin");
-  const rows = await Promise.all(
-    memberships.map(async (membership) => {
-      const [profile, insight, feedbackSummary, review] = await Promise.all([
-        getWorkspacePilotProfile(membership.workspace.id),
-        getPilotInsightsSnapshot(membership.workspace.id, range),
-        getWorkspaceFeedbackSummary(membership.workspace.id),
-        getWeeklyReviewSnapshot(membership.workspace.id),
-      ]);
-
-      return {
-        workspaceId: membership.workspace.id,
-        workspaceName: membership.workspace.name,
+  let rows = await Promise.all(
+    memberships.map((membership) =>
+      buildWorkspacePortfolioRow({
+        workspace: membership.workspace,
         role: membership.role,
-        businessType: membership.workspace.business_type,
-        pilotStatus: profile?.pilot_status ?? "onboarding",
-        customerStage: profile?.customer_stage ?? "trial",
-        caseStudyStatus: profile?.case_study_status ?? "not_started",
-        activeSeats: insight.metrics.activeSeats,
-        leadsCreated: insight.metrics.leadsCreated,
-        leadToDealConversion: insight.metrics.leadToDealConversion,
-        invoicePaymentRate: insight.metrics.invoicePaymentRate,
-        openFeedback: feedbackSummary.open,
-        overdueInvoices: review.topAttention.overdueInvoices,
-        jobsAtRisk: review.topAttention.jobsAtRisk,
-      } satisfies PilotPortfolioRow;
-    }),
+        range,
+      }),
+    ),
   );
 
-  if (!statusFilter || statusFilter === "all") return rows;
-  return rows.filter((row) => row.pilotStatus === statusFilter);
+  if (filters?.pilotStatus && filters.pilotStatus !== "all") rows = rows.filter((row) => row.pilotStatus === filters.pilotStatus);
+  if (filters?.attentionLevel && filters.attentionLevel !== "all") rows = rows.filter((row) => row.attentionLevel === filters.attentionLevel);
+  if (filters?.businessType && filters.businessType !== "all") rows = rows.filter((row) => row.businessType === filters.businessType);
+  if (filters?.followUpStatus && filters.followUpStatus !== "all") rows = rows.filter((row) => row.followUpStatus === filters.followUpStatus);
+  if (filters?.caseStudyOnly) rows = rows.filter((row) => row.caseStudyReadiness.isCandidate);
+
+  rows.sort((a, b) => {
+    const attentionRank: Record<PortfolioAttentionLevel, number> = { at_risk: 0, needs_attention: 1, watch: 2, healthy: 3 };
+    const followUpRank: Record<PortfolioFollowUpStatus, number> = {
+      overdue: 0,
+      due_this_week: 1,
+      unplanned: 2,
+      scheduled: 3,
+      recently_checked_in: 4,
+    };
+    if (attentionRank[a.attentionLevel] !== attentionRank[b.attentionLevel]) {
+      return attentionRank[a.attentionLevel] - attentionRank[b.attentionLevel];
+    }
+    if (followUpRank[a.followUpStatus] !== followUpRank[b.followUpStatus]) {
+      return followUpRank[a.followUpStatus] - followUpRank[b.followUpStatus];
+    }
+    return a.workspaceName.localeCompare(b.workspaceName);
+  });
+
+  return rows;
+}
+
+export async function listPortfolioFeedbackQueue(
+  userId: string,
+  filters?: {
+    importance?: FeedbackImportance | "all";
+    category?: FeedbackCategory | "all";
+    module?: string | "all";
+  },
+) {
+  const memberships = (await getWorkspacesForUser(userId)).filter((membership) => membership.role === "owner" || membership.role === "admin");
+  const workspaceIds = memberships.map((membership) => membership.workspace.id);
+  if (!workspaceIds.length) return [] as PortfolioFeedbackQueueItem[];
+
+  const workspaceMap = new Map(
+    memberships.map((membership) => [
+      membership.workspace.id,
+      { workspaceName: membership.workspace.name, businessType: membership.workspace.business_type },
+    ]),
+  );
+
+  const supabase = await createClient();
+  let query = supabase
+    .from("workspace_feedback_items")
+    .select("id,workspace_id,title,category,importance,related_module,status,follow_up_date,contact_name,created_at")
+    .in("workspace_id", workspaceIds)
+    .order("created_at", { ascending: false });
+
+  if (filters?.importance && filters.importance !== "all") query = query.eq("importance", filters.importance);
+  if (filters?.category && filters.category !== "all") query = query.eq("category", filters.category);
+  if (filters?.module && filters.module !== "all") query = query.eq("related_module", filters.module);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data ?? [])
+    .filter((item) => !["resolved", "wont_fix"].includes(item.status))
+    .map((item) => ({
+      id: item.id,
+      workspaceId: item.workspace_id,
+      workspaceName: workspaceMap.get(item.workspace_id)?.workspaceName ?? item.workspace_id,
+      businessType: workspaceMap.get(item.workspace_id)?.businessType ?? null,
+      title: item.title,
+      category: item.category as FeedbackCategory,
+      importance: item.importance as FeedbackImportance,
+      relatedModule: item.related_module,
+      status: item.status as FeedbackStatus,
+      followUpDate: item.follow_up_date,
+      contactName: item.contact_name,
+      createdAt: item.created_at,
+    }))
+    .sort((a, b) => {
+      const importanceRank: Record<FeedbackImportance, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+      if (importanceRank[a.importance] !== importanceRank[b.importance]) {
+        return importanceRank[a.importance] - importanceRank[b.importance];
+      }
+      if ((a.followUpDate ?? "9999-12-31") !== (b.followUpDate ?? "9999-12-31")) {
+        return (a.followUpDate ?? "9999-12-31").localeCompare(b.followUpDate ?? "9999-12-31");
+      }
+      return b.createdAt.localeCompare(a.createdAt);
+    });
 }

@@ -30,6 +30,7 @@ The `Plan.md` Phases 1–5 roadmap is implemented on this codebase, including po
 - Workspace health + attention surfacing (stalled deals, overdue invoices, at-risk jobs, overdue tasks)
 - Invoice aging bands for collection pressure visibility (current, overdue 1–7, 8–30, 30+ days)
 - Pilot insights route for owner/admin (`/insights`) covering pilot status, customer feedback capture, weekly check-in notes, success metrics, and case-study readiness tracking
+- Founder pilot portfolio route for owner/admin (`/pilots`) covering multi-workspace health, follow-up cadence, action queues, comparison, and case-study candidate surfacing
 
 ## Local setup
 1. Install dependencies:
@@ -76,6 +77,7 @@ Apply files exactly in this order:
 14. `supabase/migrations/202604100004_workspace_branding_settings.sql`
 15. `supabase/migrations/202604100005_workspace_onboarding_state.sql`
 16. `supabase/migrations/202604120003_pilot_learning_layer.sql`
+17. `supabase/migrations/202604130001_pilot_portfolio_follow_up.sql`
 
 > Note: follow the exact filenames above. They reflect the normalized migration history currently merged on `main`.
 
@@ -148,6 +150,35 @@ Apply files exactly in this order:
   - weekly check-in notes with optional linked feedback items
   - operational evidence snapshots stored with each check-in note
   - comparison across accessible workspaces using the existing workspace membership model
+
+### Founder pilot portfolio workflow
+- Owner/admin users can open `/pilots` for a cross-workspace founder/operator cockpit.
+- `/pilots` adds:
+  - deterministic cross-workspace attention levels (`healthy`, `watch`, `needs attention`, `at risk`)
+  - portfolio-level filterable workspace list
+  - founder follow-up cadence tracking using:
+    - latest check-in date
+    - next follow-up date
+    - follow-up status
+    - next follow-up focus note
+  - operator action-center groupings for:
+    - pilots needing check-in
+    - overdue invoice pressure
+    - stalled deals or jobs at risk
+    - critical unresolved feedback
+    - case-study candidates
+  - cross-workspace comparison for a selected set of pilot workspaces
+  - unresolved feedback queue across pilot workspaces
+- Health scoring is deterministic and explainable. It combines:
+  - setup readiness
+  - recent activity and active seats
+  - overdue invoices
+  - stalled deals
+  - jobs at risk
+  - overdue tasks
+  - critical unresolved feedback
+  - founder follow-up cadence
+  - explicit pilot risk status where set
 
 ### Reports behavior
 - Reporting route: `/reports`.
