@@ -24,6 +24,45 @@ export type WorkspaceBrandingSettings = {
   updated_at: string;
 };
 
+export type PilotStatus =
+  | "onboarding"
+  | "active_pilot"
+  | "needs_attention"
+  | "healthy"
+  | "expansion_opportunity"
+  | "at_risk"
+  | "completed";
+
+export type CustomerStage =
+  | "trial"
+  | "active_pilot"
+  | "successful_pilot"
+  | "churn_risk"
+  | "case_study_candidate";
+
+export type CaseStudyStatus =
+  | "not_started"
+  | "collecting_evidence"
+  | "awaiting_permission"
+  | "ready_to_write"
+  | "published"
+  | "not_applicable";
+
+export type WorkspacePilotProfile = {
+  workspace_id: string;
+  pilot_status: PilotStatus;
+  customer_stage: CustomerStage;
+  team_size_estimate: number | null;
+  baseline_process_notes: string | null;
+  measurable_outcome_notes: string | null;
+  testimonial_quote: string | null;
+  permission_to_use_name: boolean;
+  permission_to_use_logo: boolean;
+  case_study_status: CaseStudyStatus;
+  created_at: string;
+  updated_at: string;
+};
+
 export type WorkspaceMember = {
   workspace_id: string;
   user_id: string;
@@ -222,6 +261,65 @@ export type Reminder = {
   updated_at: string;
 };
 
+export type FeedbackCategory =
+  | "pain_point"
+  | "missing_feature"
+  | "confusing_workflow"
+  | "bug_report"
+  | "positive_outcome"
+  | "time_saved"
+  | "customer_quote"
+  | "support_note";
+
+export type FeedbackImportance = "low" | "medium" | "high" | "critical";
+export type FeedbackStatus = "open" | "planned" | "in_progress" | "monitoring" | "resolved" | "wont_fix";
+
+export type WorkspaceFeedbackItem = {
+  id: string;
+  workspace_id: string;
+  title: string;
+  category: FeedbackCategory;
+  note_body: string;
+  importance: FeedbackImportance;
+  related_module: string | null;
+  status: FeedbackStatus;
+  follow_up_date: string | null;
+  contact_name: string | null;
+  evidence_entity_type: string | null;
+  evidence_entity_id: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CheckInConfidenceLevel = "low" | "medium" | "high";
+
+export type WorkspaceCheckInNote = {
+  id: string;
+  workspace_id: string;
+  title: string;
+  note_date: string;
+  customer_summary: string | null;
+  blockers: string | null;
+  wins: string | null;
+  requested_changes: string | null;
+  next_actions: string | null;
+  confidence_level: CheckInConfidenceLevel;
+  evidence_snapshot: Record<string, unknown> | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WorkspaceCheckInFeedbackLink = {
+  workspace_id: string;
+  check_in_note_id: string;
+  feedback_item_id: string;
+  created_at: string;
+};
+
 export type ActivityType =
   | "workspace.created"
   | "lead.created"
@@ -268,13 +366,35 @@ export type ActivityType =
   | "pipeline_stage.archived"
   | "branding.updated"
   | "onboarding.started"
-  | "onboarding.completed";
+  | "onboarding.completed"
+  | "pilot_profile.updated"
+  | "pilot_status.changed"
+  | "case_study.updated"
+  | "feedback.created"
+  | "feedback.updated"
+  | "feedback.status_changed"
+  | "check_in.created"
+  | "check_in.updated";
 
 export type Activity = {
   id: string;
   workspace_id: string;
   actor_user_id: string | null;
-  entity_type: "workspace" | "lead" | "client" | "deal" | "quote" | "invoice" | "payment" | "job" | "task" | "reminder" | "pipeline_stage";
+  entity_type:
+    | "workspace"
+    | "lead"
+    | "client"
+    | "deal"
+    | "quote"
+    | "invoice"
+    | "payment"
+    | "job"
+    | "task"
+    | "reminder"
+    | "pipeline_stage"
+    | "pilot_profile"
+    | "pilot_feedback"
+    | "check_in_note";
   entity_id: string;
   activity_type: ActivityType;
   description: string;
