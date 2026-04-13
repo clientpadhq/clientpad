@@ -29,6 +29,7 @@ The `Plan.md` Phases 1–5 roadmap is implemented on this codebase, including po
 - Weekly review route for owner/admin (`/review`) with deterministic 7-day pilot operations metrics
 - Workspace health + attention surfacing (stalled deals, overdue invoices, at-risk jobs, overdue tasks)
 - Invoice aging bands for collection pressure visibility (current, overdue 1–7, 8–30, 30+ days)
+- Pilot insights route for owner/admin (`/insights`) covering pilot status, customer feedback capture, weekly check-in notes, success metrics, and case-study readiness tracking
 
 ## Local setup
 1. Install dependencies:
@@ -60,22 +61,23 @@ The `Plan.md` Phases 1–5 roadmap is implemented on this codebase, including po
 ## Migration order (forward-safe)
 Apply files exactly in this order:
 1. `supabase/migrations/202604090001_init_phase1.sql`
-2. `supabase/migrations/202604090002_revenue_flow.sql`
-3. `supabase/migrations/202604090002_active_workspace_selection.sql`
-4. `supabase/migrations/202604090003_execution_workflow.sql`
-5. `supabase/migrations/202604090004_ai_layer.sql`
-6. `supabase/migrations/202604090005_phase5_polish.sql`
-7. `supabase/migrations/202604090006_workspace_scoped_fks.sql`
-8. `supabase/migrations/202604090006_remove_workspace_webhook_hash.sql`
-9. `supabase/migrations/202604090006_invite_acceptance_guard.sql`
-10. `supabase/migrations/202604090006_owner_role_hardening.sql`
-11. `supabase/migrations/202604090006_document_number_counters.sql`
-12. `supabase/migrations/202604100001_workspace_onboarding_state.sql`
-13. `supabase/migrations/202604100001_workspace_branding_settings.sql`
-14. `supabase/migrations/202604100001_pipeline_stage_archive_support.sql`
-15. `supabase/migrations/202604100001_onboarding_presets.sql`
+2. `supabase/migrations/202604090002_active_workspace_selection.sql`
+3. `supabase/migrations/202604090003_revenue_flow.sql`
+4. `supabase/migrations/202604090004_execution_workflow.sql`
+5. `supabase/migrations/202604090005_ai_layer.sql`
+6. `supabase/migrations/202604090006_phase5_polish.sql`
+7. `supabase/migrations/202604090007_document_number_counters.sql`
+8. `supabase/migrations/202604090008_invite_acceptance_guard.sql`
+9. `supabase/migrations/202604090009_owner_role_hardening.sql`
+10. `supabase/migrations/202604090010_remove_workspace_webhook_hash.sql`
+11. `supabase/migrations/202604090011_workspace_scoped_fks.sql`
+12. `supabase/migrations/202604100002_onboarding_presets.sql`
+13. `supabase/migrations/202604100003_pipeline_stage_archive_support.sql`
+14. `supabase/migrations/202604100004_workspace_branding_settings.sql`
+15. `supabase/migrations/202604100005_workspace_onboarding_state.sql`
+16. `supabase/migrations/202604120003_pilot_learning_layer.sql`
 
-> Note: several hardening migrations share the `202604090006` prefix. Preserve the order above for deterministic local bootstrap.
+> Note: follow the exact filenames above. They reflect the normalized migration history currently merged on `main`.
 
 ## Operational notes
 ### Workspace switching
@@ -122,6 +124,30 @@ Apply files exactly in this order:
   - overdue task and overdue invoice attention lists
   - invoice aging bands for collection pressure follow-up
 - AI weekly summary is optional and secondary to deterministic metrics.
+
+### Pilot learning workflow
+- Owner/admin users can open `/insights` for the internal pilot-management layer.
+- Deterministic success metrics support:
+  - last 7 days
+  - last 30 days
+  - this month
+- Metrics tracked include:
+  - leads created
+  - lead-to-deal conversion
+  - quotes sent (from quote send/accept activity)
+  - invoice payment rate
+  - average days to payment record when payment timestamps exist
+  - jobs completed on time
+  - active seats in window
+  - reminder completion rate
+  - task completion rate
+- `/insights` also supports:
+  - workspace pilot status management
+  - customer stage and case-study readiness fields
+  - lightweight customer feedback capture
+  - weekly check-in notes with optional linked feedback items
+  - operational evidence snapshots stored with each check-in note
+  - comparison across accessible workspaces using the existing workspace membership model
 
 ### Reports behavior
 - Reporting route: `/reports`.

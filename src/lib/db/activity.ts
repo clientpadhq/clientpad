@@ -4,7 +4,21 @@ import type { ActivityType } from "@/types/database";
 export async function logActivity(params: {
   workspaceId: string;
   actorUserId?: string | null;
-  entityType: "workspace" | "lead" | "client" | "deal" | "quote" | "invoice" | "payment" | "job" | "task" | "reminder" | "pipeline_stage";
+  entityType:
+    | "workspace"
+    | "lead"
+    | "client"
+    | "deal"
+    | "quote"
+    | "invoice"
+    | "payment"
+    | "job"
+    | "task"
+    | "reminder"
+    | "pipeline_stage"
+    | "pilot_profile"
+    | "pilot_feedback"
+    | "check_in_note";
   entityId: string;
   type: ActivityType;
   description: string;

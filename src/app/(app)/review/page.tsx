@@ -7,16 +7,19 @@ import { requireWorkspace } from "@/lib/rbac/permissions";
 import { formatNaira } from "@/lib/revenue/calculations";
 import { getWeeklyReviewSnapshot, STALLED_DEAL_DAYS } from "@/lib/db/review";
 import { getWorkspaceAISettings, listAIGenerations } from "@/lib/db/ai";
+import { getWorkspaceFeedbackSummary, getWorkspacePilotProfile } from "@/lib/db/pilot";
 import { generateWeeklyDigestAction } from "@/lib/actions/ai";
 
 export default async function ReviewPage() {
   const { workspace } = await requireWorkspace("admin");
 
-  const [review, readiness, aiSettings, aiRows] = await Promise.all([
+  const [review, readiness, aiSettings, aiRows, feedbackSummary, pilotProfile] = await Promise.all([
     getWeeklyReviewSnapshot(workspace.id),
     getSetupReadiness(workspace.id),
     getWorkspaceAISettings(workspace.id),
     listAIGenerations(workspace.id),
+    getWorkspaceFeedbackSummary(workspace.id),
+    getWorkspacePilotProfile(workspace.id),
   ]);
 
   const digestRows = aiRows.filter((row) => row.generation_type === "weekly_digest").slice(0, 2);
@@ -60,6 +63,8 @@ export default async function ReviewPage() {
           <li>Attention now: {review.topAttention.stalledDeals} stalled deals, {review.topAttention.overdueInvoices} overdue invoices, {review.topAttention.jobsAtRisk} jobs at risk.</li>
           <li>Operational load: {review.topAttention.openTasks} open tasks, {review.topAttention.openReminders} open reminders.</li>
           <li>Ownership gaps: {review.topAttention.unassignedJobs} unassigned jobs, {review.topAttention.unassignedTasks} unassigned tasks.</li>
+          <li>Pilot status: {pilotProfile?.pilot_status ?? "onboarding"} • customer stage: {pilotProfile?.customer_stage ?? "trial"}.</li>
+          <li>Pilot learning: {feedbackSummary.open} open feedback items, {feedbackSummary.criticalOpen} critical open, {feedbackSummary.followUpDue} follow-up due.</li>
         </ul>
         <div className="mt-2 flex flex-wrap gap-2 text-xs">
           <Link className="rounded border border-slate-300 px-2 py-1" href="/settings">Open setup checklist</Link>
@@ -67,6 +72,7 @@ export default async function ReviewPage() {
           <Link className="rounded border border-slate-300 px-2 py-1" href="/invoices?status=overdue">Open overdue invoices</Link>
           <Link className="rounded border border-slate-300 px-2 py-1" href="/jobs">Open jobs at risk</Link>
           <Link className="rounded border border-slate-300 px-2 py-1" href="/tasks">Open overdue tasks</Link>
+          <Link className="rounded border border-slate-300 px-2 py-1" href="/insights">Open pilot insights</Link>
         </div>
       </Card>
 
