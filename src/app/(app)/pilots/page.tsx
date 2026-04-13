@@ -322,7 +322,7 @@ export default async function PilotsPage({
         </form>
       </Card>
 
-      <div className="grid gap-3 xl:grid-cols-3">
+      <div className="grid gap-3 xl:grid-cols-2">
         <PortfolioActionList
           title="Pilots needing check-in"
           rows={actionCenter.followUp}
@@ -337,12 +337,22 @@ export default async function PilotsPage({
           path="/invoices?status=overdue"
           subtitle="These workspaces need payment follow-up support."
         />
+      </div>
+
+      <div className="grid gap-3 xl:grid-cols-2">
         <PortfolioActionList
-          title="Workflow bottlenecks"
-          rows={actionCenter.stalledDeals.length > 0 ? actionCenter.stalledDeals : actionCenter.jobsAtRisk}
-          empty="No stalled deals or jobs at risk right now."
+          title="Stalled deals"
+          rows={actionCenter.stalledDeals}
+          empty="No stalled deals right now."
           path="/review"
-          subtitle="Stalled sales or execution issues are a direct pilot risk."
+          subtitle="Stalled sales are a direct pilot risk."
+        />
+        <PortfolioActionList
+          title="Jobs at risk"
+          rows={actionCenter.jobsAtRisk}
+          empty="No jobs at risk right now."
+          path="/review"
+          subtitle="Execution issues delay pilot success evidence."
         />
       </div>
 

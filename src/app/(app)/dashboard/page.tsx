@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AIHistoryList } from "@/components/ai/ai-history-list";
 import { ReminderList } from "@/components/execution/reminder-list";
 import { Card } from "@/components/ui/card";
@@ -9,6 +10,7 @@ import { createReminderAction } from "@/lib/actions/execution";
 import { listAIGenerations } from "@/lib/db/ai";
 import { getDashboardStats } from "@/lib/db/dashboard";
 import { getExecutionMetrics, listOpenReminders } from "@/lib/db/execution";
+import { listPilotWorkspacePortfolio } from "@/lib/db/pilot";
 import { getRevenueMetrics } from "@/lib/db/revenue";
 import { getWeeklyReviewSnapshot } from "@/lib/db/review";
 import { getSetupReadiness } from "@/lib/onboarding/readiness";
@@ -17,7 +19,7 @@ import { formatNaira } from "@/lib/revenue/calculations";
 
 export default async function DashboardPage() {
   const { workspace, user, role } = await requireWorkspace();
-  const [stats, revenue, execution, reminders, digestRows, readiness, weeklyReview] = await Promise.all([
+  const [stats, revenue, execution, reminders, digestRows, readiness, weeklyReview, portfolio] = await Promise.all([
     getDashboardStats(workspace.id),
     getRevenueMetrics(workspace.id),
     getExecutionMetrics(workspace.id, user.id),
@@ -25,11 +27,37 @@ export default async function DashboardPage() {
     listAIGenerations(workspace.id),
     canManageSettings(role) ? getSetupReadiness(workspace.id) : Promise.resolve(null),
     canManageSettings(role) ? getWeeklyReviewSnapshot(workspace.id) : Promise.resolve(null),
+    canManageSettings(role) ? listPilotWorkspacePortfolio(user.id, "7d") : Promise.resolve([]),
   ]);
+
+  const atRiskCount = portfolio.filter((row) => row.attentionLevel === "at_risk" || row.attentionLevel === "needs_attention").length;
 
   return (
     <div className="space-y-4">
       <PageHeader title="Dashboard" description="Track lead, revenue, and execution operations." />
+
+      {portfolio.length > 0 ? (
+        <Card title="Pilot Portfolio Cockpit">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm text-slate-600">
+                You are managing <span className="font-semibold text-slate-900">{portfolio.length}</span> pilot workspaces.
+              </p>
+              {atRiskCount > 0 ? (
+                <p className="mt-1 text-sm text-red-700">
+                  <span className="font-semibold">{atRiskCount}</span> workspaces require your attention this week.
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-emerald-700">All pilot workspaces appear healthy or on track.</p>
+              )}
+            </div>
+            <Link href="/pilots" className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">
+              Open Portfolio
+            </Link>
+          </div>
+        </Card>
+      ) : null}
+
       {readiness ? <SetupReadinessCard readiness={readiness} /> : null}
       {weeklyReview ? (
         <Card title="Workspace Health This Week">

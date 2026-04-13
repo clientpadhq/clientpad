@@ -153,6 +153,7 @@ Apply files exactly in this order:
 
 ### Founder pilot portfolio workflow
 - Owner/admin users can open `/pilots` for a cross-workspace founder/operator cockpit.
+- A "Pilot Portfolio Cockpit" summary and link is visible on the Dashboard for owner/admin users.
 - `/pilots` adds:
   - deterministic cross-workspace attention levels (`healthy`, `watch`, `needs attention`, `at risk`)
   - portfolio-level filterable workspace list
