@@ -4,6 +4,7 @@ import { SetupReadinessCard } from "@/components/onboarding/setup-readiness-card
 import { ImportCsvCard } from "@/components/settings/import-csv-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { updateAISettingsAction } from "@/lib/actions/ai";
+import { updateWhatsAppSettingsAction } from "@/lib/actions/whatsapp";
 import {
   createPipelineStageAction,
   movePipelineStageAction,
@@ -24,6 +25,7 @@ import { getWorkspaceAISettings, listAIGenerations } from "@/lib/db/ai";
 import { listPipelineStages } from "@/lib/db/deals";
 import { getPaymentSettings } from "@/lib/db/revenue";
 import { getWorkspaceBrandingSettings, getWorkspaceInvites, getWorkspaceMembers } from "@/lib/db/workspace";
+import { getWorkspaceWhatsAppSettings } from "@/lib/db/whatsapp";
 import { WORKSPACE_PRESETS } from "@/lib/onboarding/presets";
 import { getSetupReadiness } from "@/lib/onboarding/readiness";
 import { canManageSettings, getAssignableRoles, requireWorkspace } from "@/lib/rbac/permissions";
@@ -46,7 +48,7 @@ export default async function SettingsPage({
   const params = await searchParams;
   const assignableRoles = getAssignableRoles(context.role);
 
-  const [members, invites, paymentSettings, brandingSettings, aiSettings, aiRows, readiness, pipelineStages] = await Promise.all([
+  const [members, invites, paymentSettings, brandingSettings, aiSettings, aiRows, readiness, pipelineStages, whatsappSettings] = await Promise.all([
     getWorkspaceMembers(context.workspace.id),
     getWorkspaceInvites(context.workspace.id),
     getPaymentSettings(context.workspace.id),
@@ -55,6 +57,7 @@ export default async function SettingsPage({
     listAIGenerations(context.workspace.id),
     canManageSettings(context.role) ? getSetupReadiness(context.workspace.id) : Promise.resolve(null),
     listPipelineStages(context.workspace.id, { includeInactive: true }),
+    getWorkspaceWhatsAppSettings(context.workspace.id),
   ]);
 
   const transferCandidates = members.filter((member) => member.user_id !== context.user.id);
@@ -298,6 +301,41 @@ export default async function SettingsPage({
       <Card title="Data Import (CSV)">
         <ImportCsvCard />
       </Card>
+
+      <div id="whatsapp-configuration">
+        <Card title="WhatsApp Business Configuration">
+          {canManageSettings(context.role) ? (
+            <form action={updateWhatsAppSettingsAction} className="space-y-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="enabled" defaultChecked={whatsappSettings?.enabled ?? false} className="h-4 w-4" />
+                Enable WhatsApp messaging
+              </label>
+              <input name="phone_number_id" defaultValue={whatsappSettings?.phone_number_id ?? ""} placeholder="WhatsApp Phone Number ID" />
+              <input name="business_account_id" defaultValue={whatsappSettings?.business_account_id ?? ""} placeholder="WhatsApp Business Account ID" />
+              <select name="default_template_language" defaultValue={whatsappSettings?.default_template_language ?? "en_US"}>
+                <option value="en_US">English (US)</option>
+                <option value="en_GB">English (UK)</option>
+                <option value="ar">Arabic</option>
+                <option value="fr">French</option>
+                <option value="ha">Hausa</option>
+                <option value="ig">Igbo</option>
+                <option value="yo">Yoruba</option>
+              </select>
+              <p className="rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                Configure your WhatsApp Business API credentials in environment variables.
+              </p>
+              <button className="w-full bg-green-700 text-white">Save WhatsApp settings</button>
+            </form>
+          ) : (
+            <p className="text-sm text-slate-600">Only owners/admins can edit WhatsApp settings.</p>
+          )}
+          {whatsappSettings?.enabled && (
+            <div className="mt-3 rounded border border-green-200 bg-green-50 p-3 text-xs text-green-800">
+              WhatsApp messaging is enabled for this workspace.
+            </div>
+          )}
+        </Card>
+      </div>
 
       <div id="ai-controls">
         <Card title="AI Controls">

@@ -24,6 +24,18 @@ export type WorkspaceBrandingSettings = {
   updated_at: string;
 };
 
+export type WorkspaceWhatsAppConfig = {
+  id: string;
+  workspace_id: string;
+  phone_number_id: string | null;
+  business_account_id: string | null;
+  enabled: boolean;
+  default_template_language: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
 export type WorkspaceMember = {
   workspace_id: string;
   user_id: string;
@@ -255,6 +267,8 @@ export type ActivityType =
   | "reminder.created"
   | "reminder.dismissed"
   | "reminder.completed"
+  | "reminder.delivery_sent"
+  | "reminder.delivery_failed"
   | "invoice.overdue"
   | "follow_up.overdue"
   | "invite.accepted"
