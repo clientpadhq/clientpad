@@ -470,6 +470,14 @@ Nail one vertical workflow deeply before broadening to adjacent service categori
 - Performance optimization and reporting enhancements
 - Preparation for selected advanced features based on validated demand
 
+## Phase 6: WhatsApp Business Integration
+- Direct WhatsApp message sending via Business API (not just share links)
+- Inbound message capture via webhook
+- Message status tracking (sent, delivered, read)
+- Message history per contact/lead/client
+- Template message support for automated workflows
+- WhatsApp Business configuration per workspace
+
 ---
 
 ## 17) Risks and Product Challenges
