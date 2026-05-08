@@ -8,10 +8,14 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "dist",
-    "rootDir": "src",
+    "baseUrl": ".",
     "strict": true,
     "skipLibCheck": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "paths": {
+      "@abdulmuiz44/clientpad-core": ["../clientpad-core/src/index.ts"],
+      "@abdulmuiz44/clientpad-sdk": ["../sdk/src/index.ts"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["dist", "node_modules"]

@@ -297,3 +297,31 @@ const invalidPaymentWebhookResponse = await paymentHandler(
   })
 );
 assert.equal(invalidPaymentWebhookResponse.status, 401);
+
+const flutterwaveWebhookRaw = JSON.stringify({
+  event: "charge.completed",
+  data: {
+    status: "successful",
+    tx_ref: "flw_ref_1",
+    id: 67890,
+    amount: 50000,
+    currency: "NGN",
+    customer: { email: "bob@example.com" },
+  },
+});
+const flutterwaveHandler = createClientPadHandler({
+  db,
+  apiKeyPepper: pepper,
+  payments: {
+    flutterwaveWebhookSecret: "fw_secret",
+  },
+});
+const flutterwaveWebhookResponse = await flutterwaveHandler(
+  new Request("https://example.com/payments/flutterwave/webhook", {
+    method: "POST",
+    headers: { "verif-hash": "fw_secret", "content-type": "application/json" },
+    body: flutterwaveWebhookRaw,
+  })
+);
+assert.equal(flutterwaveWebhookResponse.status, 200);
+assert.deepEqual(await flutterwaveWebhookResponse.json(), { received: true });

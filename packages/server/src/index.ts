@@ -38,6 +38,7 @@ export type ApiKeyPrincipal = {
 export type ServiceBusinessFlowConfig = Record<string, unknown>;
 
 export type ClientPadWhatsAppConfig = {
+  workspaceId: string;
   verifyToken: string;
   accessToken: string;
   phoneNumberId: string;
@@ -470,6 +471,8 @@ export class ClientPadServer {
       defaultCountryCode: this.whatsapp.defaultCountryCode ?? "+234",
       db: this.db,
     });
+  }
+
   private async handlePaymentWebhook(request: Request, provider: PaymentProvider) {
     const rawBody = await request.text();
     let webhook: VerifiedPaymentWebhook;
