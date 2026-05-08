@@ -1,0 +1,33 @@
+{
+  "name": "@abdulmuiz44/clientpad-sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for ClientPad public APIs.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "clientpad",
+    "sdk",
+    "business-infrastructure",
+    "api-client",
+    "typescript",
+    "open-source"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node test/sdk.test.mjs",
+    "prepack": "npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

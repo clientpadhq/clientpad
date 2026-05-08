@@ -1,0 +1,33 @@
+{
+  "name": "@abdulmuiz44/clientpad-cli",
+  "version": "0.1.0",
+  "description": "Open-source ClientPad infrastructure CLI for PostgreSQL-backed business APIs.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "clientpad": "bin/clientpad.mjs"
+  },
+  "files": [
+    "bin",
+    "migrations",
+    "templates",
+    "README.md"
+  ],
+  "keywords": [
+    "clientpad",
+    "business-infrastructure",
+    "crm",
+    "postgresql",
+    "api-keys",
+    "open-source"
+  ],
+  "dependencies": {
+    "pg": "^8.13.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

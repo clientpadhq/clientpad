@@ -1,327 +1,119 @@
 # ClientPad
 
-ClientPad is a WhatsApp-first CRM + lead-to-cash + execution workspace for Nigerian service businesses.
+ClientPad is free, open-source business infrastructure for building lead and client workflows into any application.
 
-## Release candidate scope
-The `Plan.md` Phases 1–5 roadmap is implemented on this codebase, including post-V1 hardening for:
-- Workspace-scoped relational link enforcement
-- Flutterwave webhook verification + invoice matching hardening
-- WhatsApp share redirect validation
-- Global Flutterwave webhook secret alignment
-- Invite acceptance expiry guard
-- Owner role hardening + explicit ownership transfer
-- Atomic quote/invoice numbering via DB counters
-- Workspace AI defaults + monthly cap enforcement
-- Reports hardening and conversion metric clarification
-- Persistent active workspace selection + workspace switcher
+This repository ships installable packages instead of a hosted product with subscriptions. Developers bring their own PostgreSQL database, deploy wherever they want, and use API keys as the gateway for application and integration access.
 
-## Pilot onboarding readiness additions
-- Guided, resumable onboarding flow for owner/admin users at `/onboarding`
-- Workspace branding defaults (logo URL, contact details, footer, quote/invoice defaults) used by quote/invoice PDF generation
-- Pipeline stage management in Settings (create, rename, reorder, archive/restore)
-- Vertical presets for:
-  - Solar / CCTV installers
-  - Printing businesses
-  - Design / agency providers
-- CSV import for leads and clients with templates + dry-run preview
-- CSV export for leads, clients, deals, and invoices
-- Setup readiness card shown to owner/admin to highlight missing launch-critical setup items
-- Weekly review route for owner/admin (`/review`) with deterministic 7-day pilot operations metrics
-- Workspace health + attention surfacing (stalled deals, overdue invoices, at-risk jobs, overdue tasks)
-- Invoice aging bands for collection pressure visibility (current, overdue 1–7, 8–30, 30+ days)
-- Pilot insights route for owner/admin (`/insights`) covering pilot status, customer feedback capture, weekly check-in notes, success metrics, and case-study readiness tracking
-- Founder pilot portfolio route for owner/admin (`/pilots`) covering multi-workspace health, follow-up cadence, action queues, comparison, and case-study candidate surfacing
+## Packages
 
-## WhatsApp Business API Integration
-- Direct WhatsApp message sending via Business API (not just share links)
-- Inbound message capture via webhook
-- Message status tracking (sent, delivered, read)
-- Message history per contact/lead/client
-- Send endpoint: `POST /api/whatsapp/send`
-- Webhook endpoint: `POST /api/whatsapp/webhook`
-- Internal WhatsApp workspace route: `/whatsapp` with `/whatsapp/[conversationId]` thread views
-- Conversation assignment/status, CRM linking, quick lead/client creation, and reply-from-thread workflow
+- `@abdulmuiz44/clientpad-core`: shared TypeScript types and dependency-free protocol utilities.
+- `@abdulmuiz44/clientpad-cli`: local project setup, SQL migrations, and API key creation.
+- `@abdulmuiz44/clientpad-server`: fetch-standard public API handler for leads and clients.
+- `@abdulmuiz44/clientpad-sdk`: TypeScript SDK for consuming ClientPad public APIs from apps, workers, and scripts.
 
-## Local setup
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Copy env file:
-   ```bash
-   cp .env.example .env.local
-   ```
-3. Fill `.env.local` values.
-4. Run migrations in the exact order below.
-5. Start the app:
-   ```bash
-   npm run dev
-   ```
+## Install
 
-## Public npm publishing
-The root ClientPad repository is the full Next.js application and should **not** be published wholesale. The only publishable package in this repo is `@abdulmuiz44/clientpad-core`, a narrow core metadata/utilities package located at `packages/clientpad-core`.
-
-`@abdulmuiz44/clientpad-core` currently exports only:
-
-- `CLIENTPAD_CORE_PACKAGE_NAME`
-- `CLIENTPAD_APP_NAME`
-- `ClientPadCoreInfo`
-- `getClientPadCoreInfo()`
-
-Authentication for publishing to npm should use your npm login or a publish-only npm token supplied outside the committed root `.npmrc`. Do not commit a real token. For token-based publishing, export `NPM_TOKEN` and inject it into a temporary npm user config only for the publish command:
 ```bash
-export NPM_TOKEN=<your_npm_token>
-printf "//registry.npmjs.org/:_authToken=${NPM_TOKEN}\n" > /tmp/clientpad-npmrc
+pnpm add @abdulmuiz44/clientpad-core @abdulmuiz44/clientpad-server @abdulmuiz44/clientpad-sdk
+pnpm add -D @abdulmuiz44/clientpad-cli
 ```
 
-Build and typecheck the publishable package with npm:
+For a global CLI install:
+
 ```bash
-npm --prefix packages/clientpad-core run build
-npm --prefix packages/clientpad-core run typecheck
+pnpm install -g @abdulmuiz44/clientpad-cli
+clientpad help
 ```
 
-Preview the final package contents before publishing:
+## Quick Start
+
+Create a config and run migrations:
+
 ```bash
-npm pack ./packages/clientpad-core --dry-run
+clientpad init
+clientpad migrate
 ```
 
-Publish the package with npm:
+Create a workspace API key:
+
 ```bash
-npm publish ./packages/clientpad-core --userconfig /tmp/clientpad-npmrc
+clientpad api-key create --workspace-id <workspace-id> --name "Local app"
 ```
 
-Publish the package with pnpm:
-```bash
-pnpm --dir packages/clientpad-core publish --config.userconfig=/tmp/clientpad-npmrc
-```
+Use the SDK from an app:
 
-Install the package with npm:
-```bash
-npm install @abdulmuiz44/clientpad-core
-```
-
-Install the package with pnpm:
-```bash
-pnpm add @abdulmuiz44/clientpad-core
-```
-
-Consumer import example:
 ```ts
-import {
-  CLIENTPAD_APP_NAME,
-  CLIENTPAD_CORE_PACKAGE_NAME,
-  getClientPadCoreInfo,
-  type ClientPadCoreInfo,
-} from "@abdulmuiz44/clientpad-core";
+import { ClientPad } from "@abdulmuiz44/clientpad-sdk";
 
-const coreInfo: ClientPadCoreInfo = getClientPadCoreInfo();
+const clientpad = new ClientPad({
+  baseUrl: "https://example.com/api/public/v1",
+  apiKey: process.env.CLIENTPAD_API_KEY!,
+});
+
+await clientpad.leads.create({
+  name: "Ada Customer",
+  phone: "+234...",
+  source: "Website",
+});
 ```
 
-Limitation: the package only exposes the core metadata/utilities from `packages/clientpad-core/src/index.ts`; it does not expose or bundle the ClientPad Next.js app.
+Expose the public API from any fetch-compatible server runtime:
 
-## Required environment variables
-- `NEXT_PUBLIC_APP_URL`
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `FLUTTERWAVE_SECRET_KEY`
-- `FLUTTERWAVE_WEBHOOK_HASH`
-- `AI_PROVIDER` (default: `mistral`)
-- `MISTRAL_API_KEY`
-- `MISTRAL_MODEL` (default: `mistral-small-latest`)
-- `FOLLOW_UP_AUTOMATION_TOKEN` (required for `/api/automation/follow-ups`)
-- `FOLLOW_UP_DELIVERY_WEBHOOK_URL` (destination webhook for automated follow-up delivery)
-- `FOLLOW_UP_DELIVERY_WEBHOOK_TOKEN` (optional bearer token sent to delivery webhook)
-- `WHATSAPP_PHONE_NUMBER_ID` (WhatsApp Business phone number ID)
-- `WHATSAPP_BUSINESS_ACCOUNT_ID` (WhatsApp Business account ID)
-- `WHATSAPP_ACCESS_TOKEN` (WhatsApp API access token)
-- `WHATSAPP_WEBHOOK_VERIFY_TOKEN` (verify token for webhook validation)
-- `WHATSAPP_DEFAULT_WORKSPACE_ID` (optional fallback workspace for webhook payloads when no `workspace_whatsapp_config.phone_number_id` match exists)
+```ts
+import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
 
-## Migration order (forward-safe)
-Apply files exactly in this order:
-1. `supabase/migrations/202604090001_init_phase1.sql`
-2. `supabase/migrations/202604090002_active_workspace_selection.sql`
-3. `supabase/migrations/202604090003_revenue_flow.sql`
-4. `supabase/migrations/202604090004_execution_workflow.sql`
-5. `supabase/migrations/202604090005_ai_layer.sql`
-6. `supabase/migrations/202604090006_phase5_polish.sql`
-7. `supabase/migrations/202604090007_document_number_counters.sql`
-8. `supabase/migrations/202604090008_invite_acceptance_guard.sql`
-9. `supabase/migrations/202604090009_owner_role_hardening.sql`
-10. `supabase/migrations/202604090010_remove_workspace_webhook_hash.sql`
-11. `supabase/migrations/202604090011_workspace_scoped_fks.sql`
-12. `supabase/migrations/202604100002_onboarding_presets.sql`
-13. `supabase/migrations/202604100003_pipeline_stage_archive_support.sql`
-14. `supabase/migrations/202604100004_workspace_branding_settings.sql`
-15. `supabase/migrations/202604100005_workspace_onboarding_state.sql`
-16. `supabase/migrations/202604120001_workspace_creation_rls_fix.sql`
-17. `supabase/migrations/202604120002_workspace_creator_select_policy.sql`
-18. `supabase/migrations/202604120003_pilot_learning_layer.sql`
-19. `supabase/migrations/202604130001_pilot_portfolio_follow_up.sql`
-20. `supabase/migrations/202605010001_whatsapp_layer.sql`
-21. `supabase/migrations/202605080001_whatsapp_conversation_workspace.sql`
+export const handler = createClientPadHandler({
+  databaseUrl: process.env.DATABASE_URL!,
+  apiKeyPepper: process.env.API_KEY_PEPPER!,
+});
+```
 
-> Note: apply `202605080001_whatsapp_conversation_workspace.sql` after the merged WhatsApp Business layer because it adds conversation threading, assignment/status metadata, RLS policies, and `conversation_id` back-references for existing `whatsapp_messages`.
+## Public API
 
-## Operational notes
-### Workspace switching
-- Active workspace is persisted in `profiles.active_workspace_id`.
-- The top bar switcher updates active workspace server-side.
-- If a user has no active workspace selected, server fallback picks an available membership and persists it.
+The first stable API surface is versioned under `/api/public/v1`:
 
-### Invites and ownership transfer
-- Owners/admins can invite members.
-- Expired invites are marked `expired` and cannot be accepted.
-- Ownership transfer is explicit and only owner-initiated.
-- Owners cannot self-demote through role edit; transfer flow must be used.
+- `GET /leads`
+- `POST /leads`
+- `GET /clients`
+- `POST /clients`
 
-### Payments and webhooks
-- Invoice payment links are generated per invoice.
-- Flutterwave webhook endpoint:
-  - `POST /api/webhooks/flutterwave`
-- Webhook verifies `verif-hash` against global `FLUTTERWAVE_WEBHOOK_HASH`.
-- Verified webhook updates payment records and recalculates invoice amounts/status.
+API keys are sent with:
 
-### AI behavior and degradation
-- AI outputs are review- only drafts/suggestions.
-- If AI provider config is missing, disabled, or cap is reached, requests degrade gracefully and are still logged in `ai_generations`.
-- Workspace-level AI settings include provider/model/default enablement and monthly cap.
+```text
+Authorization: Bearer <api_key>
+```
 
-### WhatsApp Business API
-- Direct message sending via WhatsApp Business API (not just share links)
-- Send endpoint: `POST /api/whatsapp/send` (requires workspace membership)
-- Webhook endpoint: `POST /api/whatsapp/webhook` (receives inbound messages + status updates)
-- Message history stored in `whatsapp_messages` and grouped deterministically into `whatsapp_conversations` by workspace + remote phone/wa_id.
-- Supports status tracking: sent, delivered, read, failed
-- Workspace users can triage `/whatsapp` by open, pending, resolved, unassigned, mine, linked/unlinked, and unread queues.
-- Thread views support manual assignment, open/pending/resolved handling, linking to leads/clients/deals, quick lead/client creation with WhatsApp source notes, and replies through the existing send infrastructure.
-- Webhook workspace resolution first checks `workspace_whatsapp_config.phone_number_id`; `WHATSAPP_DEFAULT_WORKSPACE_ID` is only a fallback for legacy/dev payloads.
+List responses return:
 
-### Automated follow-up delivery
-- Dispatch endpoint:
-  - `POST /api/automation/follow-ups`
-- Endpoint requires `Authorization: Bearer <FOLLOW_UP_AUTOMATION_TOKEN>`.
-- Optional request body:
-  - `workspace_id` to target one workspace
-  - `batch_size` (1-200, default 50)
-- The dispatcher:
-  - generates system reminders before dispatching
-  - sends payloads to `FOLLOW_UP_DELIVERY_WEBHOOK_URL`
-  - writes delivery metadata to reminder `metadata.delivery` (`last_status`, retries, next delivery time)
-  - logs delivery audit events in `activities` (`reminder.delivery_sent`, `reminder.delivery_failed`)
+```ts
+{ data: T[]; pagination: { limit: number; offset: number } }
+```
 
-### Onboarding, setup, and data portability
-- Onboarding route (`/onboarding`) is workspace-aware and resumable.
-- Presets are optional and can be applied again from Settings.
-- CSV import templates:
-  - `public/templates/leads-import-template.csv`
-  - `public/templates/clients-import-template.csv`
-- CSV exports are available via:
-  - `/api/exports/leads`
-  - `/api/exports/clients`
-  - `/api/exports/deals`
-  - `/api/exports/invoices`
+Create responses return:
 
-### Pilot success review workflow
-- Owner/admin users can open `/review` for a weekly operational review window.
-- The review page is deterministic-first and includes:
-  - leads/deals/quotes/invoices/jobs/tasks/reminders weekly metrics
-  - stalled deal detection (no deal update for 14+ days, excluding closed stages)
-  - jobs at risk (blocked, overdue, or due within 3 days while not started)
-  - overdue task and overdue invoice attention lists
-  - invoice aging bands for collection pressure follow-up
-- AI weekly summary is optional and secondary to deterministic metrics.
+```ts
+{ data: { id: string } }
+```
 
-### Pilot learning workflow
-- Owner/admin users can open `/insights` for the internal pilot-management layer.
-- Deterministic success metrics support:
-  - last 7 days
-  - last 30 days
-  - this month
-- Metrics tracked include:
-  - leads created
-  - lead-to-deal conversion
-  - quotes sent (from quote send/accept activity)
-  - invoice payment rate
-  - average days to payment record when payment timestamps exist
-  - jobs completed on time
-  - active seats in window
-  - reminder completion rate
-  - task completion rate
-- `/insights` also supports:
-  - workspace pilot status management
-  - customer stage and case-study readiness fields
-  - lightweight customer feedback capture
-  - weekly check-in notes with optional linked feedback items
-  - operational evidence snapshots stored with each check-in note
-  - comparison across accessible workspaces using the existing workspace membership model
+## Development
 
-### Founder pilot portfolio workflow
-- Owner/admin users can open `/pilots` for a cross-workspace founder/operator cockpit.
-- A "Pilot Portfolio Cockpit" summary and link is visible on the Dashboard for owner/admin users.
-- `/pilots` adds:
-  - deterministic cross-workspace attention levels (`healthy`, `watch`, `needs attention`, `at risk`)
-  - portfolio-level filterable workspace list
-  - founder follow-up cadence tracking using:
-    - latest check-in date
-    - next follow-up date
-    - follow-up status
-    - next follow-up focus note
-  - operator action-center groupings for:
-    - pilots needing check-in
-    - overdue invoice pressure
-    - stalled deals or jobs at risk
-    - critical unresolved feedback
-    - case-study candidates
-  - cross-workspace comparison for a selected set of pilot workspaces
-  - unresolved feedback queue across pilot workspaces
-- Health scoring is deterministic and explainable. It combines:
-  - setup readiness
-  - recent activity and active seats
-  - overdue invoices
-  - stalled deals
-  - jobs at risk
-  - overdue tasks
-  - critical unresolved feedback
-  - founder follow-up cadence
-  - explicit pilot risk status where set
-
-  ## Production Runbook & Diagnostics
-
-  ### Deployment Prerequisites
-  1. **Critical Env Vars**: Ensure all required environment variables are set in your production environment (Netlify/Vercel/etc.).
-  2. **Migration Order**: Follow the exact migration sequence provided above.
-  3. **Webhook Verification**: Configure `FLUTTERWAVE_WEBHOOK_HASH` and point your Flutterwave dashboard to `[YOUR_APP_URL]/api/webhooks/flutterwave`.
-
-  ### System Health & Debugging
-  - **Healthcheck**: Access `[YOUR_APP_URL]/api/health` to verify app, database, and config status (JSON response).
-  - **Diagnostics**: Owner/Admin users can visit `/diagnostics` within the app for a detailed configuration and setup audit.
-  - **Graceful Failure**: Major routes (Dashboard, Onboarding, Auth) are protected by `error.tsx` handlers to prevent opaque server crashes.
-  - **AI/Payment Fallbacks**: If API keys are missing, the UI will degrade gracefully with actionable messages rather than hard-failing.
-
-  ### Common Failure Modes
-  1. **Missing Workspace/Onboarding**: If a user is redirected repeatedly to `/onboarding`, ensure `pipeline_stages` were correctly seeded for that workspace.
-  2. **Payment Link Failure**: Check `FLUTTERWAVE_SECRET_KEY` in your environment.
-  3. **AI Generation Errors**: Verify `MISTRAL_API_KEY` and `MISTRAL_MODEL`.
-  4. **Webhook Signature Issues**: Ensure `FLUTTERWAVE_WEBHOOK_HASH` matches what is set in the Flutterwave dashboard.
-
-  ### Post-Deploy Smoke Test
-  - [ ] Sign in with a test user.
-  - [ ] Verify `/api/health` returns 200 OK.
-  - [ ] Navigate to `/diagnostics` (as Admin) and check for red/missing items.
-  - [ ] Create a test Lead to verify DB connectivity.
-  - [ ] Generate a Quote to verify PDF generation logic.
-
-  ## Reports behavior
-
-- Reporting route: `/reports`.
-- Supports key snapshot + funnel/conversion metrics.
-- Conversion metric is cohort-based (leads created in range that have linked deals).
-- Report data status can be `ok`, `partial`, or `failed`.
-
-## Build health checks
 ```bash
+pnpm install
 npm run typecheck
-npm run lint
+npm run test:sdk
+npm run test:server
+npm run build
 ```
+
+`npm run build` packs all publishable packages into `dist/`.
+
+## Documentation
+
+- [Open-source architecture](docs/OPEN_SOURCE_ARCHITECTURE.md)
+- [Public API](docs/PUBLIC_API.md)
+- [npm package strategy](docs/NPM_PACKAGE_STRATEGY.md)
+- [Publishing checklist](docs/PUBLISHING.md)
+
+## License
+
+MIT
