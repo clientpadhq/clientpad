@@ -8,15 +8,17 @@
   "scripts": {
     "cli": "node packages/cli/bin/clientpad.mjs",
     "dev": "node packages/cli/bin/clientpad.mjs help",
+    "dashboard:dev": "pnpm --filter @abdulmuiz44/clientpad-dashboard dev",
     "build": "node scripts/pack-packages.mjs",
     "api-key:create": "node packages/cli/bin/clientpad.mjs api-key create",
     "db:migrate": "node packages/cli/bin/clientpad.mjs migrate",
     "lint": "node packages/cli/bin/clientpad.mjs help",
-    "typecheck": "pnpm --filter @abdulmuiz44/clientpad-core typecheck && pnpm --filter @abdulmuiz44/clientpad-sdk typecheck && pnpm --filter @abdulmuiz44/clientpad-server typecheck && pnpm --filter @abdulmuiz44/clientpad-cloud typecheck",
+    "typecheck": "pnpm --filter @abdulmuiz44/clientpad-core typecheck && pnpm --filter @abdulmuiz44/clientpad-sdk typecheck && pnpm --filter @abdulmuiz44/clientpad-server typecheck && pnpm --filter @abdulmuiz44/clientpad-cloud typecheck && pnpm --filter @abdulmuiz44/clientpad-dashboard typecheck",
     "test:core": "pnpm --filter @abdulmuiz44/clientpad-core typecheck",
     "test:sdk": "pnpm --filter @abdulmuiz44/clientpad-sdk test",
     "test:server": "pnpm --filter @abdulmuiz44/clientpad-server test",
-    "test:cloud": "pnpm --filter @abdulmuiz44/clientpad-cloud test"
+    "test:cloud": "pnpm --filter @abdulmuiz44/clientpad-cloud test",
+    "test:dashboard": "pnpm --filter @abdulmuiz44/clientpad-dashboard build"
   },
   "dependencies": {
     "pg": "^8.13.3"

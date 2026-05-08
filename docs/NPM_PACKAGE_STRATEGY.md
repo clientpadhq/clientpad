@@ -87,6 +87,16 @@ pnpm add @abdulmuiz44/clientpad-cloud
 
 The cloud package handles managed projects, public plans, subscriptions, hosted API key issuance, usage dashboards, billing event intake, and health checks.
 
+## Dashboard Package
+
+The hosted developer interface ships as:
+
+```bash
+pnpm add @abdulmuiz44/clientpad-dashboard
+```
+
+It provides login, overview, projects, API key creation, usage activity, billing plan views, docs quickstart, and cloud connection settings.
+
 ## Hosted Gateway Revenue
 
 The npm packages stay open source. Paid usage happens through an optional hosted gateway:
