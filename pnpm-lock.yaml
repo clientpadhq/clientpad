@@ -72,6 +72,15 @@ importers:
 
   packages/sdk: {}
 
+  packages/whatsapp:
+    dependencies:
+      '@abdulmuiz44/clientpad-core':
+        specifier: workspace:*
+        version: link:../clientpad-core
+      '@abdulmuiz44/clientpad-sdk':
+        specifier: workspace:*
+        version: link:../sdk
+
   packages/server:
     dependencies:
       '@abdulmuiz44/clientpad-core':
