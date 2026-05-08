@@ -1,9 +1,7 @@
 {
   "name": "@abdulmuiz44/clientpad-whatsapp",
   "version": "0.2.0",
-  "description": "WhatsApp webhook handler and AI assistant utilities for ClientPad.",
-  "description": "WhatsApp commerce helpers for ClientPad flows, Nigerian payment links, and payment webhooks.",
-  "description": "Fetch-compatible WhatsApp Cloud API helpers for ClientPad service businesses.",
+  "description": "WhatsApp webhook handler, AI assistant, and Nigerian payment utilities for ClientPad.",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
@@ -26,36 +24,28 @@
     "clientpad",
     "whatsapp",
     "webhook",
-    "ai-assistant"
+    "ai-assistant",
     "payments",
     "paystack",
     "flutterwave",
-    "nigeria"
+    "nigeria",
+    "meta",
+    "cloud-api",
+    "typescript"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "npm run build && node test/whatsapp.test.mjs",
-    "prepack": "npm run build"
-  },
-  "dependencies": {
-    "pg": "^8.13.3"
-    "test": "npm run build && node test/payments.test.mjs",
-    "prepack": "npm run build"
-  },
-    "meta",
-    "cloud-api",
-    "webhook",
-    "typescript"
-  ],
-  "scripts": {
-    "build": "pnpm --filter @abdulmuiz44/clientpad-core build && pnpm --filter @abdulmuiz44/clientpad-sdk build && tsc -p tsconfig.json",
-    "typecheck": "pnpm --filter @abdulmuiz44/clientpad-core build && pnpm --filter @abdulmuiz44/clientpad-sdk build && tsc -p tsconfig.json --noEmit",
-    "prepack": "npm run build"
+    "test": "node test/whatsapp.test.mjs",
+    "prepack": "pnpm run build"
   },
   "dependencies": {
     "@abdulmuiz44/clientpad-core": "workspace:*",
-    "@abdulmuiz44/clientpad-sdk": "workspace:*"
+    "@abdulmuiz44/clientpad-sdk": "workspace:*",
+    "pg": "^8.13.3"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10"
   },
   "engines": {
     "node": ">=18"

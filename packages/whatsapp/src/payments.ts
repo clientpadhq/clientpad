@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import type { QueryValue, Queryable } from "./types.js";
 
 export type PaymentProvider = "paystack" | "flutterwave";
 export type PaymentStatus = "pending" | "paid" | "failed" | "cancelled";
@@ -38,12 +39,6 @@ export type PaymentLinkResult = {
   accessCode?: string | null;
   providerPaymentId?: string | null;
   raw: unknown;
-};
-
-export type QueryValue = string | number | boolean | Date | null | Record<string, unknown>;
-
-export type Queryable = {
-  query<T = Record<string, unknown>>(text: string, values?: QueryValue[]): Promise<{ rows: T[]; rowCount: number | null }>;
 };
 
 export type StoredPaymentLinkInput = CreatePaymentLinkInput & {

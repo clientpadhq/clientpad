@@ -57,3 +57,22 @@ assert.equal(payload.data.processed, 1);
 assert.equal(payload.data.conversations[0].intent.intent, "booking");
 assert.equal(queries.some((query) => query.text.includes("intent = $1") && query.text.includes("ai_summary = $2")), true);
 assert.equal(queries.some((query) => query.text.includes("whatsapp_conversations")), true);
+
+// Outbound message builder tests
+import { createReplyButtonsMessage, createListMessage } from "../dist/index.js";
+
+const buttonMsg = createReplyButtonsMessage({
+  body: "Hello",
+  buttons: [{ id: "yes", title: "Yes" }, { id: "no", title: "No" }],
+});
+assert.equal(buttonMsg.type, "interactive");
+assert.equal(buttonMsg.interactive.type, "button");
+assert.equal(buttonMsg.interactive.action.buttons.length, 2);
+
+const listMsg = createListMessage({
+  body: "Select one",
+  button: "Open",
+  sections: [{ title: "Options", rows: [{ id: "1", title: "One" }] }],
+});
+assert.equal(listMsg.interactive.type, "list");
+assert.equal(listMsg.interactive.action.sections[0].rows[0].id, "1");

@@ -331,38 +331,37 @@ async function importWhatsAppCsv() {
               lead_id,
               phone,
               contact_name,
-              source,
-              last_message_at
+              last_message_at,
+              metadata
             )
-            values ($1, $2, $3, $4, $5, coalesce($6::timestamptz, now()))
+            values ($1, $2, $3, $4, coalesce($5::timestamptz, now()), $6::jsonb)
+            on conflict (workspace_id, wa_id) where wa_id is not null
+            do update set
+              last_message_at = excluded.last_message_at,
+              metadata = whatsapp_conversations.metadata || excluded.metadata
             returning id
           `,
-          [workspaceId, leadId, normalizedPhone, name, source, lastMessageAt]
+          [workspaceId, leadId, normalizedPhone, name, lastMessageAt, JSON.stringify({ source })]
         );
         const conversationId = conversationResult.rows[0]?.id;
 
         await pool.query(
           `
             insert into whatsapp_messages (
-              workspace_id,
               conversation_id,
-              lead_id,
-              phone,
               direction,
-              body,
+              message_type,
+              message_text,
               sent_at,
               raw_payload
             )
-            values ($1, $2, $3, $4, 'inbound', $5, coalesce($6::timestamptz, now()), $7::jsonb)
+            values ($1, 'inbound', 'text', $2, coalesce($3::timestamptz, now()), $4::jsonb)
           `,
           [
-            workspaceId,
             conversationId,
-            leadId,
-            normalizedPhone,
             lastMessage,
             lastMessageAt,
-            JSON.stringify({ csv_row: rowNumber }),
+            JSON.stringify({ csv_row: rowNumber, source }),
           ]
         );
       }
@@ -388,6 +387,8 @@ async function importWhatsAppCsv() {
       2
     )
   );
+}
+
 function whatsappSetup() {
   console.log(`WhatsApp setup checklist
 
