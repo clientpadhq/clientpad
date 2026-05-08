@@ -27,6 +27,19 @@ importers:
 
   packages/clientpad-core: {}
 
+  packages/cloud:
+    dependencies:
+      '@abdulmuiz44/clientpad-core':
+        specifier: workspace:*
+        version: link:../clientpad-core
+      pg:
+        specifier: ^8.13.3
+        version: 8.20.0
+    devDependencies:
+      '@types/pg':
+        specifier: ^8.11.10
+        version: 8.20.0
+
   packages/sdk: {}
 
   packages/server:

@@ -1,0 +1,68 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ClientPad Cloud Control Plane",
+    "version": "0.2.0"
+  },
+  "servers": [
+    {
+      "url": "https://cloud.clientpad.com/api/cloud/v1"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Cloud service health",
+        "responses": {
+          "200": { "description": "Service is healthy" }
+        }
+      }
+    },
+    "/plans": {
+      "get": {
+        "summary": "List active plans",
+        "responses": {
+          "200": { "description": "Plan list" }
+        }
+      }
+    },
+    "/projects": {
+      "get": {
+        "summary": "List hosted projects",
+        "responses": {
+          "200": { "description": "Project list" }
+        }
+      },
+      "post": {
+        "summary": "Create hosted project and workspace",
+        "responses": {
+          "201": { "description": "Created project" }
+        }
+      }
+    },
+    "/api-keys": {
+      "post": {
+        "summary": "Create hosted API key",
+        "responses": {
+          "201": { "description": "Created API key; raw key returned once" }
+        }
+      }
+    },
+    "/usage": {
+      "get": {
+        "summary": "List workspace usage",
+        "responses": {
+          "200": { "description": "Usage by key" }
+        }
+      }
+    },
+    "/billing/events": {
+      "post": {
+        "summary": "Record billing provider event",
+        "responses": {
+          "200": { "description": "Accepted" }
+        }
+      }
+    }
+  }
+}

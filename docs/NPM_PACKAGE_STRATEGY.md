@@ -77,6 +77,16 @@ pnpm add @abdulmuiz44/clientpad-server
 
 The server package exports a fetch-standard handler and currently supports leads and clients.
 
+## Cloud Package
+
+Hosted control planes should install:
+
+```bash
+pnpm add @abdulmuiz44/clientpad-cloud
+```
+
+The cloud package handles managed projects, public plans, subscriptions, hosted API key issuance, usage dashboards, billing event intake, and health checks.
+
 ## Hosted Gateway Revenue
 
 The npm packages stay open source. Paid usage happens through an optional hosted gateway:

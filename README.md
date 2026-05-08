@@ -10,11 +10,13 @@ This repository ships installable packages instead of a hosted product with subs
 - `@abdulmuiz44/clientpad-cli`: local project setup, SQL migrations, and API key creation.
 - `@abdulmuiz44/clientpad-server`: fetch-standard public API handler for leads and clients.
 - `@abdulmuiz44/clientpad-sdk`: TypeScript SDK for consuming ClientPad public APIs from apps, workers, and scripts.
+- `@abdulmuiz44/clientpad-cloud`: hosted control plane for projects, plans, subscriptions, usage, and API keys.
 
 ## Install
 
 ```bash
 pnpm add @abdulmuiz44/clientpad-core @abdulmuiz44/clientpad-server @abdulmuiz44/clientpad-sdk
+pnpm add @abdulmuiz44/clientpad-cloud
 pnpm add -D @abdulmuiz44/clientpad-cli
 ```
 
@@ -125,6 +127,7 @@ pnpm install
 npm run typecheck
 npm run test:sdk
 npm run test:server
+npm run test:cloud
 npm run build
 ```
 
@@ -134,6 +137,7 @@ npm run build
 
 - [Open-source architecture](docs/OPEN_SOURCE_ARCHITECTURE.md)
 - [Public API](docs/PUBLIC_API.md)
+- [ClientPad Cloud](docs/CLIENTPAD_CLOUD.md)
 - [npm package strategy](docs/NPM_PACKAGE_STRATEGY.md)
 - [Publishing checklist](docs/PUBLISHING.md)
 
