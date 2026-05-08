@@ -10,6 +10,7 @@ This repository ships installable packages instead of a hosted product with subs
 - `@abdulmuiz44/clientpad-cli`: local project setup, SQL migrations, and API key creation.
 - `@abdulmuiz44/clientpad-server`: fetch-standard public API handler for leads and clients.
 - `@abdulmuiz44/clientpad-sdk`: TypeScript SDK for consuming ClientPad public APIs from apps, workers, and scripts.
+- `@abdulmuiz44/clientpad-whatsapp`: WhatsApp automation, lead capture, booking flows, payments, and review prompts for service businesses.
 - `@abdulmuiz44/clientpad-cloud`: hosted control plane for projects, plans, subscriptions, usage, and API keys.
 - `@abdulmuiz44/clientpad-dashboard`: developer web dashboard for projects, API keys, usage, billing, and docs.
 
@@ -70,6 +71,59 @@ export const handler = createClientPadHandler({
   apiKeyPepper: process.env.API_KEY_PEPPER!,
 });
 ```
+
+## WhatsApp Magic for Nigerian Service Businesses
+
+Go from WhatsApp chaos to organized leads, bookings, payments, and reviews in under 10 minutes.
+
+ClientPad stays open and self-hostable: the WhatsApp package plugs into the same PostgreSQL-backed server, migrations, API keys, SDK, and optional ClientPad Cloud gateway already described above. Use it to turn everyday WhatsApp conversations into structured CRM activity without giving up local deployment control.
+
+### Quick start
+
+```bash
+clientpad init --whatsapp
+clientpad migrate
+clientpad whatsapp:setup
+clientpad whatsapp:flows salon
+```
+
+### Webhook server
+
+Wire the WhatsApp webhook into any fetch-compatible runtime alongside the public ClientPad API:
+
+```ts
+import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
+import { createWhatsAppWebhookHandler } from "@abdulmuiz44/clientpad-whatsapp";
+
+const clientpad = createClientPadHandler({
+  databaseUrl: process.env.DATABASE_URL!,
+  apiKeyPepper: process.env.API_KEY_PEPPER!,
+});
+
+export const whatsappWebhook = createWhatsAppWebhookHandler({
+  databaseUrl: process.env.DATABASE_URL!,
+  verifyToken: process.env.WHATSAPP_VERIFY_TOKEN!,
+  appSecret: process.env.WHATSAPP_APP_SECRET!,
+  accessToken: process.env.WHATSAPP_ACCESS_TOKEN!,
+  defaultWorkspaceId: process.env.CLIENTPAD_WORKSPACE_ID!,
+  clientpad,
+});
+```
+
+If you prefer server-integrated routing, mount the same WhatsApp config next to your existing `createClientPadHandler` route and point Meta's webhook URL at that endpoint.
+
+### Demo GIFs
+
+- `docs/assets/demo-whatsapp-salon.gif`: salon owner connects WhatsApp, receives a booking, sends a Paystack link, and watches the pipeline update to paid.
+- `docs/assets/demo-whatsapp-mechanic.gif`: customer sends a car issue, shares location, owner sends a quote, and the job moves to in progress.
+- `docs/assets/demo-dashboard-pipeline.gif`: mobile PWA pipeline updating live from WhatsApp button clicks.
+
+### WhatsApp documentation
+
+- [WhatsApp Magic guide](docs/WHATSAPP_MAGIC.md)
+- [WhatsApp CSV import](docs/WHATSAPP_CSV_IMPORT.md)
+- [WhatsApp payments in Nigeria](docs/WHATSAPP_PAYMENTS_NIGERIA.md)
+- [WhatsApp examples](examples/whatsapp/README.md)
 
 ## Public API
 
