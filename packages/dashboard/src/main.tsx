@@ -1,24 +1,31 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Activity,
-  BarChart3,
+  Bell,
   BookOpen,
+  Building2,
+  CalendarDays,
   Check,
   ChevronDown,
+  ChevronRight,
+  CircleHelp,
   Clipboard,
+  Cloud,
   CreditCard,
-  Database,
+  Edit3,
+  ExternalLink,
+  Filter,
   KeyRound,
   LayoutDashboard,
-  Lock,
-  LogOut,
+  MoreHorizontal,
   Plus,
   Search,
-  Server,
   Settings,
   ShieldCheck,
-  Sparkles,
+  SlidersHorizontal,
+  Trash2,
+  TrendingUp,
+  WalletCards,
 } from "lucide-react";
 import "./styles.css";
 
@@ -27,6 +34,9 @@ type Session = {
   adminToken: string;
   demo?: boolean;
 };
+
+type Page = "overview" | "projects" | "keys" | "usage" | "billing" | "docs" | "settings";
+type QuickstartLanguage = "curl" | "python" | "node" | "go" | "ruby";
 
 type Plan = {
   id: string;
@@ -69,7 +79,16 @@ type ApiKeyResult = {
   rate_limit_per_minute: number | null;
 };
 
-type Page = "overview" | "projects" | "keys" | "usage" | "billing" | "docs" | "settings";
+type ApiKeyRecord = ApiKeyResult & {
+  name: string;
+  project_slug: string;
+  created_at: string;
+  last_used_at: string;
+  status: "active" | "paused";
+};
+
+type ProjectFormState = { name: string; owner_email: string; plan_code: string };
+type KeyFormState = { workspace_id: string; name: string; plan_code: string; scopes: string };
 
 const sessionKey = "clientpad.cloud.session";
 
@@ -81,10 +100,15 @@ function App() {
 
   if (!session) return <Login onLogin={setSession} />;
 
-  return <Dashboard session={session} onLogout={() => {
-    localStorage.removeItem(sessionKey);
-    setSession(null);
-  }} />;
+  return (
+    <Dashboard
+      session={session}
+      onLogout={() => {
+        localStorage.removeItem(sessionKey);
+        setSession(null);
+      }}
+    />
+  );
 }
 
 function Login({ onLogin }: { onLogin: (session: Session) => void }) {
@@ -116,9 +140,9 @@ function Login({ onLogin }: { onLogin: (session: Session) => void }) {
   return (
     <main className="login-shell">
       <section className="login-panel">
-        <div className="brand-mark">CP</div>
+        <Logo />
         <h1>ClientPad Cloud</h1>
-        <p>Sign in to manage hosted projects, API keys, quotas, usage, and billing.</p>
+        <p>Sign in to manage projects, API keys, usage, billing, and developer docs.</p>
         <form onSubmit={submit} className="login-form">
           <label>
             Cloud API URL
@@ -135,26 +159,21 @@ function Login({ onLogin }: { onLogin: (session: Session) => void }) {
             />
           </label>
           {error ? <div className="form-error">{error}</div> : null}
-          <button className="primary-button" type="submit">
-            <Lock size={16} />
+          <button className="button primary" type="submit">
+            <ShieldCheck size={16} />
             Open dashboard
           </button>
-          <button className="ghost-button" type="button" onClick={preview}>
+          <button className="button secondary" type="button" onClick={preview}>
             <LayoutDashboard size={16} />
             Preview dashboard
           </button>
         </form>
       </section>
       <aside className="login-aside">
-        <div>
-          <h2>Hosted API keys become revenue.</h2>
-          <p>Meter requests, enforce plan quotas, and give developers a trustworthy activity dashboard.</p>
-        </div>
-        <div className="login-grid">
-          <Metric label="Free quota" value="1k" />
-          <Metric label="Developer" value="100k" />
-          <Metric label="Business" value="1M" />
-          <Metric label="Enterprise" value="SLA" />
+        <div className="preview-card">
+          <div className="mini-toolbar" />
+          <div className="mini-chart" />
+          <div className="mini-rows" />
         </div>
       </aside>
     </main>
@@ -166,21 +185,31 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
   const [page, setPage] = useState<Page>("overview");
   const [plans, setPlans] = useState<Plan[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedWorkspace, setSelectedWorkspace] = useState("");
   const [usage, setUsage] = useState<UsageRow[]>([]);
+  const [keys, setKeys] = useState<ApiKeyRecord[]>([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState("");
+  const [query, setQuery] = useState("");
+  const [dateRange, setDateRange] = useState("May 12 - May 19, 2025");
+  const [showFilters, setShowFilters] = useState(false);
+  const [quickstartLanguage, setQuickstartLanguage] = useState<QuickstartLanguage>("curl");
+  const [selectedPlanCode, setSelectedPlanCode] = useState("pro");
   const [createdKey, setCreatedKey] = useState<ApiKeyResult | null>(null);
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
 
-  async function refresh() {
+  async function refresh(workspaceOverride?: string) {
     setLoading(true);
     try {
       const [planData, projectData] = await Promise.all([api.plans(), api.projects()]);
+      const workspace = workspaceOverride || selectedWorkspace || projectData[0]?.workspace_id || "";
       setPlans(planData);
       setProjects(projectData);
-      const workspace = selectedWorkspace || projectData[0]?.workspace_id || "";
       setSelectedWorkspace(workspace);
-      if (workspace) setUsage(await api.usage(workspace));
+      if (workspace) {
+        const usageData = await api.usage(workspace);
+        setUsage(usageData);
+        setKeys(toKeyRecords(usageData, projectData));
+      }
     } finally {
       setLoading(false);
     }
@@ -192,90 +221,248 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
   }, []);
 
   async function createProject(input: ProjectFormState) {
+    if (!input.name.trim()) {
+      setNotice("Project name is required.");
+      return;
+    }
     const project = await api.createProject(input);
-    setNotice(`Created project ${project.name}`);
-    await refresh();
+    setNotice(`Created project ${project.name}.`);
+    await refresh(project.workspace_id);
+    setPage("projects");
   }
 
   async function createKey(input: KeyFormState) {
+    if (!input.workspace_id.trim() || !input.name.trim()) {
+      setNotice("Workspace ID and key name are required.");
+      return;
+    }
     const key = await api.createKey(input);
     setCreatedKey(key);
     setNotice("API key created. Copy it now; it will not be shown again.");
-    await refresh();
+    await refresh(input.workspace_id);
   }
 
+  function selectWorkspace(workspaceId: string) {
+    setSelectedWorkspace(workspaceId);
+    refresh(workspaceId).catch((error) => setNotice(error.message));
+  }
+
+  function selectPlan(code: string) {
+    setSelectedPlanCode(code);
+    setNotice(`Selected ${plans.find((plan) => plan.code === code)?.name ?? code} plan.`);
+  }
+
+  const selectedProject = projects.find((project) => project.workspace_id === selectedWorkspace) ?? projects[0];
+  const selectedPlan = plans.find((plan) => plan.code === selectedPlanCode) ?? plans[2] ?? plans[0];
+  const filteredProjects = filterProjects(projects, query, showFilters);
+  const filteredKeys = filterKeys(keys, query, showFilters);
   const totalRequests = usage.reduce((sum, row) => sum + Number(row.request_count || 0), 0);
   const rejectedRequests = usage.reduce((sum, row) => sum + Number(row.rejected_count || 0), 0);
-  const selectedProject = projects.find((project) => project.workspace_id === selectedWorkspace);
-  const plan = plans[1] ?? plans[0];
 
   return (
-    <div className="app-shell">
+    <div className="console">
       <Sidebar page={page} setPage={setPage} />
-      <div className="main-shell">
-        <header className="topbar">
-          <div className="search">
-            <Search size={16} />
-            <input placeholder="Search projects, keys, docs" />
-          </div>
-          <select value={selectedWorkspace} onChange={(event) => setSelectedWorkspace(event.target.value)}>
-            {projects.map((project) => (
-              <option key={project.id} value={project.workspace_id}>{project.name}</option>
-            ))}
-          </select>
-          <button className="ghost-button" onClick={onLogout}>
-            <LogOut size={16} />
-            Sign out
-          </button>
-        </header>
-
-        {notice ? <div className="notice"><Check size={16} />{notice}</div> : null}
-        {createdKey ? <NewKeyBanner apiKey={createdKey.key} onDismiss={() => setCreatedKey(null)} /> : null}
-
-        {page === "overview" && (
-          <Overview
-            loading={loading}
-            totalRequests={totalRequests}
-            rejectedRequests={rejectedRequests}
-            selectedProject={selectedProject}
-            usage={usage}
-            plan={plan}
-            setPage={setPage}
+      <main className="workspace">
+        <Topbar
+          projects={projects}
+          selectedWorkspace={selectedWorkspace}
+          onWorkspaceChange={selectWorkspace}
+          query={query}
+          setQuery={setQuery}
+          onLogout={onLogout}
+        />
+        <section className="content">
+          <PageHeader
+            title={titleForPage(page)}
+            subtitle={subtitleForPage(page, selectedProject)}
+            dateRange={dateRange}
+            setDateRange={setDateRange}
+            showFilters={showFilters}
+            setShowFilters={setShowFilters}
           />
-        )}
-        {page === "projects" && <Projects projects={projects} onCreate={createProject} />}
-        {page === "keys" && <Keys workspaceId={selectedWorkspace} onCreate={createKey} />}
-        {page === "usage" && <Usage usage={usage} selectedProject={selectedProject} />}
-        {page === "billing" && <Billing plans={plans} />}
-        {page === "docs" && <Docs selectedProject={selectedProject} />}
-        {page === "settings" && <SettingsPage session={session} />}
-      </div>
+          {notice ? <Notice message={notice} onDismiss={() => setNotice("")} /> : null}
+          {createdKey ? <NewKeyBanner apiKey={createdKey.key} onDismiss={() => setCreatedKey(null)} /> : null}
+
+          {page === "overview" && (
+            <Overview
+              loading={loading}
+              totalRequests={totalRequests}
+              rejectedRequests={rejectedRequests}
+              projects={filteredProjects}
+              keys={filteredKeys}
+              usage={usage}
+              selectedPlan={selectedPlan}
+              selectedProject={selectedProject}
+              quickstartLanguage={quickstartLanguage}
+              setQuickstartLanguage={setQuickstartLanguage}
+              setPage={setPage}
+            />
+          )}
+          {page === "projects" && <Projects projects={filteredProjects} onCreate={createProject} setPage={setPage} />}
+          {page === "keys" && (
+            <Keys
+              workspaceId={selectedWorkspace}
+              keys={filteredKeys}
+              onCreate={createKey}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
+          {page === "usage" && <Usage usage={usage} keys={filteredKeys} selectedProject={selectedProject} />}
+          {page === "billing" && (
+            <Billing plans={plans} selectedPlanCode={selectedPlanCode} onSelectPlan={selectPlan} />
+          )}
+          {page === "docs" && (
+            <Docs
+              selectedProject={selectedProject}
+              language={quickstartLanguage}
+              setLanguage={setQuickstartLanguage}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
+          {page === "settings" && <SettingsPage session={session} onSave={(url) => setNotice(`Saved cloud URL ${url}.`)} />}
+        </section>
+      </main>
     </div>
   );
 }
 
 function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void }) {
   const items: Array<[Page, React.ReactNode, string]> = [
-    ["overview", <LayoutDashboard size={17} />, "Overview"],
-    ["projects", <Database size={17} />, "Projects"],
-    ["keys", <KeyRound size={17} />, "API Keys"],
-    ["usage", <BarChart3 size={17} />, "Usage"],
-    ["billing", <CreditCard size={17} />, "Billing"],
-    ["docs", <BookOpen size={17} />, "Docs"],
-    ["settings", <Settings size={17} />, "Settings"],
+    ["overview", <LayoutDashboard size={18} />, "Overview"],
+    ["projects", <Building2 size={18} />, "Projects"],
+    ["keys", <KeyRound size={18} />, "API Keys"],
+    ["usage", <SlidersHorizontal size={18} />, "Usage"],
+    ["billing", <CreditCard size={18} />, "Billing"],
+    ["docs", <BookOpen size={18} />, "Docs"],
   ];
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-brand"><span>CP</span>ClientPad</div>
-      <nav>
+      <Logo />
+      <nav className="nav-list">
         {items.map(([id, icon, label]) => (
           <button key={id} className={page === id ? "active" : ""} onClick={() => setPage(id)}>
-            {icon}{label}
+            {icon}
+            {label}
           </button>
         ))}
       </nav>
+      <div className="sidebar-bottom">
+        <button className="status-row" onClick={() => setPage("usage")}>
+          <span />
+          All Systems Operational
+          <ChevronRight size={14} />
+        </button>
+        <div className="help-card">
+          <strong>Need help?</strong>
+          <p>View docs or contact support.</p>
+          <button onClick={() => setPage("docs")}>
+            Documentation <ExternalLink size={12} />
+          </button>
+          <button onClick={() => setPage("settings")}>
+            Contact Support <ExternalLink size={12} />
+          </button>
+        </div>
+        <footer>
+          <span>© 2025 ClientPad Cloud</span>
+          <span>Status · Privacy · Terms</span>
+        </footer>
+      </div>
     </aside>
+  );
+}
+
+function Topbar({
+  projects,
+  selectedWorkspace,
+  onWorkspaceChange,
+  query,
+  setQuery,
+  onLogout,
+}: {
+  projects: Project[];
+  selectedWorkspace: string;
+  onWorkspaceChange: (workspaceId: string) => void;
+  query: string;
+  setQuery: (query: string) => void;
+  onLogout: () => void;
+}) {
+  return (
+    <header className="topbar">
+      <label className="workspace-picker">
+        <span>Workspace</span>
+        <div>
+          <Building2 size={16} />
+          <select value={selectedWorkspace} onChange={(event) => onWorkspaceChange(event.target.value)}>
+            {projects.map((project) => (
+              <option key={project.id} value={project.workspace_id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={16} />
+        </div>
+      </label>
+      <label className="searchbox">
+        <Search size={18} />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search projects, API keys, docs..." />
+        <kbd>⌘ K</kbd>
+      </label>
+      <div className="top-actions">
+        <button aria-label="Notifications">
+          <Bell size={18} />
+        </button>
+        <button aria-label="Help">
+          <CircleHelp size={18} />
+        </button>
+        <button className="avatar" onClick={onLogout} title="Sign out">
+          AD
+        </button>
+        <button className="developer-menu" onClick={onLogout}>
+          Alex Developer <ChevronDown size={15} />
+        </button>
+      </div>
+    </header>
+  );
+}
+
+function PageHeader({
+  title,
+  subtitle,
+  dateRange,
+  setDateRange,
+  showFilters,
+  setShowFilters,
+}: {
+  title: string;
+  subtitle: string;
+  dateRange: string;
+  setDateRange: (range: string) => void;
+  showFilters: boolean;
+  setShowFilters: (show: boolean) => void;
+}) {
+  return (
+    <div className="page-header">
+      <div>
+        <h1>{title}</h1>
+        <p>{subtitle}</p>
+      </div>
+      <div className="header-actions">
+        <label className="date-select">
+          <CalendarDays size={16} />
+          <select value={dateRange} onChange={(event) => setDateRange(event.target.value)}>
+            <option>May 12 - May 19, 2025</option>
+            <option>May 1 - May 31, 2025</option>
+            <option>Apr 1 - Apr 30, 2025</option>
+          </select>
+          <ChevronDown size={14} />
+        </label>
+        <button className={showFilters ? "button active-filter" : "button outline"} onClick={() => setShowFilters(!showFilters)}>
+          <Filter size={17} />
+          Filters
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -283,209 +470,539 @@ function Overview({
   loading,
   totalRequests,
   rejectedRequests,
-  selectedProject,
+  projects,
+  keys,
   usage,
-  plan,
+  selectedPlan,
+  selectedProject,
+  quickstartLanguage,
+  setQuickstartLanguage,
   setPage,
 }: {
   loading: boolean;
   totalRequests: number;
   rejectedRequests: number;
-  selectedProject?: Project;
+  projects: Project[];
+  keys: ApiKeyRecord[];
   usage: UsageRow[];
-  plan?: Plan;
+  selectedPlan?: Plan;
+  selectedProject?: Project;
+  quickstartLanguage: QuickstartLanguage;
+  setQuickstartLanguage: (language: QuickstartLanguage) => void;
   setPage: (page: Page) => void;
 }) {
-  const limit = usage[0]?.monthly_request_limit ?? plan?.monthly_request_limit ?? null;
-  const remaining = limit === null ? null : Math.max(limit - totalRequests, 0);
+  const requestLimit = selectedPlan?.monthly_request_limit ?? 10_000_000;
+  const usedPercent = Math.min((totalRequests / requestLimit) * 100, 100);
 
   return (
-    <section className="page-grid">
-      <div className="page-heading">
-        <div>
-          <h1>Developer dashboard</h1>
-          <p>Monitor hosted API keys, quota burn, projects, and billing readiness.</p>
+    <div className="overview-layout">
+      <Panel className="api-requests">
+        <div className="panel-head">
+          <h2>
+            API Requests <CircleHelp size={15} />
+          </h2>
+          <div className="range-tabs">
+            {["1H", "1D", "7D", "30D"].map((tab) => (
+              <button key={tab} className={tab === "7D" ? "selected" : ""}>
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
-        <button className="primary-button" onClick={() => setPage("keys")}><Plus size={16} />Create key</button>
-      </div>
-
-      <div className="metric-row">
-        <Metric label="Requests this month" value={loading ? "..." : totalRequests.toLocaleString()} />
-        <Metric label="Rejected" value={rejectedRequests.toLocaleString()} />
-        <Metric label="Remaining" value={remaining === null ? "Unlimited" : remaining.toLocaleString()} />
-        <Metric label="Project" value={selectedProject?.slug ?? "none"} />
-      </div>
-
-      <section className="surface wide">
-        <div className="section-title">
-          <h2>Usage trend</h2>
-          <button className="ghost-button" onClick={() => setPage("usage")}>View activity</button>
+        <div className="chart-summary">
+          <span>Total requests</span>
+          <strong>{loading ? "..." : formatNumber(totalRequests || 2_560_812)}</strong>
+          <em>
+            <TrendingUp size={16} /> 18.7%
+          </em>
+          <small>vs May 5 - May 11, 2025</small>
         </div>
-        <div className="chart">
-          {[42, 64, 38, 78, 52, 88, 71, 93, 69, 84, 58, 76].map((height, index) => (
-            <span key={index} style={{ height: `${height}%` }} />
-          ))}
+        <LineChart />
+      </Panel>
+
+      <Panel className="quota-panel">
+        <h2>Quota & Usage</h2>
+        <Quota label="Requests" value={totalRequests || 2_560_812} limit={requestLimit} suffix="" />
+        <Quota label="Data Transfer" value={82.1} limit={500} suffix="GB" />
+        <button className="link-button" onClick={() => setPage("usage")}>
+          View full usage <ChevronRight size={15} />
+        </button>
+      </Panel>
+
+      <Panel className="active-projects table-panel">
+        <div className="panel-head bordered">
+          <h2>
+            Active Projects <span>{projects.length}</span>
+          </h2>
+          <button className="button outline" onClick={() => setPage("projects")}>
+            View all projects
+          </button>
         </div>
-      </section>
+        <ProjectsTable projects={projects} usage={usage} compact />
+      </Panel>
 
-      <section className="surface">
-        <div className="section-title"><h2>Plan</h2><Sparkles size={17} /></div>
-        <p className="plan-name">{plan?.name ?? "Free"}</p>
-        <p className="muted">{plan?.monthly_request_limit?.toLocaleString() ?? "Unlimited"} requests/month</p>
-        <button className="secondary-button" onClick={() => setPage("billing")}>Upgrade plan</button>
-      </section>
+      <Panel className="billing-panel">
+        <div className="panel-head">
+          <h2>Billing Plan</h2>
+          <span className="price-mini">{selectedPlan ? priceForPlan(selectedPlan) : "$199 / month"}</span>
+        </div>
+        <strong className="plan-title">{selectedPlan?.name ?? "Pro Plan"}</strong>
+        <ul className="plan-list">
+          <li>10M API requests / month</li>
+          <li>500 GB data transfer / month</li>
+          <li>99.9% uptime SLA</li>
+          <li>Priority support</li>
+        </ul>
+        <div className="period-row">
+          <span>Current period: May 12 - Jun 12, 2025 (31 days left)</span>
+          <div><i style={{ width: `${Math.max(usedPercent, 8)}%` }} /></div>
+        </div>
+        <div className="split-actions">
+          <button className="button outline" onClick={() => setPage("billing")}>
+            View billing
+          </button>
+          <button className="button primary blue" onClick={() => setPage("billing")}>
+            Upgrade plan
+          </button>
+        </div>
+      </Panel>
 
-      <section className="surface wide">
-        <div className="section-title"><h2>Active keys</h2><ShieldCheck size={17} /></div>
-        <DataTable
-          headers={["Name", "Mode", "Requests", "Rejected", "Rate limit"]}
-          rows={usage.map((row) => [
-            row.name,
-            row.billing_mode,
-            row.request_count.toLocaleString(),
-            row.rejected_count.toLocaleString(),
-            row.rate_limit_per_minute ? `${row.rate_limit_per_minute}/min` : "Unlimited",
-          ])}
+      <Panel className="api-keys table-panel">
+        <div className="panel-head bordered">
+          <h2>
+            API Keys <span>{keys.length}</span>
+          </h2>
+          <div className="inline-actions">
+            <button className="button outline" onClick={() => setPage("keys")}>
+              View all keys
+            </button>
+            <button className="button primary blue" onClick={() => setPage("keys")}>
+              <Plus size={15} /> Create API Key
+            </button>
+          </div>
+        </div>
+        <KeysTable keys={keys} />
+        <p className="table-foot">Showing {keys.length} of {keys.length} API keys</p>
+      </Panel>
+
+      <Panel className="quickstart-panel">
+        <h2>Quickstart</h2>
+        <Quickstart
+          language={quickstartLanguage}
+          setLanguage={setQuickstartLanguage}
+          selectedProject={selectedProject}
+          compact
         />
-      </section>
-    </section>
+        <button className="link-button" onClick={() => setPage("docs")}>
+          View full documentation <ExternalLink size={14} />
+        </button>
+      </Panel>
+    </div>
   );
 }
 
-type ProjectFormState = { name: string; owner_email: string; plan_code: string };
-function Projects({ projects, onCreate }: { projects: Project[]; onCreate: (input: ProjectFormState) => Promise<void> }) {
+function Projects({ projects, onCreate, setPage }: { projects: Project[]; onCreate: (input: ProjectFormState) => Promise<void>; setPage: (page: Page) => void }) {
   const [form, setForm] = useState<ProjectFormState>({ name: "", owner_email: "", plan_code: "free" });
+
   return (
-    <section className="page-grid">
-      <div className="page-heading"><div><h1>Projects</h1><p>Create hosted workspaces for developer teams.</p></div></div>
-      <section className="surface">
+    <div className="detail-layout">
+      <Panel>
         <h2>Create project</h2>
         <FormField label="Project name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
         <FormField label="Owner email" value={form.owner_email} onChange={(value) => setForm({ ...form, owner_email: value })} />
-        <label className="field">Plan<select value={form.plan_code} onChange={(event) => setForm({ ...form, plan_code: event.target.value })}><option value="free">Free</option><option value="developer">Developer</option><option value="business">Business</option></select></label>
-        <button className="primary-button" onClick={() => onCreate(form)}><Plus size={16} />Create project</button>
-      </section>
-      <section className="surface wide">
-        <h2>Hosted projects</h2>
-        <DataTable headers={["Name", "Slug", "Workspace", "Owner", "Environment"]} rows={projects.map((p) => [p.name, p.slug, p.workspace_id, p.owner_email ?? "-", p.environment])} />
-      </section>
-    </section>
+        <label className="field">
+          Plan
+          <select value={form.plan_code} onChange={(event) => setForm({ ...form, plan_code: event.target.value })}>
+            <option value="free">Free</option>
+            <option value="developer">Developer</option>
+            <option value="pro">Pro</option>
+            <option value="business">Business</option>
+          </select>
+        </label>
+        <button className="button primary blue" onClick={() => onCreate(form)}>
+          <Plus size={16} /> Create project
+        </button>
+      </Panel>
+      <Panel className="table-panel wide-detail">
+        <div className="panel-head bordered">
+          <h2>Hosted projects</h2>
+          <button className="button outline" onClick={() => setPage("keys")}>Create key</button>
+        </div>
+        <ProjectsTable projects={projects} usage={demoUsage} />
+      </Panel>
+    </div>
   );
 }
 
-type KeyFormState = {
-  workspace_id: string;
-  name: string;
-  plan_code: string;
-  scopes: string;
-};
-function Keys({ workspaceId, onCreate }: { workspaceId: string; onCreate: (input: KeyFormState) => Promise<void> }) {
+function Keys({
+  workspaceId,
+  keys,
+  onCreate,
+  onCopy,
+}: {
+  workspaceId: string;
+  keys: ApiKeyRecord[];
+  onCreate: (input: KeyFormState) => Promise<void>;
+  onCopy: (text: string) => void;
+}) {
   const [form, setForm] = useState<KeyFormState>({
     workspace_id: workspaceId,
-    name: "Production key",
-    plan_code: "free",
+    name: "Production Server Key",
+    plan_code: "pro",
     scopes: "leads:read,leads:write,clients:read,clients:write,usage:read",
   });
 
   useEffect(() => setForm((prev) => ({ ...prev, workspace_id: workspaceId })), [workspaceId]);
 
   return (
-    <section className="page-grid">
-      <div className="page-heading"><div><h1>API keys</h1><p>Issue hosted keys with plan limits, scopes, and usage tracking.</p></div></div>
-      <section className="surface">
+    <div className="detail-layout">
+      <Panel>
         <h2>Create API key</h2>
         <FormField label="Workspace ID" value={form.workspace_id} onChange={(value) => setForm({ ...form, workspace_id: value })} />
         <FormField label="Key name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
         <FormField label="Scopes" value={form.scopes} onChange={(value) => setForm({ ...form, scopes: value })} />
-        <label className="field">Plan<select value={form.plan_code} onChange={(event) => setForm({ ...form, plan_code: event.target.value })}><option value="free">Free</option><option value="developer">Developer</option><option value="business">Business</option><option value="enterprise">Enterprise</option></select></label>
-        <button className="primary-button" onClick={() => onCreate(form)}><KeyRound size={16} />Create key</button>
-      </section>
-      <section className="surface wide">
-        <h2>Production guidance</h2>
-        <div className="guidance-grid">
-          <Guidance icon={<ShieldCheck />} title="Show once" text="Raw keys are returned only at creation. Store only hashed keys in PostgreSQL." />
-          <Guidance icon={<Activity />} title="Metered" text="Each request writes usage events and updates monthly counters." />
-          <Guidance icon={<Server />} title="Scoped" text="Scopes keep integrations limited to the permissions developers request." />
+        <label className="field">
+          Plan
+          <select value={form.plan_code} onChange={(event) => setForm({ ...form, plan_code: event.target.value })}>
+            <option value="free">Free</option>
+            <option value="developer">Developer</option>
+            <option value="pro">Pro</option>
+            <option value="business">Business</option>
+          </select>
+        </label>
+        <button className="button primary blue" onClick={() => onCreate(form)}>
+          <KeyRound size={16} /> Create API key
+        </button>
+      </Panel>
+      <Panel className="table-panel wide-detail">
+        <div className="panel-head bordered">
+          <h2>All API Keys</h2>
+          <button className="button outline" onClick={() => onCopy(keys[0]?.key ?? "cp_live_demo")}>
+            <Clipboard size={15} /> Copy latest
+          </button>
         </div>
-      </section>
-    </section>
+        <KeysTable keys={keys} />
+      </Panel>
+    </div>
   );
 }
 
-function Usage({ usage, selectedProject }: { usage: UsageRow[]; selectedProject?: Project }) {
+function Usage({ usage, keys, selectedProject }: { usage: UsageRow[]; keys: ApiKeyRecord[]; selectedProject?: Project }) {
   return (
-    <section className="page-grid">
-      <div className="page-heading"><div><h1>Usage activity</h1><p>{selectedProject?.name ?? "Selected project"} month-to-date quota and rejected request activity.</p></div></div>
-      <section className="surface wide">
-        <DataTable
-          headers={["Key", "Billing mode", "Requests", "Rejected", "Monthly limit", "Rate limit"]}
-          rows={usage.map((row) => [
-            row.name,
-            row.billing_mode,
-            row.request_count.toLocaleString(),
-            row.rejected_count.toLocaleString(),
-            row.monthly_request_limit?.toLocaleString() ?? "Unlimited",
-            row.rate_limit_per_minute ? `${row.rate_limit_per_minute}/min` : "Unlimited",
-          ])}
-        />
-      </section>
-    </section>
+    <div className="detail-layout single">
+      <Panel className="api-requests wide-detail">
+        <div className="panel-head">
+          <h2>{selectedProject?.name ?? "Workspace"} usage</h2>
+          <div className="range-tabs">
+            <button>1D</button>
+            <button className="selected">7D</button>
+            <button>30D</button>
+          </div>
+        </div>
+        <LineChart />
+      </Panel>
+      <Panel className="table-panel wide-detail">
+        <div className="panel-head bordered">
+          <h2>Usage activity</h2>
+          <span>{usage.reduce((sum, row) => sum + row.rejected_count, 0)} rejected</span>
+        </div>
+        <KeysTable keys={keys} showUsage />
+      </Panel>
+    </div>
   );
 }
 
-function Billing({ plans }: { plans: Plan[] }) {
+function Billing({ plans, selectedPlanCode, onSelectPlan }: { plans: Plan[]; selectedPlanCode: string; onSelectPlan: (code: string) => void }) {
   return (
-    <section className="page-grid">
-      <div className="page-heading"><div><h1>Plans and billing</h1><p>Plan limits map directly to hosted API key quotas.</p></div></div>
-      <div className="plans">
-        {plans.map((plan) => (
-          <section className="surface" key={plan.id}>
+    <div className="billing-grid">
+      {plans.map((plan) => (
+        <Panel key={plan.id} className={selectedPlanCode === plan.code ? "selected-plan" : ""}>
+          <div className="panel-head">
             <h2>{plan.name}</h2>
-            <p className="price">{plan.monthly_price_cents === 0 ? "Free" : `$${(plan.monthly_price_cents / 100).toFixed(0)}/mo`}</p>
-            <p className="muted">{plan.monthly_request_limit?.toLocaleString() ?? "Custom"} requests/month</p>
-            <p className="muted">{plan.rate_limit_per_minute ? `${plan.rate_limit_per_minute}/minute` : "Custom rate limit"}</p>
-            <button className={plan.code === "business" ? "primary-button" : "secondary-button"}>Select {plan.name}</button>
-          </section>
+            {selectedPlanCode === plan.code ? <span className="selected-label">Current</span> : null}
+          </div>
+          <p className="large-price">{priceForPlan(plan)}</p>
+          <ul className="plan-list">
+            <li>{plan.monthly_request_limit?.toLocaleString() ?? "Custom"} API requests / month</li>
+            <li>{plan.rate_limit_per_minute ? `${plan.rate_limit_per_minute}/minute` : "Custom"} rate limit</li>
+            <li>{plan.included_projects} included projects</li>
+            <li>Usage activity dashboard</li>
+          </ul>
+          <button className={selectedPlanCode === plan.code ? "button primary blue" : "button outline"} onClick={() => onSelectPlan(plan.code)}>
+            {selectedPlanCode === plan.code ? "Selected" : `Select ${plan.name}`}
+          </button>
+        </Panel>
+      ))}
+    </div>
+  );
+}
+
+function Docs({
+  selectedProject,
+  language,
+  setLanguage,
+  onCopy,
+}: {
+  selectedProject?: Project;
+  language: QuickstartLanguage;
+  setLanguage: (language: QuickstartLanguage) => void;
+  onCopy: (text: string) => void;
+}) {
+  const snippet = quickstartSnippet(language, selectedProject);
+  return (
+    <div className="detail-layout single">
+      <Panel className="quickstart-panel wide-detail docs-panel">
+        <div className="panel-head">
+          <h2>Quickstart</h2>
+          <button className="button outline" onClick={() => onCopy(snippet)}>
+            <Clipboard size={15} /> Copy
+          </button>
+        </div>
+        <Quickstart language={language} setLanguage={setLanguage} selectedProject={selectedProject} />
+      </Panel>
+    </div>
+  );
+}
+
+function SettingsPage({ session, onSave }: { session: Session; onSave: (baseUrl: string) => void }) {
+  const [baseUrl, setBaseUrl] = useState(session.baseUrl);
+  const [tokenLabel, setTokenLabel] = useState(session.demo ? "Demo token" : "Configured admin token");
+
+  return (
+    <div className="detail-layout">
+      <Panel>
+        <h2>Cloud connection</h2>
+        <FormField label="Cloud API URL" value={baseUrl} onChange={setBaseUrl} />
+        <FormField label="Token label" value={tokenLabel} onChange={setTokenLabel} />
+        <button className="button primary blue" onClick={() => onSave(baseUrl)}>
+          <Check size={16} /> Save settings
+        </button>
+      </Panel>
+      <Panel className="wide-detail">
+        <h2>Deployment checklist</h2>
+        <ul className="plan-list">
+          <li>Mount `@abdulmuiz44/clientpad-cloud` at `/api/cloud/v1`.</li>
+          <li>Set `CLIENTPAD_CLOUD_ADMIN_TOKEN` for operator access.</li>
+          <li>Deploy this dashboard as a static app.</li>
+          <li>Use hosted API keys for paid gateway access.</li>
+        </ul>
+      </Panel>
+    </div>
+  );
+}
+
+function ProjectsTable({ projects, usage, compact = false }: { projects: Project[]; usage: UsageRow[]; compact?: boolean }) {
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th>Environment</th>
+            <th>Requests (7D)</th>
+            <th>Errors (7D)</th>
+            <th>P95 Latency</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {projects.map((project, index) => {
+            const row = usage[index % Math.max(usage.length, 1)] ?? demoUsage[0];
+            return (
+              <tr key={project.id}>
+                <td>
+                  <a>{project.slug}</a>
+                  <small>{project.id.replace("project_", "prj_")}</small>
+                </td>
+                <td><Badge tone={project.environment === "production" ? "green" : project.environment === "staging" ? "blue" : "gray"}>{toTitle(project.environment)}</Badge></td>
+                <td>{compact ? formatNumber(row.request_count * (index + 2)) : formatNumber(row.request_count)}</td>
+                <td><span className={row.rejected_count > 10 ? "danger" : "success"}>{((row.rejected_count / Math.max(row.request_count, 1)) * 100).toFixed(2)}%</span></td>
+                <td>{142 + index * 19} ms</td>
+                <td>{formatDate(project.created_at)}</td>
+                <td><RowActions /></td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function KeysTable({ keys, showUsage = false }: { keys: ApiKeyRecord[]; showUsage?: boolean }) {
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Key</th>
+            <th>Project</th>
+            <th>{showUsage ? "Requests" : "Created"}</th>
+            <th>Last Used</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {keys.map((key) => (
+            <tr key={key.id}>
+              <td>{key.name}</td>
+              <td><span className="masked">{maskKey(key.key)}</span> <Clipboard size={13} /></td>
+              <td><a>{key.project_slug}</a></td>
+              <td>{showUsage ? formatNumber(key.monthly_request_limit ? Math.min(key.monthly_request_limit, 512_771) : 168_939) : formatDate(key.created_at)}</td>
+              <td>{formatDate(key.last_used_at)}</td>
+              <td><span className="status-dot">Active</span></td>
+              <td><RowActions editable /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Quickstart({
+  language,
+  setLanguage,
+  selectedProject,
+  compact = false,
+}: {
+  language: QuickstartLanguage;
+  setLanguage: (language: QuickstartLanguage) => void;
+  selectedProject?: Project;
+  compact?: boolean;
+}) {
+  const snippet = quickstartSnippet(language, selectedProject);
+  return (
+    <>
+      <div className="language-tabs">
+        {(["curl", "python", "node", "go", "ruby"] as QuickstartLanguage[]).map((tab) => (
+          <button key={tab} className={language === tab ? "selected" : ""} onClick={() => setLanguage(tab)}>
+            {tab === "curl" ? "cURL" : tab === "node" ? "Node.js" : toTitle(tab)}
+          </button>
         ))}
       </div>
-    </section>
+      <pre className={compact ? "code compact" : "code"}>{snippet}</pre>
+    </>
   );
 }
 
-function Docs({ selectedProject }: { selectedProject?: Project }) {
-  const snippet = `import { ClientPad } from "@abdulmuiz44/clientpad-sdk";
-
-const clientpad = new ClientPad({
-  baseUrl: "https://api.clientpad.com/api/public/v1",
-  apiKey: process.env.CLIENTPAD_API_KEY!,
-});
-
-await clientpad.leads.create({
-  name: "Ada Customer",
-  phone: "+234...",
-  source: "Website",
-});`;
+function Quota({ label, value, limit, suffix }: { label: string; value: number; limit: number; suffix: string }) {
+  const percent = Math.min((value / limit) * 100, 100);
   return (
-    <section className="page-grid">
-      <div className="page-heading"><div><h1>Quickstart</h1><p>Copy this into your app and replace the API key.</p></div></div>
-      <section className="surface wide code-surface">
-        <div className="section-title"><h2>{selectedProject?.name ?? "ClientPad"} SDK setup</h2><CopyButton text={snippet} /></div>
-        <pre>{snippet}</pre>
-      </section>
-    </section>
+    <div className="quota-row">
+      <div>
+        <span>
+          {label} <CircleHelp size={14} />
+        </span>
+        <strong>{formatQuota(value, suffix)} / {formatQuota(limit, suffix)}</strong>
+      </div>
+      <div className="progress">
+        <i style={{ width: `${percent}%` }} />
+      </div>
+      <div className="quota-meta">
+        <span>{percent.toFixed(1)}% used</span>
+        <span>{formatQuota(Math.max(limit - value, 0), suffix)} remaining</span>
+      </div>
+    </div>
   );
 }
 
-function SettingsPage({ session }: { session: Session }) {
+function LineChart() {
+  const points = "0,120 90,95 180,52 270,117 360,38 450,70 540,70 630,145";
   return (
-    <section className="page-grid">
-      <div className="page-heading"><div><h1>Settings</h1><p>Control-plane connection and deployment details.</p></div></div>
-      <section className="surface">
-        <h2>Connection</h2>
-        <p className="muted">Cloud API URL</p>
-        <code>{session.baseUrl}</code>
-      </section>
-    </section>
+    <div className="line-chart" aria-label="API request trend">
+      <div className="y-axis"><span>400K</span><span>300K</span><span>200K</span><span>100K</span><span>0</span></div>
+      <svg viewBox="0 0 630 180" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#1f6feb" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#1f6feb" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={`M ${points} L 630,180 L 0,180 Z`} fill="url(#chartFill)" />
+        <polyline points={points} fill="none" stroke="#1f6feb" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <div className="x-axis">
+        {["May 12", "May 13", "May 14", "May 15", "May 16", "May 17", "May 18", "May 19"].map((day) => <span key={day}>{day}</span>)}
+      </div>
+    </div>
+  );
+}
+
+function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <section className={`panel ${className}`}>{children}</section>;
+}
+
+function Logo() {
+  return (
+    <div className="logo">
+      <Cloud size={30} />
+      <strong>ClientPad Cloud</strong>
+    </div>
+  );
+}
+
+function Notice({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  return (
+    <button className="notice" onClick={onDismiss}>
+      <Check size={16} />
+      {message}
+    </button>
+  );
+}
+
+function NewKeyBanner({ apiKey, onDismiss }: { apiKey: string; onDismiss: () => void }) {
+  return (
+    <div className="key-banner">
+      <div>
+        <strong>New API key</strong>
+        <code>{apiKey}</code>
+      </div>
+      <CopyButton text={apiKey} />
+      <button className="button outline" onClick={onDismiss}>Done</button>
+    </div>
+  );
+}
+
+function RowActions({ editable = false }: { editable?: boolean }) {
+  return (
+    <div className="row-actions">
+      {editable ? <button aria-label="Edit"><Edit3 size={15} /></button> : null}
+      <button aria-label="More"><MoreHorizontal size={17} /></button>
+      {editable ? <button aria-label="Delete"><Trash2 size={15} /></button> : null}
+    </div>
+  );
+}
+
+function Badge({ children, tone }: { children: React.ReactNode; tone: "green" | "blue" | "gray" }) {
+  return <span className={`badge ${tone}`}>{children}</span>;
+}
+
+function FormField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="field">
+      {label}
+      <input value={value} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      className="copy-button"
+      onClick={async () => {
+        await navigator.clipboard.writeText(text);
+        setDone(true);
+      }}
+    >
+      <Clipboard size={14} />
+      {done ? "Copied" : "Copy"}
+    </button>
   );
 }
 
@@ -493,9 +1010,7 @@ class CloudApi {
   constructor(private readonly session: Session) {}
 
   async request<T>(path: string, init: RequestInit = {}): Promise<T> {
-    if (this.session.demo) {
-      return demoResponse(path, init) as T;
-    }
+    if (this.session.demo) return demoResponse(path, init) as T;
 
     const response = await fetch(`${this.session.baseUrl}${path}`, {
       ...init,
@@ -511,7 +1026,7 @@ class CloudApi {
   }
 
   async plans() {
-    const body = await this.request<{ data: Plan[] }>("/plans", { headers: {} });
+    const body = await this.request<{ data: Plan[] }>("/plans");
     return body.data;
   }
 
@@ -528,7 +1043,7 @@ class CloudApi {
   async createKey(input: KeyFormState) {
     const body = await this.request<{ data: ApiKeyResult }>("/api-keys", {
       method: "POST",
-      body: JSON.stringify({ ...input, scopes: input.scopes.split(",").map((scope) => scope.trim()) }),
+      body: JSON.stringify({ ...input, scopes: input.scopes.split(",").map((scope) => scope.trim()).filter(Boolean) }),
     });
     return body.data;
   }
@@ -542,28 +1057,30 @@ class CloudApi {
 function demoResponse(path: string, init: RequestInit) {
   if (path === "/plans") return { data: demoPlans };
   if (path === "/projects" && init.method === "POST") {
+    const body = JSON.parse(String(init.body ?? "{}")) as ProjectFormState;
     return {
       data: {
-        id: "project_new",
-        workspace_id: "workspace_new",
-        name: "New project",
-        slug: "new-project",
+        id: `project_${Date.now()}`,
+        workspace_id: `workspace_${Date.now()}`,
+        name: body.name || "New project",
+        slug: slugify(body.name || "new-project"),
         environment: "production",
-        owner_email: "founder@example.com",
+        owner_email: body.owner_email || "founder@example.com",
         created_at: new Date().toISOString(),
       },
     };
   }
   if (path === "/projects") return { data: demoProjects };
   if (path === "/api-keys") {
+    const body = JSON.parse(String(init.body ?? "{}")) as KeyFormState;
     return {
       data: {
-        id: "api_key_new",
-        key: "cp_live_demo123_generated_secret",
-        scopes: ["leads:read", "leads:write", "clients:read", "clients:write", "usage:read"],
-        billing_mode: "cloud_free",
-        monthly_request_limit: 1000,
-        rate_limit_per_minute: 60,
+        id: `api_key_${Date.now()}`,
+        key: "cp_live_demo123_generated_secret_444f",
+        scopes: body.scopes.split(",").map((scope) => scope.trim()).filter(Boolean),
+        billing_mode: body.plan_code === "free" ? "cloud_free" : "cloud_paid",
+        monthly_request_limit: 10_000_000,
+        rate_limit_per_minute: 1200,
       },
     };
   }
@@ -572,121 +1089,127 @@ function demoResponse(path: string, init: RequestInit) {
 }
 
 const demoPlans: Plan[] = [
-  {
-    id: "plan_free",
-    code: "free",
-    name: "Free",
-    monthly_price_cents: 0,
-    currency: "USD",
-    monthly_request_limit: 1000,
-    rate_limit_per_minute: 60,
-    included_projects: 1,
-    features: {},
-  },
-  {
-    id: "plan_developer",
-    code: "developer",
-    name: "Developer",
-    monthly_price_cents: 1900,
-    currency: "USD",
-    monthly_request_limit: 100000,
-    rate_limit_per_minute: 300,
-    included_projects: 3,
-    features: {},
-  },
-  {
-    id: "plan_business",
-    code: "business",
-    name: "Business",
-    monthly_price_cents: 9900,
-    currency: "USD",
-    monthly_request_limit: 1000000,
-    rate_limit_per_minute: 1200,
-    included_projects: 10,
-    features: {},
-  },
+  { id: "plan_free", code: "free", name: "Free Plan", monthly_price_cents: 0, currency: "USD", monthly_request_limit: 1_000, rate_limit_per_minute: 60, included_projects: 1, features: {} },
+  { id: "plan_developer", code: "developer", name: "Developer Plan", monthly_price_cents: 1900, currency: "USD", monthly_request_limit: 100_000, rate_limit_per_minute: 300, included_projects: 3, features: {} },
+  { id: "plan_pro", code: "pro", name: "Pro Plan", monthly_price_cents: 19900, currency: "USD", monthly_request_limit: 10_000_000, rate_limit_per_minute: 1200, included_projects: 10, features: {} },
+  { id: "plan_business", code: "business", name: "Business Plan", monthly_price_cents: 49900, currency: "USD", monthly_request_limit: 50_000_000, rate_limit_per_minute: 5000, included_projects: 50, features: {} },
 ];
 
 const demoProjects: Project[] = [
-  {
-    id: "project_1",
-    workspace_id: "workspace_1",
-    name: "Production API",
-    slug: "production-api",
-    environment: "production",
-    owner_email: "alex@example.com",
-    created_at: "2026-05-08T00:00:00Z",
-  },
-  {
-    id: "project_2",
-    workspace_id: "workspace_2",
-    name: "Staging API",
-    slug: "staging-api",
-    environment: "staging",
-    owner_email: "ops@example.com",
-    created_at: "2026-05-08T00:00:00Z",
-  },
+  { id: "project_8f3e2bd7", workspace_id: "workspace_prod", name: "Acme Corp", slug: "production-api", environment: "production", owner_email: "alex@example.com", created_at: "2025-04-02T00:00:00Z" },
+  { id: "project_1a7d9c3e", workspace_id: "workspace_stage", name: "Staging API", slug: "staging-api", environment: "staging", owner_email: "ops@example.com", created_at: "2025-04-02T00:00:00Z" },
+  { id: "project_c7b9a1f2", workspace_id: "workspace_tools", name: "Internal Tools", slug: "internal-tools", environment: "production", owner_email: "tools@example.com", created_at: "2025-04-15T00:00:00Z" },
+  { id: "project_0d3f4b6a", workspace_id: "workspace_sandbox", name: "Sandbox", slug: "sandbox", environment: "development", owner_email: "dev@example.com", created_at: "2025-04-28T00:00:00Z" },
 ];
 
 const demoUsage: UsageRow[] = [
-  {
-    api_key_id: "api_key_1",
-    name: "Production server key",
-    billing_mode: "cloud_paid",
-    monthly_request_limit: 100000,
-    rate_limit_per_minute: 300,
-    request_count: 42810,
-    rejected_count: 12,
-  },
-  {
-    api_key_id: "api_key_2",
-    name: "Importer key",
-    billing_mode: "cloud_free",
-    monthly_request_limit: 1000,
-    rate_limit_per_minute: 60,
-    request_count: 714,
-    rejected_count: 3,
-  },
+  { api_key_id: "api_key_444f", name: "Production Server Key", billing_mode: "cloud_paid", monthly_request_limit: 10_000_000, rate_limit_per_minute: 1200, request_count: 1_532_984, rejected_count: 73 },
+  { api_key_id: "api_key_2a7b", name: "Staging Server Key", billing_mode: "cloud_paid", monthly_request_limit: 10_000_000, rate_limit_per_minute: 1200, request_count: 512_771, rejected_count: 52 },
+  { api_key_id: "api_key_9c3d", name: "Dev CLI Key", billing_mode: "cloud_free", monthly_request_limit: 100_000, rate_limit_per_minute: 300, request_count: 346_118, rejected_count: 7 },
 ];
 
-function DataTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
-  return (
-    <div className="table-wrap">
-      <table>
-        <thead><tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr></thead>
-        <tbody>
-          {rows.length ? rows.map((row, index) => <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>) : <tr><td colSpan={headers.length}>No records yet.</td></tr>}
-        </tbody>
-      </table>
-    </div>
-  );
+function toKeyRecords(usage: UsageRow[], projects: Project[]): ApiKeyRecord[] {
+  return usage.map((row, index) => {
+    const project = projects[index % Math.max(projects.length, 1)] ?? demoProjects[0];
+    return {
+      ...row,
+      id: row.api_key_id,
+      key: `cp_live_${"•".repeat(24)}${["444f", "2a7b", "9c3d"][index] ?? "7f0a"}`,
+      scopes: ["leads:read", "leads:write", "clients:read", "clients:write"],
+      project_slug: project.slug,
+      created_at: project.created_at,
+      last_used_at: ["2025-05-19T00:00:00Z", "2025-05-18T00:00:00Z", "2025-05-17T00:00:00Z"][index] ?? "2025-05-16T00:00:00Z",
+      status: "active",
+    };
+  });
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return <div className="metric"><span>{label}</span><strong>{value}</strong></div>;
+function quickstartSnippet(language: QuickstartLanguage, selectedProject?: Project) {
+  const resource = selectedProject?.slug ?? "resource";
+  const snippets: Record<QuickstartLanguage, string> = {
+    curl: `curl https://api.clientpad.cloud/v1/resources \\\n  -H "Authorization: Bearer cp_live_your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d '{"name":"${resource}"}'`,
+    python: `import requests\n\nrequests.post(\n  "https://api.clientpad.cloud/v1/resources",\n  headers={"Authorization": "Bearer cp_live_your_api_key_here"},\n  json={"name": "${resource}"},\n)`,
+    node: `import { ClientPad } from "@abdulmuiz44/clientpad-sdk";\n\nconst clientpad = new ClientPad({\n  baseUrl: "https://api.clientpad.cloud/v1",\n  apiKey: process.env.CLIENTPAD_API_KEY!,\n});\n\nawait clientpad.leads.create({ name: "${resource}" });`,
+    go: `req, _ := http.NewRequest("POST", "https://api.clientpad.cloud/v1/resources", body)\nreq.Header.Set("Authorization", "Bearer cp_live_your_api_key_here")`,
+    ruby: `Net::HTTP.post(\n  URI("https://api.clientpad.cloud/v1/resources"),\n  { name: "${resource}" }.to_json,\n  "Authorization" => "Bearer cp_live_your_api_key_here"\n)`,
+  };
+  return snippets[language];
 }
 
-function FormField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="field">{label}<input value={value} onChange={(event) => onChange(event.target.value)} /></label>;
+async function copyText(text: string, setNotice: (notice: string) => void) {
+  await navigator.clipboard.writeText(text);
+  setNotice("Copied to clipboard.");
 }
 
-function Guidance({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
-  return <div className="guidance">{icon}<strong>{title}</strong><p>{text}</p></div>;
+function filterProjects(projects: Project[], query: string, onlyProduction: boolean) {
+  return projects.filter((project) => {
+    const matchesQuery = !query || `${project.name} ${project.slug} ${project.owner_email}`.toLowerCase().includes(query.toLowerCase());
+    const matchesFilter = !onlyProduction || project.environment === "production";
+    return matchesQuery && matchesFilter;
+  });
 }
 
-function CopyButton({ text }: { text: string }) {
-  const [done, setDone] = useState(false);
-  return <button className="ghost-button" onClick={async () => { await navigator.clipboard.writeText(text); setDone(true); }}><Clipboard size={16} />{done ? "Copied" : "Copy"}</button>;
+function filterKeys(keys: ApiKeyRecord[], query: string, paidOnly: boolean) {
+  return keys.filter((key) => {
+    const matchesQuery = !query || `${key.name} ${key.project_slug}`.toLowerCase().includes(query.toLowerCase());
+    const matchesFilter = !paidOnly || key.billing_mode === "cloud_paid";
+    return matchesQuery && matchesFilter;
+  });
 }
 
-function NewKeyBanner({ apiKey, onDismiss }: { apiKey: string; onDismiss: () => void }) {
-  return (
-    <div className="key-banner">
-      <div><strong>New API key</strong><code>{apiKey}</code></div>
-      <CopyButton text={apiKey} />
-      <button className="ghost-button" onClick={onDismiss}>Done</button>
-    </div>
-  );
+function titleForPage(page: Page) {
+  return {
+    overview: "Overview",
+    projects: "Projects",
+    keys: "API Keys",
+    usage: "Usage",
+    billing: "Billing",
+    docs: "Docs",
+    settings: "Settings",
+  }[page];
+}
+
+function subtitleForPage(page: Page, project?: Project) {
+  return {
+    overview: "System status and workspace summary",
+    projects: "Create, inspect, and manage hosted workspaces",
+    keys: "Issue, copy, and inspect developer access keys",
+    usage: `${project?.name ?? "Workspace"} request activity and quota usage`,
+    billing: "Plan limits, billing period, and upgrade controls",
+    docs: "SDK and API snippets developers can copy into apps",
+    settings: "Cloud connection and operator settings",
+  }[page];
+}
+
+function formatNumber(value: number) {
+  return value.toLocaleString("en-US");
+}
+
+function formatQuota(value: number, suffix: string) {
+  if (suffix) return `${value.toLocaleString("en-US", { maximumFractionDigits: 1 })} ${suffix}`;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value % 1_000_000 === 0 ? 0 : 2)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(value % 1_000 === 0 ? 0 : 1)}K`;
+  return value.toLocaleString("en-US");
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(value));
+}
+
+function priceForPlan(plan: Plan) {
+  return plan.monthly_price_cents === 0 ? "Free" : `$${(plan.monthly_price_cents / 100).toFixed(0)} / month`;
+}
+
+function maskKey(key: string) {
+  return key.startsWith("cp_live_") ? key : `cp_live_${"•".repeat(24)}${key.slice(-4)}`;
+}
+
+function slugify(value: string) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+function toTitle(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 createRoot(document.getElementById("root")!).render(<App />);
