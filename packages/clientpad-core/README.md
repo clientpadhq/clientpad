@@ -11,3 +11,15 @@ This package contains common API contracts used by:
 - `@abdulmuiz44/clientpad-sdk`
 - `@abdulmuiz44/clientpad-server`
 - future adapters and integrations
+
+## Build
+
+```bash
+npm --prefix packages/clientpad-core run build
+```
+
+## Typecheck
+
+```bash
+npm --prefix packages/clientpad-core run typecheck
+```

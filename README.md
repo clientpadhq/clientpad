@@ -2,7 +2,7 @@
 
 ClientPad is free, open-source business infrastructure for building lead and client workflows into any application.
 
-This repository now ships installable packages instead of a hosted product with subscriptions. Developers bring their own PostgreSQL database, deploy wherever they want, and use API keys as the gateway for application and integration access.
+This repository ships installable packages instead of a hosted product with subscriptions. Developers bring their own PostgreSQL database, deploy wherever they want, and use API keys as the gateway for application and integration access.
 
 ## Packages
 

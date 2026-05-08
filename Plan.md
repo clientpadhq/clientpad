@@ -8,7 +8,7 @@ ClientPad is being built as open-source infrastructure that businesses and devel
 - PostgreSQL is the default database layer.
 - API keys are the gateway for integrations, automations, SDK access, and third-party apps.
 - Packages should be dependency-light and usable outside any single web framework.
-- The repository should be ready for GitHub releases and npm publishing under the `@clientpad` scope.
+- The repository should be ready for GitHub releases and npm publishing under the `@abdulmuiz44` scope.
 
 ## Current Package Surface
 
@@ -40,7 +40,7 @@ ClientPad is being built as open-source infrastructure that businesses and devel
 ## Release 0.1.0 Scope
 
 1. Publish the source code to GitHub as an open-source infrastructure repository.
-2. Attach package tarballs for:
+2. Publish packages to the public npm registry:
    - `@abdulmuiz44/clientpad-core`
    - `@abdulmuiz44/clientpad-cli`
    - `@abdulmuiz44/clientpad-sdk`
@@ -52,12 +52,12 @@ ClientPad is being built as open-source infrastructure that businesses and devel
 ## Next Implementation Areas
 
 1. Add an OpenAPI document for `/api/public/v1`.
-2. Add generated examples for Express, Hono, Fastify, and Next route handlers.
+2. Add generated examples for Express, Hono, Fastify, and route-handler runtimes.
 3. Add Docker Compose for local PostgreSQL development.
 4. Add auth/session packages for app-owned user login.
 5. Expand public APIs to deals, invoices, jobs, tasks, and activities.
 6. Add CI for install, typecheck, tests, package dry-run, and dependency scan.
-7. Publish packages to the npm registry once the `@clientpad` npm organization is available.
+7. Add release automation for npm publishing and GitHub release assets.
 
 ## Operating Principle
 

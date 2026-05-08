@@ -4,8 +4,14 @@
   "description": "Shared ClientPad types and dependency-free protocol utilities.",
   "license": "MIT",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "files": [
     "dist",
     "README.md"
@@ -22,10 +28,16 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prepack": "npm run build"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Abdulmuiz44/ClientPad.git",
+    "directory": "packages/clientpad-core"
+  },
   "engines": {
     "node": ">=18"
   },
   "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
     "access": "public"
   }
 }
