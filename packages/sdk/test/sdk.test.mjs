@@ -24,6 +24,22 @@ const fakeFetch = async (url, init) => {
     return jsonResponse({ data: { id: "client_1" } }, { status: 201 });
   }
 
+  if (String(url).includes("/usage")) {
+    return jsonResponse({
+      data: {
+        api_key_id: "api_key_1",
+        workspace_id: "workspace_1",
+        billing_mode: "cloud_free",
+        month: "2026-05-01",
+        request_count: 12,
+        rejected_count: 1,
+        monthly_request_limit: 1000,
+        remaining_requests: 988,
+        rate_limit_per_minute: 60,
+      },
+    });
+  }
+
   return jsonResponse({ data: [], pagination: { limit: 10, offset: 5 } });
 };
 
@@ -61,6 +77,10 @@ assert.deepEqual(JSON.parse(calls[2].init.body), {
   name: "Ada Customer",
   phone: "+234...",
 });
+
+const usage = await clientpad.usage.retrieve();
+assert.equal(calls[3].url, "https://example.com/api/public/v1/usage");
+assert.equal(usage.data.remaining_requests, 988);
 
 const failing = new ClientPad({
   baseUrl: "https://example.com/api/public/v1/fail",

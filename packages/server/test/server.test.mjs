@@ -19,11 +19,26 @@ const db = {
             workspace_id: "workspace_1",
             name: "Test key",
             key_hash: keyHash,
-            scopes: ["leads:read", "leads:write", "clients:read", "clients:write"],
+            scopes: ["leads:read", "leads:write", "clients:read", "clients:write", "usage:read"],
+            billing_mode: "cloud_free",
+            monthly_request_limit: 1000,
+            rate_limit_per_minute: 60,
           },
         ],
         rowCount: 1,
       };
+    }
+
+    if (text.includes("api_key_rate_limit_windows")) {
+      return { rows: [{ request_count: 1, allowed: true }], rowCount: 1 };
+    }
+
+    if (text.includes("insert into api_key_usage_months")) {
+      return { rows: [{ request_count: 1, rejected_count: 0, allowed: true }], rowCount: 1 };
+    }
+
+    if (text.includes("from api_key_usage_months")) {
+      return { rows: [{ request_count: 12, rejected_count: 1 }], rowCount: 1 };
     }
 
     if (text.includes("from leads")) {
@@ -89,5 +104,65 @@ const invalidStatus = await handler(
 );
 assert.equal(invalidStatus.status, 400);
 
+const usageResponse = await handler(
+  new Request("https://example.com/api/public/v1/usage", {
+    headers: { authorization: `Bearer ${rawKey}` },
+  })
+);
+assert.equal(usageResponse.status, 200);
+assert.deepEqual(await usageResponse.json(), {
+  data: {
+    api_key_id: "api_key_1",
+    workspace_id: "workspace_1",
+    billing_mode: "cloud_free",
+    month: new Date().toISOString().slice(0, 7) + "-01",
+    request_count: 12,
+    rejected_count: 1,
+    monthly_request_limit: 1000,
+    remaining_requests: 988,
+    rate_limit_per_minute: 60,
+  },
+});
+
 assert.equal(queries.some((query) => query.text.includes("last_used_at")), true);
 assert.equal(queries.some((query) => query.text.includes("api_key_audit_events")), true);
+assert.equal(queries.some((query) => query.text.includes("api_key_usage_events")), true);
+
+const limitedDb = {
+  async query(text) {
+    if (text.includes("from api_keys")) {
+      return {
+        rows: [
+          {
+            id: "api_key_limited",
+            workspace_id: "workspace_1",
+            name: "Limited key",
+            key_hash: keyHash,
+            scopes: ["leads:read"],
+            billing_mode: "cloud_free",
+            monthly_request_limit: 1,
+            rate_limit_per_minute: null,
+          },
+        ],
+        rowCount: 1,
+      };
+    }
+
+    if (text.includes("insert into api_key_usage_months")) {
+      return { rows: [{ request_count: 2, rejected_count: 0 }], rowCount: 1 };
+    }
+
+    return { rows: [], rowCount: 0 };
+  },
+};
+
+const limitedHandler = createClientPadHandler({ db: limitedDb, apiKeyPepper: pepper });
+const limitedResponse = await limitedHandler(
+  new Request("https://example.com/api/public/v1/leads", {
+    headers: { authorization: `Bearer ${rawKey}` },
+  })
+);
+assert.equal(limitedResponse.status, 429);
+assert.deepEqual(await limitedResponse.json(), {
+  error: { message: "API key monthly quota exceeded." },
+});

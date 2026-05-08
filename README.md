@@ -76,6 +76,7 @@ The first stable API surface is versioned under `/api/public/v1`:
 - `POST /leads`
 - `GET /clients`
 - `POST /clients`
+- `GET /usage`
 
 API keys are sent with:
 
@@ -94,6 +95,28 @@ Create responses return:
 ```ts
 { data: { id: string } }
 ```
+
+## Monetization Model
+
+ClientPad remains fully open source. Self-hosted API keys can be free and unlimited because developers run their own database and infrastructure.
+
+Revenue comes from an optional hosted ClientPad Cloud gateway:
+
+- hosted PostgreSQL and migrations
+- managed public API endpoint
+- API key dashboard
+- monthly request quotas
+- per-minute rate limits
+- usage analytics and audit logs
+- backups, upgrades, and support
+
+Hosted keys use the same API key format and SDK. Usage can be inspected with:
+
+```ts
+const usage = await clientpad.usage.retrieve();
+```
+
+Self-hosted deployments can leave `monthly_request_limit` and `rate_limit_per_minute` empty for unlimited local usage.
 
 ## Development
 

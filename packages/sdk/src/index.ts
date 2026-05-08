@@ -88,6 +88,20 @@ export type ClientPadErrorPayload = {
   [key: string]: unknown;
 };
 
+export type ApiKeyBillingMode = "self_hosted" | "cloud_free" | "cloud_paid" | "cloud_enterprise";
+
+export type ApiKeyUsageSummary = {
+  api_key_id: string;
+  workspace_id: string;
+  billing_mode: ApiKeyBillingMode;
+  month: string;
+  request_count: number;
+  rejected_count: number;
+  monthly_request_limit: number | null;
+  remaining_requests: number | null;
+  rate_limit_per_minute: number | null;
+};
+
 export type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Response>;
 
 export type ClientPadConfig = {
@@ -121,6 +135,7 @@ export class ClientPadError extends Error {
 export class ClientPad {
   readonly leads: LeadsResource;
   readonly clients: ClientsResource;
+  readonly usage: UsageResource;
 
   private readonly baseUrl: string;
   private readonly apiKey: string;
@@ -148,6 +163,7 @@ export class ClientPad {
 
     this.leads = new LeadsResource(resourceConfig);
     this.clients = new ClientsResource(resourceConfig);
+    this.usage = new UsageResource(resourceConfig);
   }
 
   private async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -205,6 +221,14 @@ class ClientsResource {
       method: "POST",
       body: input,
     });
+  }
+}
+
+class UsageResource {
+  constructor(private readonly config: ResourceConfig) {}
+
+  retrieve(): Promise<{ data: ApiKeyUsageSummary }> {
+    return this.config.request<{ data: ApiKeyUsageSummary }>("/usage");
   }
 }
 

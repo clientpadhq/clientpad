@@ -4,7 +4,9 @@ import {
   getPublicPrefix,
   isLeadStatus,
   parseBearerToken,
+  type ApiKeyUsageSummary,
   type ApiScope,
+  type ApiKeyBillingMode,
   type LeadStatus,
 } from "@abdulmuiz44/clientpad-core";
 
@@ -26,6 +28,9 @@ export type ApiKeyPrincipal = {
   workspaceId: string;
   name: string;
   scopes: ApiScope[];
+  billingMode: ApiKeyBillingMode;
+  monthlyRequestLimit: number | null;
+  rateLimitPerMinute: number | null;
 };
 
 export type ClientPadServerConfig = {
@@ -42,6 +47,30 @@ type ApiKeyRow = {
   name: string;
   key_hash: string;
   scopes: ApiScope[] | null;
+  billing_mode: ApiKeyBillingMode | null;
+  monthly_request_limit: number | null;
+  rate_limit_per_minute: number | null;
+};
+
+type UsageResult = {
+  allowed: boolean;
+  reason: string | null;
+  statusCode: number | null;
+};
+
+type UsageMonthRow = {
+  request_count: number;
+  rejected_count: number;
+};
+
+type RateLimitWindowRow = {
+  request_count: number;
+  allowed: boolean;
+};
+
+type UsageSummaryRow = {
+  request_count: number | null;
+  rejected_count: number | null;
 };
 
 export function createClientPadHandler(config: ClientPadServerConfig): ClientPadHandler {
@@ -74,6 +103,7 @@ export class ClientPadServer {
       if (path === "/leads" && request.method === "POST") return this.createLead(request);
       if (path === "/clients" && request.method === "GET") return this.listClients(request, url);
       if (path === "/clients" && request.method === "POST") return this.createClient(request);
+      if (path === "/usage" && request.method === "GET") return this.getUsage(request);
 
       return jsonError("Route not found.", 404);
     } catch (error) {
@@ -282,6 +312,16 @@ export class ClientPadServer {
     const allowed = requiredScopes.every((scope) => principal.scopes.includes(scope));
     if (!allowed) return jsonError("API key does not have the required scope.", 403);
 
+    const usage = await this.applyUsageLimits(principal, request);
+    if (!usage.allowed) {
+      await this.recordUsageEvent(principal, request, {
+        statusCode: usage.statusCode ?? 429,
+        billable: false,
+        rejectedReason: usage.reason,
+      });
+      return jsonError(usage.reason ?? "API key usage limit exceeded.", usage.statusCode ?? 429);
+    }
+
     await this.markApiKeyUsed(principal, request);
     return principal;
   }
@@ -292,7 +332,15 @@ export class ClientPadServer {
 
     const { rows } = await this.db.query<ApiKeyRow>(
       `
-        select id, workspace_id, name, key_hash, scopes
+        select
+          id,
+          workspace_id,
+          name,
+          key_hash,
+          scopes,
+          billing_mode,
+          monthly_request_limit,
+          rate_limit_per_minute
         from api_keys
         where public_prefix = $1
           and revoked_at is null
@@ -313,7 +361,125 @@ export class ClientPadServer {
       workspaceId: row.workspace_id,
       name: row.name,
       scopes: row.scopes ?? [],
+      billingMode: row.billing_mode ?? "self_hosted",
+      monthlyRequestLimit: row.monthly_request_limit,
+      rateLimitPerMinute: row.rate_limit_per_minute,
     };
+  }
+
+  private async applyUsageLimits(
+    principal: ApiKeyPrincipal,
+    request: Request
+  ): Promise<UsageResult> {
+    const rateLimit = principal.rateLimitPerMinute;
+    if (rateLimit !== null && rateLimit > 0) {
+      const rate = await this.incrementRateLimitWindow(principal, rateLimit);
+      if (!rate.allowed) {
+        return { allowed: false, reason: "API key rate limit exceeded.", statusCode: 429 };
+      }
+    }
+
+    const monthlyLimit = principal.monthlyRequestLimit;
+    const month = getCurrentMonthStart();
+    if (monthlyLimit !== null && monthlyLimit > 0) {
+      const usage = await this.incrementMonthlyUsage(principal, month, monthlyLimit);
+      if (!usage.allowed) {
+        return { allowed: false, reason: "API key monthly quota exceeded.", statusCode: 429 };
+      }
+    } else {
+      await this.incrementUnlimitedMonthlyUsage(principal, month);
+    }
+
+    await this.recordUsageEvent(principal, request, { statusCode: null, billable: true });
+    return { allowed: true, reason: null, statusCode: null };
+  }
+
+  private async incrementRateLimitWindow(principal: ApiKeyPrincipal, limit: number) {
+    const { rows } = await this.db.query<RateLimitWindowRow>(
+      `
+        insert into api_key_rate_limit_windows (
+          api_key_id,
+          window_start,
+          request_count
+        )
+        values ($1, date_trunc('minute', now()), 1)
+        on conflict (api_key_id, window_start)
+        do update set
+          request_count = api_key_rate_limit_windows.request_count + 1,
+          updated_at = now()
+        returning
+          request_count,
+          request_count <= $2 as allowed
+      `,
+      [principal.apiKeyId, limit]
+    );
+
+    return rows[0] ?? { request_count: 0, allowed: true };
+  }
+
+  private async incrementMonthlyUsage(
+    principal: ApiKeyPrincipal,
+    month: string,
+    limit: number
+  ) {
+    const { rows } = await this.db.query<UsageMonthRow>(
+      `
+        insert into api_key_usage_months (
+          api_key_id,
+          workspace_id,
+          month,
+          request_count
+        )
+        values ($1, $2, $3::date, 1)
+        on conflict (api_key_id, month)
+        do update set
+          request_count = api_key_usage_months.request_count + 1,
+          updated_at = now()
+        returning
+          request_count,
+          rejected_count
+      `,
+      [principal.apiKeyId, principal.workspaceId, month]
+    );
+
+    const usage = rows[0] ?? { request_count: 0, rejected_count: 0, allowed: true };
+    if (usage.request_count <= limit) {
+      return { ...usage, allowed: true };
+    }
+
+    await this.db.query(
+      `
+        update api_key_usage_months
+        set
+          request_count = greatest(request_count - 1, 0),
+          rejected_count = rejected_count + 1,
+          updated_at = now()
+        where api_key_id = $1
+          and month = $2::date
+      `,
+      [principal.apiKeyId, month]
+    );
+
+    return { ...usage, request_count: limit, allowed: false };
+  }
+
+  private async incrementUnlimitedMonthlyUsage(principal: ApiKeyPrincipal, month: string) {
+    await this.db.query(
+      `
+        insert into api_key_usage_months (
+          api_key_id,
+          workspace_id,
+          month,
+          request_count
+        )
+        values ($1, $2, $3::date, 1)
+        on conflict (api_key_id, month)
+        do update set
+          request_count = api_key_usage_months.request_count + 1,
+          updated_at = now()
+      `,
+      [principal.apiKeyId, principal.workspaceId, month]
+    );
   }
 
   private async markApiKeyUsed(principal: ApiKeyPrincipal, request: Request) {
@@ -355,6 +521,83 @@ export class ClientPadServer {
       ]
     );
   }
+
+  private async recordUsageEvent(
+    principal: ApiKeyPrincipal,
+    request: Request,
+    options: {
+      statusCode: number | null;
+      billable: boolean;
+      rejectedReason?: string | null;
+    }
+  ) {
+    const url = new URL(request.url);
+    await this.db.query(
+      `
+        insert into api_key_usage_events (
+          api_key_id,
+          workspace_id,
+          route,
+          method,
+          status_code,
+          billable,
+          rejected_reason,
+          ip_address,
+          user_agent
+        )
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `,
+      [
+        principal.apiKeyId,
+        principal.workspaceId,
+        normalizePath(url.pathname),
+        request.method,
+        options.statusCode,
+        options.billable,
+        options.rejectedReason ?? null,
+        getRequestIp(request),
+        request.headers.get("user-agent"),
+      ]
+    );
+  }
+
+  private async getUsage(request: Request) {
+    const context = await this.requireApiKey(request, ["usage:read"]);
+    if (context instanceof Response) return context;
+
+    const month = getCurrentMonthStart();
+    const { rows } = await this.db.query<UsageSummaryRow>(
+      `
+        select request_count, rejected_count
+        from api_key_usage_months
+        where api_key_id = $1
+          and month = $2::date
+        limit 1
+      `,
+      [context.apiKeyId, month]
+    );
+
+    const requestCount = rows[0]?.request_count ?? 0;
+    const rejectedCount = rows[0]?.rejected_count ?? 0;
+    const remainingRequests =
+      context.monthlyRequestLimit === null
+        ? null
+        : Math.max(context.monthlyRequestLimit - requestCount, 0);
+
+    const data: ApiKeyUsageSummary = {
+      api_key_id: context.apiKeyId,
+      workspace_id: context.workspaceId,
+      billing_mode: context.billingMode,
+      month,
+      request_count: requestCount,
+      rejected_count: rejectedCount,
+      monthly_request_limit: context.monthlyRequestLimit,
+      remaining_requests: remainingRequests,
+      rate_limit_per_minute: context.rateLimitPerMinute,
+    };
+
+    return Response.json({ data });
+  }
 }
 
 function normalizePath(pathname: string) {
@@ -383,6 +626,12 @@ function getRequestIp(request: Request) {
 
 function jsonError(message: string, status: number) {
   return Response.json({ error: { message } }, { status });
+}
+
+function getCurrentMonthStart() {
+  const now = new Date();
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  return `${now.getUTCFullYear()}-${month}-01`;
 }
 
 function parseLimit(value: string | null) {

@@ -1,6 +1,6 @@
 {
   "name": "@abdulmuiz44/clientpad-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Open-source ClientPad infrastructure CLI for PostgreSQL-backed business APIs.",
   "license": "MIT",
   "type": "module",

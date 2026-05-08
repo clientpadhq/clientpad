@@ -31,6 +31,7 @@ export const API_SCOPES = [
   "tasks:read",
   "tasks:write",
   "reports:read",
+  "usage:read",
 ] as const;
 
 export type ApiScope = (typeof API_SCOPES)[number];
@@ -120,6 +121,20 @@ export type ClientPadErrorPayload = {
     [key: string]: unknown;
   };
   [key: string]: unknown;
+};
+
+export type ApiKeyBillingMode = "self_hosted" | "cloud_free" | "cloud_paid" | "cloud_enterprise";
+
+export type ApiKeyUsageSummary = {
+  api_key_id: string;
+  workspace_id: string;
+  billing_mode: ApiKeyBillingMode;
+  month: string;
+  request_count: number;
+  rejected_count: number;
+  monthly_request_limit: number | null;
+  remaining_requests: number | null;
+  rate_limit_per_minute: number | null;
 };
 
 export function normalizeBaseUrl(baseUrl: string) {

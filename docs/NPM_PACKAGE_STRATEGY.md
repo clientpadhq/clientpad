@@ -76,3 +76,15 @@ pnpm add @abdulmuiz44/clientpad-server
 ```
 
 The server package exports a fetch-standard handler and currently supports leads and clients.
+
+## Hosted Gateway Revenue
+
+The npm packages stay open source. Paid usage happens through an optional hosted gateway:
+
+- developers install the SDK for free
+- self-hosted API keys are free
+- hosted ClientPad Cloud API keys can be metered
+- quotas are enforced by `@abdulmuiz44/clientpad-server`
+- usage is exposed through `clientpad.usage.retrieve()`
+
+This lets developers start locally and pay only when they choose managed infrastructure.

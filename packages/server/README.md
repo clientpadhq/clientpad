@@ -40,6 +40,7 @@ Mount it under routes that forward to:
 ```text
 /api/public/v1/leads
 /api/public/v1/clients
+/api/public/v1/usage
 ```
 
 ## Supported Routes
@@ -48,5 +49,16 @@ Mount it under routes that forward to:
 - `POST /leads`
 - `GET /clients`
 - `POST /clients`
+- `GET /usage`
 
 The handler also accepts full public API paths such as `/api/public/v1/leads`.
+
+## Usage Metering
+
+The server records API key usage in PostgreSQL and enforces optional limits:
+
+- `monthly_request_limit`
+- `rate_limit_per_minute`
+- `billing_mode`
+
+Leaving limits empty keeps self-hosted deployments unlimited. Hosted ClientPad Cloud deployments can set limits on API keys and return `429` when a key exceeds quota.

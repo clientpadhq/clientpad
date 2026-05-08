@@ -48,6 +48,41 @@ export const handler = createClientPadHandler({
 
 The handler accepts standard `Request` objects and returns standard `Response` objects. It supports both short paths such as `/leads` and full paths such as `/api/public/v1/leads`.
 
+## Usage and Quotas
+
+Hosted ClientPad Cloud keys can be metered. Self-hosted keys can be unlimited by leaving quota columns empty.
+
+```ts
+const usage = await clientpad.usage.retrieve();
+```
+
+The endpoint returns the current API key's month-to-date usage:
+
+```http
+GET /api/public/v1/usage
+Authorization: Bearer <api_key>
+```
+
+Required scope: `usage:read`
+
+```json
+{
+  "data": {
+    "api_key_id": "api_key_id",
+    "workspace_id": "workspace_id",
+    "billing_mode": "cloud_free",
+    "month": "2026-05-01",
+    "request_count": 12,
+    "rejected_count": 1,
+    "monthly_request_limit": 1000,
+    "remaining_requests": 988,
+    "rate_limit_per_minute": 60
+  }
+}
+```
+
+When a hosted key exceeds quota or rate limits, the API returns `429`.
+
 ## Local Platform Setup
 
 Run PostgreSQL, set environment variables, then apply neutral migrations:
