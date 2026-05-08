@@ -73,6 +73,17 @@ app.post("/lead", async (_req, res, next) => {
 });
 ```
 
+## Usage
+
+Hosted ClientPad Cloud keys can expose quota and rate-limit usage:
+
+```ts
+const usage = await clientpad.usage.retrieve();
+
+console.log(usage.data.request_count);
+console.log(usage.data.remaining_requests);
+```
+
 ## Error Handling
 
 ```ts

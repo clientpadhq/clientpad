@@ -1,0 +1,73 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ClientPad Public API",
+    "version": "0.2.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.clientpad.com/api/public/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/leads": {
+      "get": {
+        "summary": "List leads",
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100 } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer", "minimum": 0 } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["new", "contacted", "qualified", "unqualified"] } }
+        ],
+        "responses": {
+          "200": { "description": "Lead list" },
+          "401": { "description": "Missing or invalid API key" },
+          "403": { "description": "Missing scope" },
+          "429": { "description": "Quota or rate limit exceeded" }
+        }
+      },
+      "post": {
+        "summary": "Create lead",
+        "responses": {
+          "201": { "description": "Created lead id" },
+          "400": { "description": "Invalid request" },
+          "429": { "description": "Quota or rate limit exceeded" }
+        }
+      }
+    },
+    "/clients": {
+      "get": {
+        "summary": "List clients",
+        "responses": {
+          "200": { "description": "Client list" }
+        }
+      },
+      "post": {
+        "summary": "Create client",
+        "responses": {
+          "201": { "description": "Created client id" }
+        }
+      }
+    },
+    "/usage": {
+      "get": {
+        "summary": "Get current API key usage",
+        "responses": {
+          "200": { "description": "Usage summary for current key" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

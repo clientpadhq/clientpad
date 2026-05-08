@@ -1,6 +1,6 @@
 {
   "name": "@abdulmuiz44/clientpad-core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Shared ClientPad types and dependency-free protocol utilities.",
   "license": "MIT",
   "type": "module",

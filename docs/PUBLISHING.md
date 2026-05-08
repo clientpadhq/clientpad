@@ -1,6 +1,6 @@
 # Publishing ClientPad
 
-ClientPad's npm packages are `@abdulmuiz44/clientpad-core`, `@abdulmuiz44/clientpad-cli`, `@abdulmuiz44/clientpad-sdk`, and `@abdulmuiz44/clientpad-server`.
+ClientPad's npm packages are `@abdulmuiz44/clientpad-core`, `@abdulmuiz44/clientpad-cli`, `@abdulmuiz44/clientpad-sdk`, `@abdulmuiz44/clientpad-server`, and `@abdulmuiz44/clientpad-cloud`.
 
 ## Pre-Publish Checklist
 
@@ -27,6 +27,7 @@ ClientPad's npm packages are `@abdulmuiz44/clientpad-core`, `@abdulmuiz44/client
    npm pack --workspace @abdulmuiz44/clientpad-cli --dry-run
    npm pack --workspace @abdulmuiz44/clientpad-sdk --dry-run
    npm pack --workspace @abdulmuiz44/clientpad-server --dry-run
+   npm pack --workspace @abdulmuiz44/clientpad-cloud --dry-run
    ```
 
 5. Publish:
@@ -36,6 +37,7 @@ ClientPad's npm packages are `@abdulmuiz44/clientpad-core`, `@abdulmuiz44/client
    pnpm --filter @abdulmuiz44/clientpad-cli publish --access public
    pnpm --filter @abdulmuiz44/clientpad-sdk publish --access public
    pnpm --filter @abdulmuiz44/clientpad-server publish --access public
+   pnpm --filter @abdulmuiz44/clientpad-cloud publish --access public
    ```
 
 ## GitHub Release

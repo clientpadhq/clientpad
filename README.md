@@ -10,11 +10,13 @@ This repository ships installable packages instead of a hosted product with subs
 - `@abdulmuiz44/clientpad-cli`: local project setup, SQL migrations, and API key creation.
 - `@abdulmuiz44/clientpad-server`: fetch-standard public API handler for leads and clients.
 - `@abdulmuiz44/clientpad-sdk`: TypeScript SDK for consuming ClientPad public APIs from apps, workers, and scripts.
+- `@abdulmuiz44/clientpad-cloud`: hosted control plane for projects, plans, subscriptions, usage, and API keys.
 
 ## Install
 
 ```bash
 pnpm add @abdulmuiz44/clientpad-core @abdulmuiz44/clientpad-server @abdulmuiz44/clientpad-sdk
+pnpm add @abdulmuiz44/clientpad-cloud
 pnpm add -D @abdulmuiz44/clientpad-cli
 ```
 
@@ -76,6 +78,7 @@ The first stable API surface is versioned under `/api/public/v1`:
 - `POST /leads`
 - `GET /clients`
 - `POST /clients`
+- `GET /usage`
 
 API keys are sent with:
 
@@ -95,6 +98,28 @@ Create responses return:
 { data: { id: string } }
 ```
 
+## Monetization Model
+
+ClientPad remains fully open source. Self-hosted API keys can be free and unlimited because developers run their own database and infrastructure.
+
+Revenue comes from an optional hosted ClientPad Cloud gateway:
+
+- hosted PostgreSQL and migrations
+- managed public API endpoint
+- API key dashboard
+- monthly request quotas
+- per-minute rate limits
+- usage analytics and audit logs
+- backups, upgrades, and support
+
+Hosted keys use the same API key format and SDK. Usage can be inspected with:
+
+```ts
+const usage = await clientpad.usage.retrieve();
+```
+
+Self-hosted deployments can leave `monthly_request_limit` and `rate_limit_per_minute` empty for unlimited local usage.
+
 ## Development
 
 ```bash
@@ -102,6 +127,7 @@ pnpm install
 npm run typecheck
 npm run test:sdk
 npm run test:server
+npm run test:cloud
 npm run build
 ```
 
@@ -111,6 +137,7 @@ npm run build
 
 - [Open-source architecture](docs/OPEN_SOURCE_ARCHITECTURE.md)
 - [Public API](docs/PUBLIC_API.md)
+- [ClientPad Cloud](docs/CLIENTPAD_CLOUD.md)
 - [npm package strategy](docs/NPM_PACKAGE_STRATEGY.md)
 - [Publishing checklist](docs/PUBLISHING.md)
 
