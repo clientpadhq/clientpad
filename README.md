@@ -58,6 +58,44 @@ The `Plan.md` Phases 1–5 roadmap is implemented on this codebase, including po
    npm run dev
    ```
 
+## GitHub Packages npm publishing
+ClientPad publishes the small dedicated package surface `@abdulmuiz44/clientpad-core` for npm consumers through GitHub Packages. This strategy keeps the publishable artifact focused because the root ClientPad repository is primarily a Next.js application.
+
+Required environment variable:
+- `GITHUB_TOKEN`
+
+Authenticate before publishing:
+```bash
+export GITHUB_TOKEN=your_github_token
+```
+
+Publish with npm:
+```bash
+npm publish ./packages/clientpad-core
+```
+
+Or publish with pnpm:
+```bash
+pnpm --dir packages/clientpad-core publish
+```
+
+Install with npm:
+```bash
+npm install @abdulmuiz44/clientpad-core
+```
+
+Or install with pnpm:
+```bash
+pnpm add @abdulmuiz44/clientpad-core
+```
+
+Consumer import example:
+```ts
+import { getClientPadPackageInfo } from "@abdulmuiz44/clientpad-core";
+```
+
+Caveat: the root repo remains the ClientPad app and is not intended to be published wholesale.
+
 ## Required environment variables
 - `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_SUPABASE_URL`
