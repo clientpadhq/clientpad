@@ -13,7 +13,22 @@ export function getClientPadCoreInfo(): ClientPadCoreInfo {
   };
 }
 
+export const LEAD_STATUSES = ["new", "contacted", "qualified", "unqualified", "paid"] as const;
+/**
+ * Legacy lead statuses are still supported by public API v1 and the SDK.
+ * WhatsApp workflow features should use PIPELINE_STAGES/PipelineStage instead.
+ */
 export const LEAD_STATUSES = ["new", "contacted", "qualified", "unqualified"] as const;
+
+export const PIPELINE_STAGES = [
+  "new_lead",
+  "quoted",
+  "booked",
+  "in_progress",
+  "completed",
+  "paid",
+  "review_requested",
+] as const;
 
 export const API_SCOPES = [
   "leads:read",
@@ -36,6 +51,12 @@ export const API_SCOPES = [
 
 export type ApiScope = (typeof API_SCOPES)[number];
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
+export type PipelineStage = (typeof PIPELINE_STAGES)[number];
+
+export type WhatsAppMessageDirection = "inbound" | "outbound";
+export type WhatsAppConversationStatus = "open" | "closed" | "requires_owner";
+export type PaymentProvider = "paystack" | "flutterwave";
+export type PaymentStatus = "pending" | "paid" | "failed" | "cancelled";
 
 export type PaginationParams = {
   limit?: number | null;
@@ -69,6 +90,8 @@ export type Lead = {
   urgency: string | null;
   budget_clue: string | null;
   notes: string | null;
+  intent: string | null;
+  ai_summary: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -83,6 +106,8 @@ export type CreateLeadInput = {
   urgency?: string | null;
   budget_clue?: string | null;
   notes?: string | null;
+  intent?: string | null;
+  ai_summary?: string | null;
 };
 
 export type ListLeadsParams = PaginationParams & {
@@ -137,6 +162,33 @@ export type ApiKeyUsageSummary = {
   rate_limit_per_minute: number | null;
 };
 
+
+export function normalizeNigerianPhoneNumber(input: string | null | undefined) {
+  if (!input) return null;
+
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  const hasInternationalPrefix = trimmed.startsWith("+");
+  const digits = trimmed.replace(/\D/g, "");
+  if (!digits) return null;
+
+  let nationalNumber: string | null = null;
+  if (hasInternationalPrefix) {
+    if (!digits.startsWith("234")) return null;
+    nationalNumber = digits.slice(3);
+  } else if (digits.startsWith("234")) {
+    nationalNumber = digits.slice(3);
+  } else if (digits.startsWith("0")) {
+    nationalNumber = digits.slice(1);
+  } else {
+    nationalNumber = digits;
+  }
+
+  if (!/^\d{10}$/.test(nationalNumber)) return null;
+  return `+234${nationalNumber}`;
+}
+
 export function normalizeBaseUrl(baseUrl: string) {
   return baseUrl.trim().replace(/\/+$/, "");
 }
@@ -158,6 +210,21 @@ export function buildUrl(
 
 export function isLeadStatus(value: string): value is LeadStatus {
   return (LEAD_STATUSES as readonly string[]).includes(value);
+}
+
+export function isPipelineStage(value: string): value is PipelineStage {
+  return (PIPELINE_STAGES as readonly string[]).includes(value);
+}
+
+export function normalizeNigerianPhoneNumber(phone: string): string {
+  const compactPhone = phone.trim().replace(/[\s().-]+/g, "");
+
+  if (compactPhone.startsWith("+234")) return compactPhone;
+  if (compactPhone.startsWith("00234")) return `+${compactPhone.slice(2)}`;
+  if (compactPhone.startsWith("234")) return `+${compactPhone}`;
+  if (compactPhone.startsWith("0")) return `+234${compactPhone.slice(1)}`;
+
+  return compactPhone;
 }
 
 export function getPublicPrefix(rawKey: string) {

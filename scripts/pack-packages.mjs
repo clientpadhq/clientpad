@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const distDir = path.join(root, "dist");
-const packages = ["clientpad-core", "cli", "sdk", "server", "cloud", "dashboard"];
+const packages = ["clientpad-core", "cli", "sdk", "server", "cloud", "whatsapp", "dashboard"];
+const packages = ["clientpad-core", "cli", "sdk", "whatsapp", "server", "cloud", "dashboard"];
+const packages = ["clientpad-core", "cli", "sdk", "server", "cloud", "dashboard", "whatsapp"];
 
 await mkdir(distDir, { recursive: true });
 

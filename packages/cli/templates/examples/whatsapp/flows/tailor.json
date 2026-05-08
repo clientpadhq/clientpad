@@ -1,0 +1,34 @@
+{
+  "id": "tailor",
+  "name": "Tailor order starter",
+  "description": "Collects garment type, measurements, deadline, and fitting preference.",
+  "steps": [
+    {
+      "id": "welcome",
+      "type": "message",
+      "text": "Welcome. What would you like us to sew or alter?",
+      "quick_replies": ["Native wear", "Suit", "Dress", "Alteration"]
+    },
+    {
+      "id": "measurements",
+      "type": "question",
+      "text": "Do you already have measurements, or should we schedule a fitting?"
+    },
+    {
+      "id": "deadline",
+      "type": "question",
+      "text": "When do you need the outfit ready?"
+    },
+    {
+      "id": "reference",
+      "type": "question",
+      "text": "Please send a reference photo if you have one."
+    },
+    {
+      "id": "handoff",
+      "type": "action",
+      "action": "create_lead",
+      "tags": ["whatsapp", "tailor", "order"]
+    }
+  ]
+}

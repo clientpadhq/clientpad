@@ -34,11 +34,13 @@ export type Lead = {
   urgency: string | null;
   budget_clue: string | null;
   notes: string | null;
+  intent: string | null;
+  ai_summary: string | null;
   created_at: string;
   updated_at: string;
 };
 
-export type CreateLeadInput = {
+export type UpsertLeadInput = {
   name: string;
   phone: string;
   source?: string | null;
@@ -48,7 +50,11 @@ export type CreateLeadInput = {
   urgency?: string | null;
   budget_clue?: string | null;
   notes?: string | null;
+  intent?: string | null;
+  ai_summary?: string | null;
 };
+
+export type CreateLeadInput = UpsertLeadInput;
 
 export type ListLeadsParams = PaginationParams & {
   status?: LeadStatus | null;
@@ -203,6 +209,13 @@ class LeadsResource {
 
   create(input: CreateLeadInput): Promise<CreatedIdResponse> {
     return this.config.request<CreatedIdResponse>("/leads", {
+      method: "POST",
+      body: input,
+    });
+  }
+
+  upsert(input: UpsertLeadInput): Promise<CreatedIdResponse> {
+    return this.config.request<CreatedIdResponse>("/leads/upsert", {
       method: "POST",
       body: input,
     });

@@ -1,5 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { Pool } from "pg";
+import { verifyPaymentWebhook, type PaymentProvider, type VerifiedPaymentWebhook } from "@abdulmuiz44/clientpad-whatsapp";
 import {
   getPublicPrefix,
   isLeadStatus,
@@ -9,6 +10,7 @@ import {
   type ApiKeyBillingMode,
   type LeadStatus,
 } from "@abdulmuiz44/clientpad-core";
+import { normalizeNigerianPhoneNumber } from "@abdulmuiz44/clientpad-core/phone";
 
 export type QueryValue = string | number | boolean | Date | null | string[] | Record<string, unknown>;
 
@@ -51,6 +53,31 @@ export type ClientPadServerConfig = {
   apiKeyPepper: string;
   db?: Queryable;
   whatsapp?: ClientPadWhatsAppConfig;
+  payments?: PaymentWebhookConfig;
+};
+
+export type PaymentWebhookConfig = {
+  paystackSecretKey?: string;
+  flutterwaveSecretKey?: string;
+  flutterwaveWebhookSecret?: string;
+  sendWhatsAppMessage?: (message: WhatsAppPaymentConfirmationMessage) => Promise<void>;
+  triggerReviewRequest?: (payment: ConfirmedPaymentRecord) => Promise<void>;
+};
+
+export type WhatsAppPaymentConfirmationMessage = {
+  workspaceId: string;
+  leadId: string;
+  paymentId: string;
+  phone: string;
+  name: string;
+  amount: number;
+  currency: string;
+  serviceItemReference: string;
+  provider: PaymentProvider;
+};
+
+export type ConfirmedPaymentRecord = WhatsAppPaymentConfirmationMessage & {
+  reference: string;
 };
 
 export type ClientPadHandler = (request: Request) => Promise<Response>;
@@ -87,6 +114,19 @@ type UsageSummaryRow = {
   rejected_count: number | null;
 };
 
+type PaymentWebhookUpdateRow = {
+  id: string;
+  workspace_id: string;
+  lead_id: string;
+  provider: PaymentProvider;
+  provider_reference: string;
+  amount: number;
+  currency: string;
+  service_item_reference: string;
+  customer_phone: string;
+  customer_name: string;
+};
+
 export function createClientPadHandler(config: ClientPadServerConfig): ClientPadHandler {
   const server = new ClientPadServer(config);
   return server.handle.bind(server);
@@ -96,6 +136,7 @@ export class ClientPadServer {
   private readonly db: Queryable;
   private readonly apiKeyPepper: string;
   private readonly whatsapp?: ClientPadWhatsAppConfig;
+  private readonly payments: PaymentWebhookConfig;
 
   constructor(config: ClientPadServerConfig) {
     if (!config.apiKeyPepper.trim()) {
@@ -108,6 +149,7 @@ export class ClientPadServer {
     this.db = config.db ?? new Pool({ connectionString: config.databaseUrl });
     this.apiKeyPepper = config.apiKeyPepper;
     this.whatsapp = config.whatsapp;
+    this.payments = config.payments ?? {};
   }
 
   async handle(request: Request): Promise<Response> {
@@ -117,11 +159,18 @@ export class ClientPadServer {
 
       if (path === "/leads" && request.method === "GET") return this.listLeads(request, url);
       if (path === "/leads" && request.method === "POST") return this.createLead(request);
+      if (path === "/leads/upsert" && request.method === "POST") return this.upsertLead(request);
       if (path === "/clients" && request.method === "GET") return this.listClients(request, url);
       if (path === "/clients" && request.method === "POST") return this.createClient(request);
       if (path === "/usage" && request.method === "GET") return this.getUsage(request);
       if (path === "/whatsapp/webhook" && request.method === "GET") return this.verifyWhatsAppWebhook(url);
       if (path === "/whatsapp/webhook" && request.method === "POST") return this.handleWhatsAppWebhook(request);
+      if (path === "/payments/paystack/webhook" && request.method === "POST") {
+        return this.handlePaymentWebhook(request, "paystack");
+      }
+      if (path === "/payments/flutterwave/webhook" && request.method === "POST") {
+        return this.handlePaymentWebhook(request, "flutterwave");
+      }
 
       return jsonError("Route not found.", 404);
     } catch (error) {
@@ -164,6 +213,8 @@ export class ClientPadServer {
           urgency,
           budget_clue,
           notes,
+          intent,
+          ai_summary,
           created_at,
           updated_at
         from leads
@@ -201,9 +252,75 @@ export class ClientPadServer {
           next_follow_up_at,
           urgency,
           budget_clue,
+          notes,
+          intent,
+          ai_summary
+        )
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        returning id
+      `,
+      [
+        context.workspaceId,
+        payload.name,
+        payload.phone,
+        payload.source,
+        payload.service_interest,
+        payload.status,
+        payload.next_follow_up_at,
+        payload.urgency,
+        payload.budget_clue,
+        payload.notes,
+        payload.intent,
+        payload.ai_summary,
+      ]
+    );
+
+    const leadId = rows[0]?.id;
+    await this.auditPublicApiEvent(context, request, "leads.create", {
+      lead_id: leadId,
+      source: payload.source,
+      status: payload.status,
+    });
+    return Response.json({ data: { id: leadId } }, { status: 201 });
+  }
+
+
+  private async upsertLead(request: Request) {
+    const context = await this.requireApiKey(request, ["leads:write"]);
+    if (context instanceof Response) return context;
+
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") return jsonError("Request body must be a JSON object.", 400);
+
+    const payload = normalizeLeadPayload(body as Record<string, unknown>);
+    if (!payload.ok) return jsonError(payload.error, 400);
+
+    const { rows } = await this.db.query<{ id: string }>(
+      `
+        insert into leads (
+          workspace_id,
+          name,
+          phone,
+          source,
+          service_interest,
+          status,
+          next_follow_up_at,
+          urgency,
+          budget_clue,
           notes
         )
         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        on conflict (workspace_id, phone)
+        do update set
+          name = excluded.name,
+          source = excluded.source,
+          service_interest = excluded.service_interest,
+          status = excluded.status,
+          next_follow_up_at = excluded.next_follow_up_at,
+          urgency = excluded.urgency,
+          budget_clue = excluded.budget_clue,
+          notes = excluded.notes,
+          updated_at = now()
         returning id
       `,
       [
@@ -221,12 +338,12 @@ export class ClientPadServer {
     );
 
     const leadId = rows[0]?.id;
-    await this.auditPublicApiEvent(context, request, "leads.create", {
+    await this.auditPublicApiEvent(context, request, "leads.upsert", {
       lead_id: leadId,
       source: payload.source,
       status: payload.status,
     });
-    return Response.json({ data: { id: leadId } }, { status: 201 });
+    return Response.json({ data: { id: leadId } });
   }
 
   private async listClients(request: Request, url: URL) {
@@ -353,6 +470,100 @@ export class ClientPadServer {
       defaultCountryCode: this.whatsapp.defaultCountryCode ?? "+234",
       db: this.db,
     });
+  private async handlePaymentWebhook(request: Request, provider: PaymentProvider) {
+    const rawBody = await request.text();
+    let webhook: VerifiedPaymentWebhook;
+    try {
+      webhook = verifyPaymentWebhook({
+        provider,
+        rawBody,
+        headers: request.headers,
+        secretKey: provider === "paystack" ? this.payments.paystackSecretKey : this.payments.flutterwaveSecretKey,
+        webhookSecret: provider === "flutterwave" ? this.payments.flutterwaveWebhookSecret : undefined,
+      });
+    } catch {
+      return jsonError("Invalid payment webhook payload.", 400);
+    }
+
+    if (!webhook.verified) return jsonError("Invalid payment webhook signature.", 401);
+    if (!webhook.reference) return jsonError("Payment webhook is missing a reference.", 400);
+
+    const updated = await this.recordPaymentWebhook(webhook);
+    if (updated && webhook.status === "paid") {
+      await this.completePaidLead(updated);
+    }
+
+    return Response.json({ received: true });
+  }
+
+  private async recordPaymentWebhook(webhook: VerifiedPaymentWebhook): Promise<ConfirmedPaymentRecord | null> {
+    const { rows } = await this.db.query<PaymentWebhookUpdateRow>(
+      `
+        update payments
+        set
+          status = $3,
+          provider_payment_id = coalesce($4, provider_payment_id),
+          provider_event = $5,
+          webhook_payload = $6,
+          paid_at = case when $3 = 'paid' then coalesce(paid_at, now()) else paid_at end,
+          updated_at = now()
+        where provider = $1
+          and provider_reference = $2
+        returning
+          id,
+          workspace_id,
+          lead_id,
+          provider,
+          provider_reference,
+          amount,
+          currency,
+          service_item_reference,
+          customer_phone,
+          customer_name
+      `,
+      [
+        webhook.provider,
+        webhook.reference,
+        webhook.status,
+        webhook.providerPaymentId,
+        webhook.event,
+        webhook.payload,
+      ]
+    );
+
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      workspaceId: row.workspace_id,
+      leadId: row.lead_id,
+      paymentId: row.id,
+      phone: row.customer_phone,
+      name: row.customer_name,
+      amount: row.amount,
+      currency: row.currency,
+      serviceItemReference: row.service_item_reference,
+      provider: row.provider,
+      reference: row.provider_reference,
+    };
+  }
+
+  private async completePaidLead(payment: ConfirmedPaymentRecord) {
+    await this.db.query(
+      `
+        update leads
+        set status = 'paid', updated_at = now()
+        where id = $1 and workspace_id = $2
+      `,
+      [payment.leadId, payment.workspaceId]
+    );
+
+    if (this.payments.sendWhatsAppMessage) {
+      await this.payments.sendWhatsAppMessage(payment);
+    }
+
+    if (this.payments.triggerReviewRequest) {
+      await this.payments.triggerReviewRequest(payment);
+    }
   }
 
   private async requireApiKey(
@@ -756,11 +967,13 @@ function optionalString(value: unknown) {
 
 function normalizeLeadPayload(body: Record<string, unknown>) {
   const name = optionalString(body.name);
-  const phone = optionalString(body.phone);
+  const rawPhone = optionalString(body.phone);
+  const phone = normalizeNigerianPhoneNumber(rawPhone);
   const status = optionalString(body.status) ?? "new";
 
   if (!name) return { ok: false as const, error: "name is required." };
-  if (!phone) return { ok: false as const, error: "phone is required." };
+  if (!rawPhone) return { ok: false as const, error: "phone is required." };
+  if (!phone) return { ok: false as const, error: "phone must be a valid Nigerian phone number." };
   if (!isLeadStatus(status)) {
     return { ok: false as const, error: "Invalid lead status." };
   }
@@ -776,6 +989,8 @@ function normalizeLeadPayload(body: Record<string, unknown>) {
     urgency: optionalString(body.urgency),
     budget_clue: optionalString(body.budget_clue),
     notes: optionalString(body.notes),
+    intent: optionalString(body.intent),
+    ai_summary: optionalString(body.ai_summary),
   };
 }
 

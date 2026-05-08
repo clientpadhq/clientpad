@@ -10,11 +10,17 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./phone": {
+      "types": "./phone.d.ts",
+      "import": "./phone.mjs"
     }
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "phone.mjs",
+    "phone.d.ts"
   ],
   "keywords": [
     "clientpad",
