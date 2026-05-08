@@ -58,7 +58,7 @@ The `Plan.md` Phases 1–5 roadmap is implemented on this codebase, including po
    npm run dev
    ```
 
-## GitHub Packages npm publishing
+## Public npm publishing
 The root ClientPad repository is the full Next.js application and should **not** be published wholesale. The only publishable package in this repo is `@abdulmuiz44/clientpad-core`, a narrow core metadata/utilities package located at `packages/clientpad-core`.
 
 `@abdulmuiz44/clientpad-core` currently exports only:
@@ -68,9 +68,10 @@ The root ClientPad repository is the full Next.js application and should **not**
 - `ClientPadCoreInfo`
 - `getClientPadCoreInfo()`
 
-Authentication for GitHub Packages uses the repo `.npmrc` and a token supplied at publish or install time. Do not commit a real token; export one locally when needed:
+Authentication for publishing to npm should use your npm login or a publish-only npm token supplied outside the committed root `.npmrc`. Do not commit a real token. For token-based publishing, export `NPM_TOKEN` and inject it into a temporary npm user config only for the publish command:
 ```bash
-export GITHUB_TOKEN=<your_github_token>
+export NPM_TOKEN=<your_npm_token>
+printf "//registry.npmjs.org/:_authToken=${NPM_TOKEN}\n" > /tmp/clientpad-npmrc
 ```
 
 Build and typecheck the publishable package with npm:
@@ -86,12 +87,12 @@ npm pack ./packages/clientpad-core --dry-run
 
 Publish the package with npm:
 ```bash
-npm publish ./packages/clientpad-core
+npm publish ./packages/clientpad-core --userconfig /tmp/clientpad-npmrc
 ```
 
 Publish the package with pnpm:
 ```bash
-pnpm --dir packages/clientpad-core publish
+pnpm --dir packages/clientpad-core publish --config.userconfig=/tmp/clientpad-npmrc
 ```
 
 Install the package with npm:
