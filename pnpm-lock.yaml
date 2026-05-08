@@ -82,6 +82,12 @@ importers:
         specifier: ^8.11.10
         version: 8.20.0
 
+  packages/whatsapp:
+    dependencies:
+      pg:
+        specifier: ^8.13.3
+        version: 8.20.0
+
 packages:
 
   '@babel/code-frame@7.29.0':

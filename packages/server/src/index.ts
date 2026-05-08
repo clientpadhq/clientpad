@@ -146,6 +146,8 @@ export class ClientPadServer {
           urgency,
           budget_clue,
           notes,
+          intent,
+          ai_summary,
           created_at,
           updated_at
         from leads
@@ -183,9 +185,11 @@ export class ClientPadServer {
           next_follow_up_at,
           urgency,
           budget_clue,
-          notes
+          notes,
+          intent,
+          ai_summary
         )
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         returning id
       `,
       [
@@ -199,6 +203,8 @@ export class ClientPadServer {
         payload.urgency,
         payload.budget_clue,
         payload.notes,
+        payload.intent,
+        payload.ai_summary,
       ]
     );
 
@@ -672,6 +678,8 @@ function normalizeLeadPayload(body: Record<string, unknown>) {
     urgency: optionalString(body.urgency),
     budget_clue: optionalString(body.budget_clue),
     notes: optionalString(body.notes),
+    intent: optionalString(body.intent),
+    ai_summary: optionalString(body.ai_summary),
   };
 }
 

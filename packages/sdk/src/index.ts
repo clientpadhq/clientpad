@@ -34,6 +34,8 @@ export type Lead = {
   urgency: string | null;
   budget_clue: string | null;
   notes: string | null;
+  intent: string | null;
+  ai_summary: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -48,6 +50,8 @@ export type CreateLeadInput = {
   urgency?: string | null;
   budget_clue?: string | null;
   notes?: string | null;
+  intent?: string | null;
+  ai_summary?: string | null;
 };
 
 export type ListLeadsParams = PaginationParams & {
