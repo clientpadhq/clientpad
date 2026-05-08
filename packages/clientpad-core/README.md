@@ -8,6 +8,6 @@ pnpm add @abdulmuiz44/clientpad-core
 
 This package contains common API contracts used by:
 
-- `@clientpad/sdk`
-- `@clientpad/server`
+- `@abdulmuiz44/clientpad-sdk`
+- `@abdulmuiz44/clientpad-server`
 - future adapters and integrations

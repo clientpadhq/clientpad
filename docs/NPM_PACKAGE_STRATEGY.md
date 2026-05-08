@@ -3,10 +3,10 @@
 ClientPad's infrastructure starts with a CLI package developers can install globally:
 
 ```bash
-pnpm install -g @clientpad/cli
+pnpm install -g @abdulmuiz44/clientpad-cli
 ```
 
-The package name is `@clientpad/cli` because npm scoped packages require a slash. The installed binary is:
+The package name is `@abdulmuiz44/clientpad-cli` because npm scoped packages require a slash. The installed binary is:
 
 ```bash
 clientpad
@@ -51,8 +51,8 @@ pnpm add @abdulmuiz44/clientpad-core
 
 ```bash
 pnpm install
-pnpm --filter @clientpad/cli pack
-pnpm --filter @clientpad/cli publish --access public
+pnpm --filter @abdulmuiz44/clientpad-cli pack
+pnpm --filter @abdulmuiz44/clientpad-cli publish --access public
 ```
 
 Before publishing, create the npm organization or scope owner for `@clientpad`.
@@ -62,7 +62,7 @@ Before publishing, create the npm organization or scope owner for `@clientpad`.
 Developers should install the runtime SDK inside applications:
 
 ```bash
-pnpm add @clientpad/sdk
+pnpm add @abdulmuiz44/clientpad-sdk
 ```
 
 The SDK is HTTP-only, uses native `fetch`, and currently supports leads and clients.
@@ -72,7 +72,7 @@ The SDK is HTTP-only, uses native `fetch`, and currently supports leads and clie
 Developers should install the server package to expose ClientPad APIs from their own apps:
 
 ```bash
-pnpm add @clientpad/server
+pnpm add @abdulmuiz44/clientpad-server
 ```
 
 The server package exports a fetch-standard handler and currently supports leads and clients.

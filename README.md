@@ -7,21 +7,21 @@ This repository now ships installable packages instead of a hosted product with 
 ## Packages
 
 - `@abdulmuiz44/clientpad-core`: shared TypeScript types and dependency-free protocol utilities.
-- `@clientpad/cli`: local project setup, SQL migrations, and API key creation.
-- `@clientpad/server`: fetch-standard public API handler for leads and clients.
-- `@clientpad/sdk`: TypeScript SDK for consuming ClientPad public APIs from apps, workers, and scripts.
+- `@abdulmuiz44/clientpad-cli`: local project setup, SQL migrations, and API key creation.
+- `@abdulmuiz44/clientpad-server`: fetch-standard public API handler for leads and clients.
+- `@abdulmuiz44/clientpad-sdk`: TypeScript SDK for consuming ClientPad public APIs from apps, workers, and scripts.
 
 ## Install
 
 ```bash
-pnpm add @abdulmuiz44/clientpad-core @clientpad/server @clientpad/sdk
-pnpm add -D @clientpad/cli
+pnpm add @abdulmuiz44/clientpad-core @abdulmuiz44/clientpad-server @abdulmuiz44/clientpad-sdk
+pnpm add -D @abdulmuiz44/clientpad-cli
 ```
 
 For a global CLI install:
 
 ```bash
-pnpm install -g @clientpad/cli
+pnpm install -g @abdulmuiz44/clientpad-cli
 clientpad help
 ```
 
@@ -43,7 +43,7 @@ clientpad api-key create --workspace-id <workspace-id> --name "Local app"
 Use the SDK from an app:
 
 ```ts
-import { ClientPad } from "@clientpad/sdk";
+import { ClientPad } from "@abdulmuiz44/clientpad-sdk";
 
 const clientpad = new ClientPad({
   baseUrl: "https://example.com/api/public/v1",
@@ -60,7 +60,7 @@ await clientpad.leads.create({
 Expose the public API from any fetch-compatible server runtime:
 
 ```ts
-import { createClientPadHandler } from "@clientpad/server";
+import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
 
 export const handler = createClientPadHandler({
   databaseUrl: process.env.DATABASE_URL!,

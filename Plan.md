@@ -18,19 +18,19 @@ ClientPad is being built as open-source infrastructure that businesses and devel
   - URL, bearer-token, prefix, and status helpers.
   - No runtime dependencies.
 
-- `@clientpad/cli`
+- `@abdulmuiz44/clientpad-cli`
   - `clientpad init`
   - `clientpad migrate`
   - `clientpad api-key create`
   - SQL migrations shipped with the package.
 
-- `@clientpad/server`
+- `@abdulmuiz44/clientpad-server`
   - Fetch-standard public API handler.
   - API key verification.
   - Workspace-scoped lead and client endpoints.
   - PostgreSQL-backed storage.
 
-- `@clientpad/sdk`
+- `@abdulmuiz44/clientpad-sdk`
   - `ClientPad` class.
   - `leads.list`, `leads.create`.
   - `clients.list`, `clients.create`.
@@ -42,9 +42,9 @@ ClientPad is being built as open-source infrastructure that businesses and devel
 1. Publish the source code to GitHub as an open-source infrastructure repository.
 2. Attach package tarballs for:
    - `@abdulmuiz44/clientpad-core`
-   - `@clientpad/cli`
-   - `@clientpad/sdk`
-   - `@clientpad/server`
+   - `@abdulmuiz44/clientpad-cli`
+   - `@abdulmuiz44/clientpad-sdk`
+   - `@abdulmuiz44/clientpad-server`
 3. Document the local install, migration, API key, SDK, and server handler flows.
 4. Keep the first public API intentionally small: leads and clients.
 5. Verify there are no hosted backend, app-framework, or subscription-billing dependencies in the publishable package graph.

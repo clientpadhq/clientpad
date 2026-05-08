@@ -5,13 +5,13 @@ Fetch-standard server handlers for ClientPad public APIs.
 ## Install
 
 ```bash
-pnpm add @clientpad/server
+pnpm add @abdulmuiz44/clientpad-server
 ```
 
 ## Basic Usage
 
 ```ts
-import { createClientPadHandler } from "@clientpad/server";
+import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
 
 export const handler = createClientPadHandler({
   databaseUrl: process.env.DATABASE_URL!,
@@ -24,7 +24,7 @@ The handler accepts a standard `Request` and returns a standard `Response`.
 ## Next.js Route Handler
 
 ```ts
-import { createClientPadHandler } from "@clientpad/server";
+import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
 
 const handler = createClientPadHandler({
   databaseUrl: process.env.DATABASE_URL!,

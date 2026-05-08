@@ -1,5 +1,5 @@
 {
-  "name": "@clientpad/server",
+  "name": "@abdulmuiz44/clientpad-server",
   "version": "0.1.0",
   "description": "Fetch-standard ClientPad public API server for PostgreSQL-backed apps.",
   "license": "MIT",
