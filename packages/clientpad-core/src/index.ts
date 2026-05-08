@@ -13,7 +13,7 @@ export function getClientPadCoreInfo(): ClientPadCoreInfo {
   };
 }
 
-export const LEAD_STATUSES = ["new", "contacted", "qualified", "unqualified"] as const;
+export const LEAD_STATUSES = ["new", "contacted", "qualified", "unqualified", "paid"] as const;
 
 export const API_SCOPES = [
   "leads:read",

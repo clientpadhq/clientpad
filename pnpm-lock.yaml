@@ -74,6 +74,9 @@ importers:
       '@abdulmuiz44/clientpad-core':
         specifier: workspace:*
         version: link:../clientpad-core
+      '@abdulmuiz44/clientpad-whatsapp':
+        specifier: workspace:*
+        version: link:../whatsapp
       pg:
         specifier: ^8.13.3
         version: 8.20.0
@@ -81,6 +84,8 @@ importers:
       '@types/pg':
         specifier: ^8.11.10
         version: 8.20.0
+
+  packages/whatsapp: {}
 
 packages:
 

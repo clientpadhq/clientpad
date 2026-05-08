@@ -1,0 +1,43 @@
+{
+  "name": "@abdulmuiz44/clientpad-whatsapp",
+  "version": "0.2.0",
+  "description": "WhatsApp commerce helpers for ClientPad flows, Nigerian payment links, and payment webhooks.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./payments": {
+      "types": "./dist/payments.d.ts",
+      "import": "./dist/payments.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "clientpad",
+    "whatsapp",
+    "payments",
+    "paystack",
+    "flutterwave",
+    "nigeria"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node test/payments.test.mjs",
+    "prepack": "npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

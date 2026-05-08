@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { createClientPadHandler } from "../dist/index.js";
 
 const rawKey = "cp_test_public123_secret";
@@ -39,6 +39,26 @@ const db = {
 
     if (text.includes("from api_key_usage_months")) {
       return { rows: [{ request_count: 12, rejected_count: 1 }], rowCount: 1 };
+    }
+
+    if (text.includes("update payments")) {
+      return {
+        rows: [
+          {
+            id: "payment_1",
+            workspace_id: "workspace_1",
+            lead_id: "lead_1",
+            provider: values[0],
+            provider_reference: values[1],
+            amount: 25000,
+            currency: "NGN",
+            service_item_reference: "brand-identity",
+            customer_phone: "+234801",
+            customer_name: "Ada",
+          },
+        ],
+        rowCount: 1,
+      };
     }
 
     if (text.includes("from leads")) {
@@ -166,3 +186,53 @@ assert.equal(limitedResponse.status, 429);
 assert.deepEqual(await limitedResponse.json(), {
   error: { message: "API key monthly quota exceeded." },
 });
+
+const paymentMessages = [];
+const reviewRequests = [];
+const paymentHandler = createClientPadHandler({
+  db,
+  apiKeyPepper: pepper,
+  payments: {
+    paystackSecretKey: "sk_test",
+    async sendWhatsAppMessage(message) {
+      paymentMessages.push(message);
+    },
+    async triggerReviewRequest(payment) {
+      reviewRequests.push(payment);
+    },
+  },
+});
+const paymentWebhookRaw = JSON.stringify({
+  event: "charge.success",
+  data: {
+    status: "success",
+    reference: "paystack_ref_1",
+    id: 12345,
+    amount: 2500000,
+    currency: "NGN",
+    customer: { email: "ada@example.com" },
+  },
+});
+const paymentWebhookSignature = createHmac("sha512", "sk_test").update(paymentWebhookRaw).digest("hex");
+const paymentWebhookResponse = await paymentHandler(
+  new Request("https://example.com/payments/paystack/webhook", {
+    method: "POST",
+    headers: { "x-paystack-signature": paymentWebhookSignature, "content-type": "application/json" },
+    body: paymentWebhookRaw,
+  })
+);
+assert.equal(paymentWebhookResponse.status, 200);
+assert.deepEqual(await paymentWebhookResponse.json(), { received: true });
+assert.equal(queries.some((query) => query.text.includes("update payments") && query.values[2] === "paid"), true);
+assert.equal(queries.some((query) => query.text.includes("set status = 'paid'")), true);
+assert.equal(paymentMessages.length, 1);
+assert.equal(reviewRequests.length, 1);
+
+const invalidPaymentWebhookResponse = await paymentHandler(
+  new Request("https://example.com/payments/paystack/webhook", {
+    method: "POST",
+    headers: { "x-paystack-signature": "bad", "content-type": "application/json" },
+    body: paymentWebhookRaw,
+  })
+);
+assert.equal(invalidPaymentWebhookResponse.status, 401);
