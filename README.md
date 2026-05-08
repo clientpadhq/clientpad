@@ -59,42 +59,58 @@ The `Plan.md` Phases 1–5 roadmap is implemented on this codebase, including po
    ```
 
 ## GitHub Packages npm publishing
-ClientPad publishes the small dedicated package surface `@abdulmuiz44/clientpad-core` for npm consumers through GitHub Packages. This strategy keeps the publishable artifact focused because the root ClientPad repository is primarily a Next.js application.
+The root ClientPad repository is the full Next.js application and should **not** be published wholesale. The only publishable package in this repo is the dedicated core package, `@abdulmuiz44/clientpad-core`, which is configured for GitHub Packages.
 
-Required environment variable:
-- `GITHUB_TOKEN`
-
-Authenticate before publishing:
+Authentication requires a GitHub token with package publishing permissions. Export it before running publish commands:
 ```bash
-export GITHUB_TOKEN=your_github_token
+export GITHUB_TOKEN=<your_github_token>
 ```
 
-Publish with npm:
+Build and typecheck the publishable package with npm:
+```bash
+npm --prefix packages/clientpad-core run build
+npm --prefix packages/clientpad-core run typecheck
+```
+
+Preview the package contents before publishing:
+```bash
+npm pack ./packages/clientpad-core --dry-run
+```
+
+Publish the package with npm:
 ```bash
 npm publish ./packages/clientpad-core
 ```
 
-Or publish with pnpm:
+pnpm equivalents:
 ```bash
+pnpm --dir packages/clientpad-core build
 pnpm --dir packages/clientpad-core publish
 ```
 
-Install with npm:
+Install the package with npm:
 ```bash
 npm install @abdulmuiz44/clientpad-core
 ```
 
-Or install with pnpm:
+Install the package with pnpm:
 ```bash
 pnpm add @abdulmuiz44/clientpad-core
 ```
 
 Consumer import example:
 ```ts
-import { getClientPadPackageInfo } from "@abdulmuiz44/clientpad-core";
+import {
+  CLIENTPAD_APP_NAME,
+  CLIENTPAD_CORE_PACKAGE_NAME,
+  CLIENTPAD_CORE_VERSION,
+  CLIENTPAD_PACKAGE_NAME,
+  getClientPadPackageInfo,
+  type ClientPadPackageInfo,
+} from "@abdulmuiz44/clientpad-core";
 ```
 
-Caveat: the root repo remains the ClientPad app and is not intended to be published wholesale.
+Limitation: the current package only exposes core metadata/utilities from `packages/clientpad-core/src/index.ts`; it does not expose or bundle the full ClientPad Next.js app.
 
 ## Required environment variables
 - `NEXT_PUBLIC_APP_URL`
