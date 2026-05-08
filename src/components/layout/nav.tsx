@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/leads", label: "Leads" },
+  { href: "/whatsapp", label: "WhatsApp" },
   { href: "/clients", label: "Clients" },
   { href: "/deals", label: "Deals" },
   { href: "/quotes", label: "Quotes" },
@@ -52,6 +53,7 @@ export function BottomNav() {
   const mobileItems = [
     { href: "/dashboard", label: "Home" },
     { href: "/leads", label: "Leads" },
+    { href: "/whatsapp", label: "WA" },
     { href: "/deals", label: "Deals" },
     { href: "/jobs", label: "Jobs" },
     { href: "/tasks", label: "Tasks" },
@@ -63,7 +65,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 border-t border-slate-200 bg-white p-2 md:hidden">
-      <ul className="grid grid-cols-9 gap-1">
+      <ul className="grid grid-cols-10 gap-1">
         {mobileItems.map((item) => (
           <li key={item.href}>
             <Link

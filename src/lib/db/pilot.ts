@@ -291,11 +291,11 @@ function formatDelta(delta: number, suffix = "") {
 
 function buildWhatChanged(current: MetricResult, previous: MetricResult) {
   const candidates: Array<{ label: string; delta: number; type: "count" | "points" | "days" }> = [
-    { label: "Lead-to-deal conversion", delta: current.leadToDealConversion - previous.leadToDealConversion, type: "points" },
-    { label: "Invoice payment rate", delta: current.invoicePaymentRate - previous.invoicePaymentRate, type: "points" },
-    { label: "Active seats", delta: current.activeSeats - previous.activeSeats, type: "count" },
-    { label: "Quotes sent", delta: current.quotesSent - previous.quotesSent, type: "count" },
-    { label: "On-time jobs completed", delta: current.jobsCompletedOnTime - previous.jobsCompletedOnTime, type: "count" },
+    { label: "Lead-to-deal conversion", delta: current.leadToDealConversion - previous.leadToDealConversion, type: "points" as const },
+    { label: "Invoice payment rate", delta: current.invoicePaymentRate - previous.invoicePaymentRate, type: "points" as const },
+    { label: "Active seats", delta: current.activeSeats - previous.activeSeats, type: "count" as const },
+    { label: "Quotes sent", delta: current.quotesSent - previous.quotesSent, type: "count" as const },
+    { label: "On-time jobs completed", delta: current.jobsCompletedOnTime - previous.jobsCompletedOnTime, type: "count" as const },
   ]
     .filter((item) => item.delta !== 0)
     .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
@@ -305,7 +305,7 @@ function buildWhatChanged(current: MetricResult, previous: MetricResult) {
     candidates.push({
       label: "Average days to payment",
       delta: Math.round((current.avgDaysToPayment - previous.avgDaysToPayment) * 10) / 10,
-      type: "days",
+      type: "days" as const,
     });
   }
 

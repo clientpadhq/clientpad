@@ -18,7 +18,8 @@ export async function logActivity(params: {
     | "pipeline_stage"
     | "pilot_profile"
     | "pilot_feedback"
-    | "check_in_note";
+    | "check_in_note"
+    | "whatsapp_conversation";
   entityId: string;
   type: ActivityType;
   description: string;

@@ -1,4 +1,4 @@
-import { normalizeNigerianPhone } from "./whatsapp";
+import { normalizeNigerianPhone } from "@/lib/whatsapp";
 
 export interface WhatsAppMessage {
   to: string;

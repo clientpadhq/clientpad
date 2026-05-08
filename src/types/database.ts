@@ -322,6 +322,46 @@ export type WorkspaceCheckInFeedbackLink = {
   created_at: string;
 };
 
+export type WhatsAppConversationStatus = "open" | "pending" | "resolved";
+
+export type WhatsAppMessageRecord = {
+  id: string;
+  workspace_id: string;
+  conversation_id: string | null;
+  whatsapp_message_id: string | null;
+  from_phone: string;
+  to_phone: string;
+  message_type: "text" | "template" | "image" | "document" | "audio";
+  content: string;
+  direction: "outbound" | "inbound";
+  status: "sent" | "delivered" | "read" | "failed" | "pending";
+  whatsapp_wid: string | null;
+  metadata: Record<string, unknown> | null;
+  linked_entity_type: string | null;
+  linked_entity_id: string | null;
+  created_at: string;
+  delivered_at: string | null;
+  read_at: string | null;
+};
+
+export type WhatsAppConversation = {
+  id: string;
+  workspace_id: string;
+  remote_phone: string;
+  display_name: string | null;
+  status: WhatsAppConversationStatus;
+  assigned_to: string | null;
+  linked_entity_type: "lead" | "client" | "deal" | null;
+  linked_entity_id: string | null;
+  last_message_at: string | null;
+  last_handled_at: string | null;
+  last_read_at: string | null;
+  metadata: Record<string, unknown> | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ActivityType =
   | "workspace.created"
   | "lead.created"
@@ -377,7 +417,17 @@ export type ActivityType =
   | "feedback.status_changed"
   | "check_in.created"
   | "check_in.updated"
-  | "pilot_follow_up.updated";
+  | "pilot_follow_up.updated"
+  | "whatsapp.message_sent"
+  | "whatsapp.message_delivered"
+  | "whatsapp.message_read"
+  | "whatsapp.message_failed"
+  | "whatsapp.message_received"
+  | "whatsapp.conversation_linked"
+  | "whatsapp.conversation_assigned"
+  | "whatsapp.conversation_status_changed"
+  | "whatsapp.lead_created"
+  | "whatsapp.client_created";
 
 export type Activity = {
   id: string;
@@ -397,7 +447,8 @@ export type Activity = {
     | "pipeline_stage"
     | "pilot_profile"
     | "pilot_feedback"
-    | "check_in_note";
+    | "check_in_note"
+    | "whatsapp_conversation";
   entity_id: string;
   activity_type: ActivityType;
   description: string;
