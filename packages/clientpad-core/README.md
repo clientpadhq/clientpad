@@ -95,22 +95,23 @@ The package is configured to include only `dist`, this `README.md`, and package 
 
 ## Publish
 
-The root ClientPad repo is not published wholesale. Publish only this package after exporting a valid token:
+The root ClientPad repo is not published wholesale. Publish only this package after signing in to npm or exporting a valid publish-only npm token outside the committed root `.npmrc`:
 
 ```sh
-export GITHUB_TOKEN=<your_github_token>
+export NPM_TOKEN=<your_npm_token>
+printf "//registry.npmjs.org/:_authToken=${NPM_TOKEN}\n" > /tmp/clientpad-npmrc
 ```
 
 Publish with npm from the repo root:
 
 ```sh
-npm publish ./packages/clientpad-core
+npm publish ./packages/clientpad-core --userconfig /tmp/clientpad-npmrc
 ```
 
 Publish with pnpm from the repo root:
 
 ```sh
-pnpm --dir packages/clientpad-core publish
+pnpm --dir packages/clientpad-core publish --config.userconfig=/tmp/clientpad-npmrc
 ```
 
-The package `publishConfig` targets GitHub Packages at `https://npm.pkg.github.com`.
+The package `publishConfig` targets the public npm registry at `https://registry.npmjs.org/` with public access for the scoped package.
