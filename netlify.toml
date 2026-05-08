@@ -1,0 +1,8 @@
+[build]
+  command = "pnpm --filter @abdulmuiz44/clientpad-dashboard build"
+  publish = "packages/dashboard/dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
