@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { createClientPadHandler } from "../dist/index.js";
 
 const rawKey = "cp_test_public123_secret";
@@ -123,6 +123,56 @@ assert.deepEqual(await usageResponse.json(), {
     rate_limit_per_minute: 60,
   },
 });
+
+const whatsappHandler = createClientPadHandler({
+  db,
+  apiKeyPepper: pepper,
+  whatsapp: {
+    verifyToken: "verify_me",
+    accessToken: "meta_access_token",
+    phoneNumberId: "phone_number_1",
+    clientpadBaseUrl: "https://example.com/api/public/v1",
+    clientpadApiKey: rawKey,
+    appSecret: "meta_app_secret",
+  },
+});
+
+const verificationResponse = await whatsappHandler(
+  new Request(
+    "https://example.com/api/public/v1/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=verify_me&hub.challenge=challenge_123"
+  )
+);
+assert.equal(verificationResponse.status, 200);
+assert.equal(await verificationResponse.text(), "challenge_123");
+
+const invalidVerificationResponse = await whatsappHandler(
+  new Request(
+    "https://example.com/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=wrong&hub.challenge=challenge_123"
+  )
+);
+assert.equal(invalidVerificationResponse.status, 403);
+
+const unsignedWhatsAppResponse = await whatsappHandler(
+  new Request("https://example.com/whatsapp/webhook", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ object: "whatsapp_business_account" }),
+  })
+);
+assert.equal(unsignedWhatsAppResponse.status, 401);
+
+const signedBody = JSON.stringify({ object: "whatsapp_business_account" });
+const invalidSignedWhatsAppResponse = await whatsappHandler(
+  new Request("https://example.com/whatsapp/webhook", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-hub-signature-256": `sha256=${createHmac("sha256", "wrong_secret").update(signedBody).digest("hex")}`,
+    },
+    body: signedBody,
+  })
+);
+assert.equal(invalidSignedWhatsAppResponse.status, 401);
 
 assert.equal(queries.some((query) => query.text.includes("last_used_at")), true);
 assert.equal(queries.some((query) => query.text.includes("api_key_audit_events")), true);
