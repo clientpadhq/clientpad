@@ -1,0 +1,8 @@
+{
+  "database": {
+    "urlEnv": "DATABASE_URL"
+  },
+  "apiKeys": {
+    "pepperEnv": "API_KEY_PEPPER"
+  }
+}

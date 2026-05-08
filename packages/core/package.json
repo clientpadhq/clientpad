@@ -1,0 +1,31 @@
+{
+  "name": "@clientpad/core",
+  "version": "0.1.0",
+  "description": "Shared ClientPad types and dependency-free protocol utilities.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "clientpad",
+    "core",
+    "business-infrastructure",
+    "types",
+    "open-source"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

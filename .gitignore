@@ -1,5 +1,6 @@
 # dependencies
-/node_modules
+node_modules/
+**/node_modules/
 
 # next
 /.next
@@ -7,6 +8,9 @@
 
 # production
 /build
+/dist
+packages/*/dist
+*.tgz
 
 # misc
 .DS_Store
