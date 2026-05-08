@@ -1,6 +1,7 @@
 {
   "name": "@abdulmuiz44/clientpad-whatsapp",
   "version": "0.2.0",
+  "description": "WhatsApp webhook handler and AI assistant utilities for ClientPad.",
   "description": "WhatsApp commerce helpers for ClientPad flows, Nigerian payment links, and payment webhooks.",
   "description": "Fetch-compatible WhatsApp Cloud API helpers for ClientPad service businesses.",
   "license": "MIT",
@@ -24,6 +25,8 @@
   "keywords": [
     "clientpad",
     "whatsapp",
+    "webhook",
+    "ai-assistant"
     "payments",
     "paystack",
     "flutterwave",
@@ -32,6 +35,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node test/whatsapp.test.mjs",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "pg": "^8.13.3"
     "test": "npm run build && node test/payments.test.mjs",
     "prepack": "npm run build"
   },

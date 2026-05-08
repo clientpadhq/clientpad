@@ -13,6 +13,7 @@
     "api-key:create": "node packages/cli/bin/clientpad.mjs api-key create",
     "db:migrate": "node packages/cli/bin/clientpad.mjs migrate",
     "lint": "node packages/cli/bin/clientpad.mjs help",
+    "typecheck": "pnpm --filter @abdulmuiz44/clientpad-core typecheck && pnpm --filter @abdulmuiz44/clientpad-sdk typecheck && pnpm --filter @abdulmuiz44/clientpad-server typecheck && pnpm --filter @abdulmuiz44/clientpad-cloud typecheck && pnpm --filter @abdulmuiz44/clientpad-whatsapp typecheck && pnpm --filter @abdulmuiz44/clientpad-dashboard typecheck",
     "typecheck": "pnpm --filter @abdulmuiz44/clientpad-core typecheck && pnpm --filter @abdulmuiz44/clientpad-sdk typecheck && pnpm --filter @abdulmuiz44/clientpad-whatsapp typecheck && pnpm --filter @abdulmuiz44/clientpad-server typecheck && pnpm --filter @abdulmuiz44/clientpad-cloud typecheck && pnpm --filter @abdulmuiz44/clientpad-dashboard typecheck",
     "typecheck": "pnpm --filter @abdulmuiz44/clientpad-core typecheck && pnpm --filter @abdulmuiz44/clientpad-sdk typecheck && pnpm --filter @abdulmuiz44/clientpad-server typecheck && pnpm --filter @abdulmuiz44/clientpad-cloud typecheck && pnpm --filter @abdulmuiz44/clientpad-dashboard typecheck && pnpm --filter @abdulmuiz44/clientpad-whatsapp typecheck",
     "test:core": "pnpm --filter @abdulmuiz44/clientpad-core typecheck",
@@ -20,6 +21,7 @@
     "test:whatsapp": "pnpm --filter @abdulmuiz44/clientpad-whatsapp test",
     "test:server": "pnpm --filter @abdulmuiz44/clientpad-server test",
     "test:cloud": "pnpm --filter @abdulmuiz44/clientpad-cloud test",
+    "test:whatsapp": "pnpm --filter @abdulmuiz44/clientpad-whatsapp test",
     "test:dashboard": "pnpm --filter @abdulmuiz44/clientpad-dashboard build"
   },
   "dependencies": {

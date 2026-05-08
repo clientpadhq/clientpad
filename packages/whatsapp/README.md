@@ -1,5 +1,6 @@
 # @abdulmuiz44/clientpad-whatsapp
 
+Fetch-standard WhatsApp webhook handler and AI assistant utilities for ClientPad.
 Fetch-compatible WhatsApp Cloud API helpers for ClientPad. The package is designed for self-hosted runtimes (Node, Workers, Bun, Deno-compatible servers) by accepting injected `fetch`, ClientPad credentials, Meta WhatsApp credentials, and webhook verification tokens.
 
 ## Install
@@ -27,6 +28,15 @@ Use `WHATSAPP_VERIFY_TOKEN` as the verify token when configuring the Meta webhoo
 ```ts
 import { createWhatsAppWebhookHandler } from "@abdulmuiz44/clientpad-whatsapp";
 
+export const handler = createWhatsAppWebhookHandler({
+  databaseUrl: process.env.DATABASE_URL,
+  workspaceId: process.env.CLIENTPAD_WORKSPACE_ID!,
+  verifyToken: process.env.WHATSAPP_VERIFY_TOKEN,
+  aiProvider: optionalProvider,
+});
+```
+
+If `aiProvider` is omitted, the handler uses deterministic keyword routing for booking, quote, and payment intents.
 const handleWhatsAppWebhook = createWhatsAppWebhookHandler({
   verifyToken: process.env.WHATSAPP_VERIFY_TOKEN!,
   whatsAppAccessToken: process.env.WHATSAPP_ACCESS_TOKEN!,
