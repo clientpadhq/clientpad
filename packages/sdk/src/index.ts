@@ -38,7 +38,7 @@ export type Lead = {
   updated_at: string;
 };
 
-export type CreateLeadInput = {
+export type UpsertLeadInput = {
   name: string;
   phone: string;
   source?: string | null;
@@ -49,6 +49,8 @@ export type CreateLeadInput = {
   budget_clue?: string | null;
   notes?: string | null;
 };
+
+export type CreateLeadInput = UpsertLeadInput;
 
 export type ListLeadsParams = PaginationParams & {
   status?: LeadStatus | null;
@@ -203,6 +205,13 @@ class LeadsResource {
 
   create(input: CreateLeadInput): Promise<CreatedIdResponse> {
     return this.config.request<CreatedIdResponse>("/leads", {
+      method: "POST",
+      body: input,
+    });
+  }
+
+  upsert(input: UpsertLeadInput): Promise<CreatedIdResponse> {
+    return this.config.request<CreatedIdResponse>("/leads/upsert", {
       method: "POST",
       body: input,
     });
