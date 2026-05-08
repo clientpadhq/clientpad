@@ -6,4 +6,35 @@
     "README.md",
     "package.json"
   ]
+  "name": "@abdulmuiz44/clientpad-core",
+  "version": "0.1.0",
+  "description": "Reusable core utilities and shared primitives for ClientPad applications.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Abdulmuiz44/ClientPad.git",
+    "directory": "packages/clientpad-core"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
 }
