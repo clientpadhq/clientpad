@@ -9,15 +9,19 @@ import pg from "pg";
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const command = process.argv[2];
 const args = process.argv.slice(3);
+const whatsappFlowNames = ["salon", "mechanic", "tailor"];
 
 const helpText = `ClientPad CLI
 
 Usage:
   clientpad init [directory]
+  clientpad init --whatsapp [directory]
   clientpad migrate [--migrations-dir <path>]
   clientpad api-key create <workspace_id> [name] [comma_scopes]
   clientpad api-key create --workspace-id <id> [--name <name>] [--scopes <comma_scopes>] [--billing-mode <mode>] [--monthly-request-limit <number>] [--rate-limit-per-minute <number>]
   clientpad api-key usage <api_key_id>
+  clientpad whatsapp:setup
+  clientpad whatsapp:flows [salon|mechanic|tailor]
   clientpad doctor
   clientpad help
 
@@ -32,8 +36,18 @@ function readOption(name, fallback) {
   return args[index + 1] || fallback;
 }
 
+function readAnyOption(names, fallback) {
+  for (const name of names) {
+    const value = readOption(name, undefined);
+    if (value !== undefined) return value;
+  }
+  return fallback;
+}
+
 async function initProject() {
-  const target = path.resolve(args[0] || ".");
+  const includeWhatsapp = args.includes("--whatsapp");
+  const targetArg = args.find((arg) => arg !== "--whatsapp" && !arg.startsWith("--"));
+  const target = path.resolve(targetArg || ".");
   await mkdir(target, { recursive: true });
   await mkdir(path.join(target, "db", "migrations"), { recursive: true });
 
@@ -54,7 +68,28 @@ async function initProject() {
     );
   }
 
-  console.log(`ClientPad initialized in ${target}`);
+  if (includeWhatsapp) {
+    await copyWhatsappTemplates(target);
+  }
+
+  console.log(`ClientPad initialized in ${target}${includeWhatsapp ? " with WhatsApp starter files" : ""}`);
+}
+
+async function copyWhatsappTemplates(target) {
+  const files = [
+    [".env.whatsapp.example", ".env.whatsapp.example"],
+    [path.join("examples", "whatsapp", "server.mjs"), path.join("examples", "whatsapp", "server.mjs")],
+    ...whatsappFlowNames.map((name) => [
+      path.join("examples", "whatsapp", "flows", `${name}.json`),
+      path.join("examples", "whatsapp", "flows", `${name}.json`),
+    ]),
+  ];
+
+  for (const [sourceRelativePath, destinationRelativePath] of files) {
+    const destination = path.join(target, destinationRelativePath);
+    await mkdir(path.dirname(destination), { recursive: true });
+    await copyFile(path.join(packageRoot, "templates", sourceRelativePath), destination);
+  }
 }
 
 async function migrate() {
@@ -204,6 +239,67 @@ async function getApiKeyUsage() {
   console.log(JSON.stringify({ data: result.rows }, null, 2));
 }
 
+function whatsappSetup() {
+  console.log(`WhatsApp setup checklist
+
+1. Create a Meta developer app at https://developers.facebook.com/apps/.
+2. Add the WhatsApp product to the app.
+3. Copy the WhatsApp Phone Number ID into WHATSAPP_PHONE_NUMBER_ID.
+4. Configure your webhook callback URL, for example:
+   https://your-domain.example/webhooks/whatsapp
+5. Set a webhook verify token and save it as WHATSAPP_VERIFY_TOKEN.
+6. Create a permanent or system-user access token and save it as WHATSAPP_ACCESS_TOKEN.
+7. Set WHATSAPP_APP_SECRET so the webhook server can verify signed Meta requests.
+8. Configure ClientPad API access with CLIENTPAD_PUBLIC_API_BASE_URL and CLIENTPAD_API_KEY.
+9. Add payment keys as needed: PAYSTACK_SECRET_KEY and/or FLUTTERWAVE_SECRET_KEY.
+10. Run clientpad migrate.
+11. Start the webhook server:
+    node examples/whatsapp/server.mjs
+
+Tip: clientpad init --whatsapp [directory] copies .env.whatsapp.example, a dependency-light Node webhook server, and starter flows.`);
+}
+
+async function whatsappFlows() {
+  const flowName = args.find((arg) => whatsappFlowNames.includes(arg));
+  if (!flowName) {
+    throw new Error(`Usage: clientpad whatsapp:flows [${whatsappFlowNames.join("|")}] [--output <file>|--dir <directory>]`);
+  }
+
+  const flowPath = path.join(
+    packageRoot,
+    "templates",
+    "examples",
+    "whatsapp",
+    "flows",
+    `${flowName}.json`
+  );
+  const flow = await readFile(flowPath, "utf8");
+  const outputFile = readAnyOption(["--output", "--out"], "");
+  const outputDir = readAnyOption(["--dir", "--write"], "");
+
+  if (outputFile && outputDir) {
+    throw new Error("Use either --output <file> or --dir <directory>, not both.");
+  }
+
+  if (outputFile) {
+    const destination = path.resolve(outputFile);
+    await mkdir(path.dirname(destination), { recursive: true });
+    await writeFile(destination, flow);
+    console.log(`Wrote ${flowName} WhatsApp flow to ${destination}`);
+    return;
+  }
+
+  if (outputDir) {
+    const destination = path.resolve(outputDir, `${flowName}.json`);
+    await mkdir(path.dirname(destination), { recursive: true });
+    await writeFile(destination, flow);
+    console.log(`Wrote ${flowName} WhatsApp flow to ${destination}`);
+    return;
+  }
+
+  console.log(flow);
+}
+
 async function doctor() {
   const checks = [
     ["DATABASE_URL", Boolean(process.env.DATABASE_URL)],
@@ -232,6 +328,8 @@ async function main() {
   if (command === "doctor") return doctor();
   if (command === "api-key" && args[0] === "create") return createApiKey();
   if (command === "api-key" && args[0] === "usage") return getApiKeyUsage();
+  if (command === "whatsapp:setup") return whatsappSetup();
+  if (command === "whatsapp:flows") return whatsappFlows();
 
   throw new Error(`Unknown command: ${command}`);
 }
