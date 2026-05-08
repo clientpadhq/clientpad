@@ -13,6 +13,7 @@ export function getClientPadCoreInfo(): ClientPadCoreInfo {
   };
 }
 
+export const LEAD_STATUSES = ["new", "contacted", "qualified", "unqualified", "paid"] as const;
 /**
  * Legacy lead statuses are still supported by public API v1 and the SDK.
  * WhatsApp workflow features should use PIPELINE_STAGES/PipelineStage instead.

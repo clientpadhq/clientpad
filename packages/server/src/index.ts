@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { Pool } from "pg";
+import { verifyPaymentWebhook, type PaymentProvider, type VerifiedPaymentWebhook } from "@abdulmuiz44/clientpad-whatsapp";
 import {
   getPublicPrefix,
   isLeadStatus,
@@ -38,6 +39,31 @@ export type ClientPadServerConfig = {
   databaseUrl?: string;
   apiKeyPepper: string;
   db?: Queryable;
+  payments?: PaymentWebhookConfig;
+};
+
+export type PaymentWebhookConfig = {
+  paystackSecretKey?: string;
+  flutterwaveSecretKey?: string;
+  flutterwaveWebhookSecret?: string;
+  sendWhatsAppMessage?: (message: WhatsAppPaymentConfirmationMessage) => Promise<void>;
+  triggerReviewRequest?: (payment: ConfirmedPaymentRecord) => Promise<void>;
+};
+
+export type WhatsAppPaymentConfirmationMessage = {
+  workspaceId: string;
+  leadId: string;
+  paymentId: string;
+  phone: string;
+  name: string;
+  amount: number;
+  currency: string;
+  serviceItemReference: string;
+  provider: PaymentProvider;
+};
+
+export type ConfirmedPaymentRecord = WhatsAppPaymentConfirmationMessage & {
+  reference: string;
 };
 
 export type ClientPadHandler = (request: Request) => Promise<Response>;
@@ -74,6 +100,19 @@ type UsageSummaryRow = {
   rejected_count: number | null;
 };
 
+type PaymentWebhookUpdateRow = {
+  id: string;
+  workspace_id: string;
+  lead_id: string;
+  provider: PaymentProvider;
+  provider_reference: string;
+  amount: number;
+  currency: string;
+  service_item_reference: string;
+  customer_phone: string;
+  customer_name: string;
+};
+
 export function createClientPadHandler(config: ClientPadServerConfig): ClientPadHandler {
   const server = new ClientPadServer(config);
   return server.handle.bind(server);
@@ -82,6 +121,7 @@ export function createClientPadHandler(config: ClientPadServerConfig): ClientPad
 export class ClientPadServer {
   private readonly db: Queryable;
   private readonly apiKeyPepper: string;
+  private readonly payments: PaymentWebhookConfig;
 
   constructor(config: ClientPadServerConfig) {
     if (!config.apiKeyPepper.trim()) {
@@ -93,6 +133,7 @@ export class ClientPadServer {
 
     this.db = config.db ?? new Pool({ connectionString: config.databaseUrl });
     this.apiKeyPepper = config.apiKeyPepper;
+    this.payments = config.payments ?? {};
   }
 
   async handle(request: Request): Promise<Response> {
@@ -106,6 +147,12 @@ export class ClientPadServer {
       if (path === "/clients" && request.method === "GET") return this.listClients(request, url);
       if (path === "/clients" && request.method === "POST") return this.createClient(request);
       if (path === "/usage" && request.method === "GET") return this.getUsage(request);
+      if (path === "/payments/paystack/webhook" && request.method === "POST") {
+        return this.handlePaymentWebhook(request, "paystack");
+      }
+      if (path === "/payments/flutterwave/webhook" && request.method === "POST") {
+        return this.handlePaymentWebhook(request, "flutterwave");
+      }
 
       return jsonError("Route not found.", 404);
     } catch (error) {
@@ -361,6 +408,102 @@ export class ClientPadServer {
     const clientId = rows[0]?.id;
     await this.auditPublicApiEvent(context, request, "clients.create", { client_id: clientId });
     return Response.json({ data: { id: clientId } }, { status: 201 });
+  }
+
+  private async handlePaymentWebhook(request: Request, provider: PaymentProvider) {
+    const rawBody = await request.text();
+    let webhook: VerifiedPaymentWebhook;
+    try {
+      webhook = verifyPaymentWebhook({
+        provider,
+        rawBody,
+        headers: request.headers,
+        secretKey: provider === "paystack" ? this.payments.paystackSecretKey : this.payments.flutterwaveSecretKey,
+        webhookSecret: provider === "flutterwave" ? this.payments.flutterwaveWebhookSecret : undefined,
+      });
+    } catch {
+      return jsonError("Invalid payment webhook payload.", 400);
+    }
+
+    if (!webhook.verified) return jsonError("Invalid payment webhook signature.", 401);
+    if (!webhook.reference) return jsonError("Payment webhook is missing a reference.", 400);
+
+    const updated = await this.recordPaymentWebhook(webhook);
+    if (updated && webhook.status === "paid") {
+      await this.completePaidLead(updated);
+    }
+
+    return Response.json({ received: true });
+  }
+
+  private async recordPaymentWebhook(webhook: VerifiedPaymentWebhook): Promise<ConfirmedPaymentRecord | null> {
+    const { rows } = await this.db.query<PaymentWebhookUpdateRow>(
+      `
+        update payments
+        set
+          status = $3,
+          provider_payment_id = coalesce($4, provider_payment_id),
+          provider_event = $5,
+          webhook_payload = $6,
+          paid_at = case when $3 = 'paid' then coalesce(paid_at, now()) else paid_at end,
+          updated_at = now()
+        where provider = $1
+          and provider_reference = $2
+        returning
+          id,
+          workspace_id,
+          lead_id,
+          provider,
+          provider_reference,
+          amount,
+          currency,
+          service_item_reference,
+          customer_phone,
+          customer_name
+      `,
+      [
+        webhook.provider,
+        webhook.reference,
+        webhook.status,
+        webhook.providerPaymentId,
+        webhook.event,
+        webhook.payload,
+      ]
+    );
+
+    const row = rows[0];
+    if (!row) return null;
+    return {
+      workspaceId: row.workspace_id,
+      leadId: row.lead_id,
+      paymentId: row.id,
+      phone: row.customer_phone,
+      name: row.customer_name,
+      amount: row.amount,
+      currency: row.currency,
+      serviceItemReference: row.service_item_reference,
+      provider: row.provider,
+      reference: row.provider_reference,
+    };
+  }
+
+  private async completePaidLead(payment: ConfirmedPaymentRecord) {
+    await this.db.query(
+      `
+        update leads
+        set status = 'paid', updated_at = now()
+        where id = $1 and workspace_id = $2
+      `,
+      [payment.leadId, payment.workspaceId]
+    );
+
+    if (this.payments.sendWhatsAppMessage) {
+      await this.payments.sendWhatsAppMessage(payment);
+    }
+
+    if (this.payments.triggerReviewRequest) {
+      await this.payments.triggerReviewRequest(payment);
+    }
   }
 
   private async requireApiKey(

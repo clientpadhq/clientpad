@@ -1,3 +1,4 @@
+export * from "./payments.js";
 import { normalizeBaseUrl } from "@abdulmuiz44/clientpad-core";
 import { ClientPad, type CreateLeadInput, type FetchLike } from "@abdulmuiz44/clientpad-sdk";
 

@@ -1,6 +1,7 @@
 {
   "name": "@abdulmuiz44/clientpad-whatsapp",
   "version": "0.2.0",
+  "description": "WhatsApp commerce helpers for ClientPad flows, Nigerian payment links, and payment webhooks.",
   "description": "Fetch-compatible WhatsApp Cloud API helpers for ClientPad service businesses.",
   "license": "MIT",
   "type": "module",
@@ -10,6 +11,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./payments": {
+      "types": "./dist/payments.d.ts",
+      "import": "./dist/payments.js"
     }
   },
   "files": [
@@ -19,6 +24,17 @@
   "keywords": [
     "clientpad",
     "whatsapp",
+    "payments",
+    "paystack",
+    "flutterwave",
+    "nigeria"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node test/payments.test.mjs",
+    "prepack": "npm run build"
+  },
     "meta",
     "cloud-api",
     "webhook",
