@@ -22,10 +22,22 @@ const clientpad = new ClientPad({
 
 await clientpad.leads.create({
   name: "Ada Customer",
-  phone: "+234...",
+  phone: "08031234567",
   source: "WhatsApp",
 });
 ```
+
+## Upsert Leads
+
+```ts
+await clientpad.leads.upsert({
+  name: "Ada Customer",
+  phone: "08031234567",
+  source: "WhatsApp",
+});
+```
+
+`leads.upsert` requires the public API `/leads/upsert` endpoint and matches records by `(workspace_id, phone)`.
 
 ## Node
 
@@ -64,7 +76,7 @@ app.post("/lead", async (_req, res, next) => {
   try {
     const result = await clientpad.leads.create({
       name: "Ada Customer",
-      phone: "+234...",
+      phone: "08031234567",
     });
     res.json(result);
   } catch (error) {

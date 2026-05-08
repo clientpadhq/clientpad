@@ -5,6 +5,7 @@ import { copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { normalizeNigerianPhoneNumber } from "@abdulmuiz44/clientpad-core/phone";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const command = process.argv[2];
@@ -18,6 +19,7 @@ Usage:
   clientpad api-key create <workspace_id> [name] [comma_scopes]
   clientpad api-key create --workspace-id <id> [--name <name>] [--scopes <comma_scopes>] [--billing-mode <mode>] [--monthly-request-limit <number>] [--rate-limit-per-minute <number>]
   clientpad api-key usage <api_key_id>
+  clientpad whatsapp:import <file.csv> --workspace-id <id>
   clientpad doctor
   clientpad help
 
@@ -204,6 +206,155 @@ async function getApiKeyUsage() {
   console.log(JSON.stringify({ data: result.rows }, null, 2));
 }
 
+async function importWhatsAppCsv() {
+  const filePath = args[0];
+  const workspaceId = readOption("--workspace-id", "");
+  const connectionString = process.env.DATABASE_URL;
+
+  if (!connectionString) throw new Error("DATABASE_URL is required.");
+  if (!filePath || filePath.startsWith("--") || !workspaceId) {
+    throw new Error("Usage: clientpad whatsapp:import <file.csv> --workspace-id <id>");
+  }
+
+  const csv = await readFile(path.resolve(filePath), "utf8");
+  const rows = parseCsv(csv);
+  if (!rows.length) throw new Error("CSV file is empty.");
+
+  const [headerRow, ...dataRows] = rows;
+  const headers = headerRow.map((header) => header.trim().toLowerCase());
+  const requiredColumns = ["name", "phone"];
+  const missingColumns = requiredColumns.filter((column) => !headers.includes(column));
+  if (missingColumns.length) {
+    throw new Error(`CSV is missing required column(s): ${missingColumns.join(", ")}`);
+  }
+
+  const pool = new pg.Pool({ connectionString });
+  const seenPhones = new Set();
+  const sampleInvalidRows = [];
+  let importedCount = 0;
+  let skippedDuplicateCount = 0;
+  let invalidPhoneCount = 0;
+
+  await pool.query("begin");
+  try {
+    for (const [index, values] of dataRows.entries()) {
+      const record = rowToRecord(headers, values);
+      const normalizedPhone = normalizeNigerianPhoneNumber(record.phone);
+      const rowNumber = index + 2;
+
+      if (!normalizedPhone) {
+        invalidPhoneCount += 1;
+        if (sampleInvalidRows.length < 5) {
+          sampleInvalidRows.push({ row: rowNumber, phone: record.phone ?? "" });
+        }
+        continue;
+      }
+
+      if (seenPhones.has(normalizedPhone)) {
+        skippedDuplicateCount += 1;
+        continue;
+      }
+      seenPhones.add(normalizedPhone);
+
+      const name = optionalCsvValue(record.name) ?? normalizedPhone;
+      const lastMessage = optionalCsvValue(record.last_message);
+      const lastMessageAt = parseCsvTimestamp(record.last_message_at);
+      const source = optionalCsvValue(record.source) ?? "whatsapp_csv";
+      const serviceInterest = optionalCsvValue(record.service_interest);
+      const notes = optionalCsvValue(record.notes);
+
+      const leadResult = await pool.query(
+        `
+          insert into leads (
+            workspace_id,
+            name,
+            phone,
+            source,
+            service_interest,
+            notes
+          )
+          values ($1, $2, $3, $4, $5, $6)
+          on conflict (workspace_id, phone)
+          do update set
+            name = coalesce(nullif(excluded.name, ''), leads.name),
+            source = coalesce(excluded.source, leads.source),
+            service_interest = coalesce(excluded.service_interest, leads.service_interest),
+            notes = coalesce(excluded.notes, leads.notes),
+            updated_at = now()
+          returning id
+        `,
+        [workspaceId, name, normalizedPhone, source, serviceInterest, notes]
+      );
+      const leadId = leadResult.rows[0]?.id;
+      importedCount += 1;
+
+      if (lastMessage) {
+        const conversationResult = await pool.query(
+          `
+            insert into whatsapp_conversations (
+              workspace_id,
+              lead_id,
+              phone,
+              contact_name,
+              source,
+              last_message_at
+            )
+            values ($1, $2, $3, $4, $5, coalesce($6::timestamptz, now()))
+            returning id
+          `,
+          [workspaceId, leadId, normalizedPhone, name, source, lastMessageAt]
+        );
+        const conversationId = conversationResult.rows[0]?.id;
+
+        await pool.query(
+          `
+            insert into whatsapp_messages (
+              workspace_id,
+              conversation_id,
+              lead_id,
+              phone,
+              direction,
+              body,
+              sent_at,
+              raw_payload
+            )
+            values ($1, $2, $3, $4, 'inbound', $5, coalesce($6::timestamptz, now()), $7::jsonb)
+          `,
+          [
+            workspaceId,
+            conversationId,
+            leadId,
+            normalizedPhone,
+            lastMessage,
+            lastMessageAt,
+            JSON.stringify({ csv_row: rowNumber }),
+          ]
+        );
+      }
+    }
+
+    await pool.query("commit");
+  } catch (error) {
+    await pool.query("rollback");
+    throw error;
+  } finally {
+    await pool.end();
+  }
+
+  console.log(
+    JSON.stringify(
+      {
+        imported_count: importedCount,
+        skipped_duplicate_count: skippedDuplicateCount,
+        invalid_phone_count: invalidPhoneCount,
+        sample_invalid_rows: sampleInvalidRows,
+      },
+      null,
+      2
+    )
+  );
+}
+
 async function doctor() {
   const checks = [
     ["DATABASE_URL", Boolean(process.env.DATABASE_URL)],
@@ -230,6 +381,7 @@ async function main() {
   if (command === "init") return initProject();
   if (command === "migrate") return migrate();
   if (command === "doctor") return doctor();
+  if (command === "whatsapp:import") return importWhatsAppCsv();
   if (command === "api-key" && args[0] === "create") return createApiKey();
   if (command === "api-key" && args[0] === "usage") return getApiKeyUsage();
 
@@ -248,4 +400,68 @@ function parseNullableInteger(value) {
     throw new Error(`Expected positive integer but received: ${value}`);
   }
   return parsed;
+}
+
+
+function parseCsv(csv) {
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < csv.length; index += 1) {
+    const char = csv[index];
+    const next = csv[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        field += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      row.push(field);
+      field = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(field);
+      if (row.some((value) => value.trim() !== "")) rows.push(row);
+      row = [];
+      field = "";
+      continue;
+    }
+
+    field += char;
+  }
+
+  row.push(field);
+  if (row.some((value) => value.trim() !== "")) rows.push(row);
+  return rows;
+}
+
+function rowToRecord(headers, values) {
+  const record = {};
+  for (const [index, header] of headers.entries()) {
+    record[header] = values[index] ?? "";
+  }
+  return record;
+}
+
+function optionalCsvValue(value) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function parseCsvTimestamp(value) {
+  const normalized = optionalCsvValue(value);
+  if (!normalized) return null;
+  const date = new Date(normalized);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
 }

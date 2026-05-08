@@ -68,18 +68,26 @@ assert.equal(calls[1].url, "https://example.com/api/public/v1/clients?offset=0")
 
 await clientpad.leads.create({
   name: "Ada Customer",
-  phone: "+234...",
+  phone: "08031234567",
 });
 
 assert.equal(calls[2].init.method, "POST");
 assert.equal(calls[2].init.headers.get("content-type"), "application/json");
 assert.deepEqual(JSON.parse(calls[2].init.body), {
   name: "Ada Customer",
-  phone: "+234...",
+  phone: "08031234567",
 });
 
+await clientpad.leads.upsert({
+  name: "Ada Customer",
+  phone: "08031234567",
+});
+
+assert.equal(calls[3].init.method, "POST");
+assert.equal(calls[3].url, "https://example.com/api/public/v1/leads/upsert");
+
 const usage = await clientpad.usage.retrieve();
-assert.equal(calls[3].url, "https://example.com/api/public/v1/usage");
+assert.equal(calls[4].url, "https://example.com/api/public/v1/usage");
 assert.equal(usage.data.remaining_requests, 988);
 
 const failing = new ClientPad({
