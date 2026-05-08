@@ -1,0 +1,105 @@
+{
+  "id": "salon-whatsapp-flow",
+  "businessType": "salon",
+  "language": "en",
+  "lowDataDefault": true,
+  "media": {
+    "optional": true,
+    "placeholdersOnly": true,
+    "imageUrls": [
+      "https://example.com/images/salon-style.jpg",
+      "https://example.com/images/bridal-package.jpg"
+    ]
+  },
+  "constraints": {
+    "replyButtonsMax": 3,
+    "listRowsMax": 10,
+    "customerServiceWindowHours": 24,
+    "templatesRequiredOutsideWindow": true
+  },
+  "entry": {
+    "type": "text",
+    "body": "Welcome to Glow & Go Salon. How can we help you today?",
+    "pidginBody": "Welcome to Glow & Go Salon. Wetin you wan do today?"
+  },
+  "mainMenu": {
+    "type": "reply_buttons",
+    "body": "Choose an option below.",
+    "pidginBody": "Abeg choose one option.",
+    "buttons": [
+      { "id": "book_appointment", "title": "Book Appointment" },
+      { "id": "view_services", "title": "View Services" },
+      { "id": "talk_to_owner", "title": "Talk to Owner" }
+    ]
+  },
+  "serviceList": {
+    "type": "list",
+    "body": "Select a service category.",
+    "buttonText": "View services",
+    "sections": [
+      {
+        "title": "Hair",
+        "rows": [
+          { "id": "hair_braids", "title": "Braids", "description": "Box braids, cornrows, twists" },
+          { "id": "hair_wig", "title": "Wig Install", "description": "Install, styling, revamp" },
+          { "id": "hair_treatment", "title": "Hair Treatment", "description": "Wash, steam, trim" }
+        ]
+      },
+      {
+        "title": "Nails",
+        "rows": [
+          { "id": "nails_gel", "title": "Gel Manicure", "description": "Gel polish and cleanup" },
+          { "id": "nails_acrylic", "title": "Acrylic Set", "description": "Full set or refill" }
+        ]
+      },
+      {
+        "title": "Lashes",
+        "rows": [
+          { "id": "lashes_classic", "title": "Classic Lashes", "description": "Natural lash extensions" },
+          { "id": "lashes_volume", "title": "Volume Lashes", "description": "Fuller lash extensions" }
+        ]
+      },
+      {
+        "title": "Bridal Packages",
+        "rows": [
+          { "id": "bridal_trial", "title": "Bridal Trial", "description": "Makeup and hair trial" },
+          { "id": "bridal_full", "title": "Full Bridal Glam", "description": "Bride plus optional train" }
+        ]
+      }
+    ]
+  },
+  "bookingSlots": {
+    "type": "list",
+    "body": "Pick an appointment slot. We will confirm availability before payment.",
+    "buttonText": "Choose slot",
+    "sections": [
+      {
+        "title": "Today",
+        "rows": [
+          { "id": "slot_today_10", "title": "Today 10:00 AM" },
+          { "id": "slot_today_14", "title": "Today 2:00 PM" },
+          { "id": "slot_today_17", "title": "Today 5:00 PM" }
+        ]
+      },
+      {
+        "title": "Tomorrow",
+        "rows": [
+          { "id": "slot_tomorrow_09", "title": "Tomorrow 9:00 AM" },
+          { "id": "slot_tomorrow_13", "title": "Tomorrow 1:00 PM" },
+          { "id": "slot_tomorrow_16", "title": "Tomorrow 4:00 PM" }
+        ]
+      }
+    ]
+  },
+  "paymentPrompt": {
+    "type": "text",
+    "body": "Your slot is on hold. Please pay the deposit using the secure payment link we send next, then reply PAID.",
+    "pidginBody": "We don hold your slot. Pay small deposit with the payment link, then reply PAID."
+  },
+  "reviewRequestFollowUp": {
+    "type": "text",
+    "sendAfter": "appointment_completed_plus_2_hours",
+    "body": "Thank you for visiting us. Please rate your experience from 1-5 or share a short review.",
+    "pidginBody": "Thank you say you come. Abeg rate us 1-5 or send small review."
+  }
+}
