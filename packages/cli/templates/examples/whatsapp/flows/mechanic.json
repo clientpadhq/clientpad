@@ -1,0 +1,34 @@
+{
+  "id": "mechanic",
+  "name": "Mechanic intake starter",
+  "description": "Collects vehicle details, issue summary, location, and repair urgency.",
+  "steps": [
+    {
+      "id": "welcome",
+      "type": "message",
+      "text": "Thanks for contacting the workshop. What vehicle do you need help with?"
+    },
+    {
+      "id": "vehicle",
+      "type": "question",
+      "text": "Please send the vehicle make, model, and year."
+    },
+    {
+      "id": "issue",
+      "type": "question",
+      "text": "Briefly describe the issue or warning light you are seeing."
+    },
+    {
+      "id": "urgency",
+      "type": "choice",
+      "text": "How urgent is this request?",
+      "options": ["Emergency", "Today", "This week"]
+    },
+    {
+      "id": "handoff",
+      "type": "action",
+      "action": "create_lead",
+      "tags": ["whatsapp", "mechanic", "repair"]
+    }
+  ]
+}
