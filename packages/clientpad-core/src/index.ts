@@ -13,3 +13,6 @@ export function getClientPadPackageInfo(): ClientPadPackageInfo {
     appName: CLIENTPAD_APP_NAME,
   };
 }
+export const CLIENTPAD_CORE_PACKAGE_NAME = "@abdulmuiz44/clientpad-core";
+
+export const CLIENTPAD_CORE_VERSION = "0.1.0";
