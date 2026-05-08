@@ -15,13 +15,17 @@ import {
   Edit3,
   ExternalLink,
   Filter,
+  MessageCircle,
   KeyRound,
+  KanbanSquare,
   LayoutDashboard,
   MoreHorizontal,
+  Phone,
   Plus,
   Search,
   Settings,
   ShieldCheck,
+  Smartphone,
   SlidersHorizontal,
   Trash2,
   TrendingUp,
@@ -35,7 +39,7 @@ type Session = {
   demo?: boolean;
 };
 
-type Page = "overview" | "projects" | "keys" | "usage" | "billing" | "docs" | "settings";
+type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "docs" | "settings";
 type QuickstartLanguage = "curl" | "python" | "node" | "go" | "ruby";
 
 type Plan = {
@@ -89,6 +93,26 @@ type ApiKeyRecord = ApiKeyResult & {
 
 type ProjectFormState = { name: string; owner_email: string; plan_code: string };
 type KeyFormState = { workspace_id: string; name: string; plan_code: string; scopes: string };
+
+type ClientRecord = {
+  id: string;
+  name: string;
+  phone: string;
+  status: string;
+  service: string;
+  value: number;
+  lastMessage: string;
+};
+
+type RevenueClient = {
+  name: string;
+  phone: string;
+  amount: number;
+  paidAt: string;
+  provider: "Paystack" | "Flutterwave";
+};
+
+const serviceStages = ["New Lead", "Quoted", "Booked", "In Progress", "Completed", "Paid", "Review Requested"] as const;
 
 const sessionKey = "clientpad.cloud.session";
 
@@ -283,6 +307,12 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
           {notice ? <Notice message={notice} onDismiss={() => setNotice("")} /> : null}
           {createdKey ? <NewKeyBanner apiKey={createdKey.key} onDismiss={() => setCreatedKey(null)} /> : null}
 
+          {page === "connect" && <ConnectWhatsApp onCopy={(text) => copyText(text, setNotice)} />}
+          {page === "pipeline" && <PipelineScreen clients={filterClients(demoClients, query)} />}
+          {page === "clients" && <ClientSearch clients={filterClients(demoClients, query)} query={query} setQuery={setQuery} />}
+          {page === "inbox" && <TeamInbox />}
+          {page === "revenue" && <RevenueDashboard />}
+
           {page === "overview" && (
             <Overview
               loading={loading}
@@ -329,10 +359,15 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
 function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void }) {
   const items: Array<[Page, React.ReactNode, string]> = [
     ["overview", <LayoutDashboard size={18} />, "Overview"],
-    ["projects", <Building2 size={18} />, "Projects"],
-    ["keys", <KeyRound size={18} />, "API Keys"],
+    ["connect", <Smartphone size={18} />, "Connect WhatsApp"],
+    ["pipeline", <KanbanSquare size={18} />, "Pipeline"],
+    ["clients", <Phone size={18} />, "Clients"],
+    ["inbox", <MessageCircle size={18} />, "Team Inbox"],
+    ["revenue", <WalletCards size={18} />, "Revenue"],
     ["usage", <SlidersHorizontal size={18} />, "Usage"],
     ["billing", <CreditCard size={18} />, "Billing"],
+    ["projects", <Building2 size={18} />, "Projects"],
+    ["keys", <KeyRound size={18} />, "API Keys"],
     ["docs", <BookOpen size={18} />, "Docs"],
   ];
 
@@ -405,7 +440,7 @@ function Topbar({
       </label>
       <label className="searchbox">
         <Search size={18} />
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search projects, API keys, docs..." />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search clients by phone/name, projects, keys..." />
         <kbd>⌘ K</kbd>
       </label>
       <div className="top-actions">
@@ -715,6 +750,12 @@ function Usage({ usage, keys, selectedProject }: { usage: UsageRow[]; keys: ApiK
 function Billing({ plans, selectedPlanCode, onSelectPlan }: { plans: Plan[]; selectedPlanCode: string; onSelectPlan: (code: string) => void }) {
   return (
     <div className="billing-grid">
+      <Panel className="billing-summary">
+        <div className="panel-head"><h2>Current cloud usage</h2><Badge tone="green">Synced</Badge></div>
+        <Quota label="Requests" value={2_391_873} limit={10_000_000} suffix="" />
+        <Quota label="Data Transfer" value={82.1} limit={500} suffix="GB" />
+        <p className="helper-text">Uses the same quota model as Usage: request count, rejections, rate limits, and monthly included projects.</p>
+      </Panel>
       {plans.map((plan) => (
         <Panel key={plan.id} className={selectedPlanCode === plan.code ? "selected-plan" : ""}>
           <div className="panel-head">
@@ -981,6 +1022,159 @@ function Badge({ children, tone }: { children: React.ReactNode; tone: "green" | 
   return <span className={`badge ${tone}`}>{children}</span>;
 }
 
+
+function ConnectWhatsApp({ onCopy }: { onCopy: (text: string) => void }) {
+  const [form, setForm] = useState({
+    phoneNumberId: "123456789012345",
+    wabaId: "987654321098765",
+    verifyToken: "clientpad_verify_2026",
+    accessToken: "EAAB...",
+  });
+  const webhookUrl = `${window.location.origin}/api/whatsapp/webhook/${form.wabaId || "waba-id"}`;
+  const checklist = [
+    `Webhook URL: ${webhookUrl}`,
+    `Verify token: ${form.verifyToken}`,
+    `Phone Number ID: ${form.phoneNumberId}`,
+    `WABA ID: ${form.wabaId}`,
+    "Subscribe messages, message_template_status_update, and account_update events.",
+    "Send a test WhatsApp message, then confirm it appears in Team Inbox.",
+  ].join("\n");
+
+  return (
+    <div className="detail-layout connect-layout">
+      <Panel>
+        <h2>WhatsApp Business credentials</h2>
+        <FormField label="Phone Number ID" value={form.phoneNumberId} onChange={(value) => setForm({ ...form, phoneNumberId: value })} />
+        <FormField label="WABA ID" value={form.wabaId} onChange={(value) => setForm({ ...form, wabaId: value })} />
+        <FormField label="Verify token" value={form.verifyToken} onChange={(value) => setForm({ ...form, verifyToken: value })} />
+        <FormField label="Access token" value={form.accessToken} onChange={(value) => setForm({ ...form, accessToken: value })} />
+      </Panel>
+      <Panel className="wide-detail setup-card">
+        <div className="panel-head">
+          <h2>Copyable connection checklist</h2>
+          <button className="button outline" onClick={() => onCopy(checklist)}><Clipboard size={15} /> Copy checklist</button>
+        </div>
+        <div className="webhook-box">
+          <span>Generated webhook URL</span>
+          <code>{webhookUrl}</code>
+          <button className="button primary blue" onClick={() => onCopy(webhookUrl)}>Copy URL</button>
+        </div>
+        <div className="qr-card" aria-label="QR-style setup card">
+          {Array.from({ length: 49 }).map((_, index) => <i key={index} className={(index + form.wabaId.length) % 3 === 0 ? "filled" : ""} />)}
+        </div>
+        <ol className="checklist">
+          {checklist.split("\n").map((item) => <li key={item}>{item}</li>)}
+        </ol>
+      </Panel>
+    </div>
+  );
+}
+
+function PipelineScreen({ clients }: { clients: ClientRecord[] }) {
+  return (
+    <div className="pipeline-board">
+      {serviceStages.map((stage) => {
+        const stageClients = clients.filter((client) => client.status === stage);
+        return (
+          <Panel key={stage} className="stage-panel">
+            <div className="panel-head bordered compact-head">
+              <h2>{stage} <span>{stageClients.length}</span></h2>
+            </div>
+            <div className="stage-cards">
+              {stageClients.map((client) => (
+                <article className="client-card" key={client.id}>
+                  <strong>{client.name}</strong>
+                  <span>{client.phone}</span>
+                  <small>{client.service}</small>
+                  <b>${client.value.toLocaleString()}</b>
+                </article>
+              ))}
+              {!stageClients.length ? <p className="empty-state">No clients in this stage.</p> : null}
+            </div>
+          </Panel>
+        );
+      })}
+    </div>
+  );
+}
+
+function ClientSearch({ clients, query, setQuery }: { clients: ClientRecord[]; query: string; setQuery: (query: string) => void }) {
+  return (
+    <div className="detail-layout single">
+      <Panel>
+        <h2>Phone/name lookup</h2>
+        <label className="lookup-input">
+          <Search size={18} />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Type +234..., 0803..., Ada, Musa..." />
+        </label>
+        <p className="helper-text">Search removes spaces, dashes, parentheses, and leading + so phone lookups stay fast on low-data Android devices.</p>
+      </Panel>
+      <Panel className="table-panel wide-detail">
+        <div className="panel-head bordered"><h2>Matched clients <span>{clients.length}</span></h2></div>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Phone</th><th>Stage</th><th>Service</th><th>Value</th><th>Last message</th></tr></thead>
+            <tbody>{clients.map((client) => (
+              <tr key={client.id}><td>{client.name}</td><td><a>{client.phone}</a></td><td>{client.status}</td><td>{client.service}</td><td>${client.value.toLocaleString()}</td><td>{client.lastMessage}</td></tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function TeamInbox() {
+  return (
+    <div className="inbox-layout">
+      <Panel className="conversation-list">
+        <h2>Conversations</h2>
+        {demoConversations.map((conversation, index) => (
+          <button key={conversation.name} className={index === 0 ? "conversation active" : "conversation"}>
+            <strong>{conversation.name}</strong>
+            <span>{conversation.preview}</span>
+            <small>{conversation.time}</small>
+          </button>
+        ))}
+      </Panel>
+      <Panel className="timeline-panel">
+        <div className="panel-head"><h2>Message timeline</h2><Badge tone="green">Assigned</Badge></div>
+        <div className="messages">
+          <p className="bubble inbound">Hi, can I get the quote for AC servicing today?</p>
+          <p className="bubble outbound">Yes — ₦45,000 including call-out. We can book 3 PM.</p>
+          <p className="bubble inbound">Great, please book it and send payment link.</p>
+        </div>
+        <label className="mention-field">Assignment / mentions<input defaultValue="@Aisha assigned · @Ops please watch payment" /></label>
+      </Panel>
+      <Panel className="quick-replies">
+        <h2>Quick reply suggestions</h2>
+        {demoReplies.map((reply) => <button className="reply-chip" key={reply}>{reply}</button>)}
+      </Panel>
+    </div>
+  );
+}
+
+function RevenueDashboard() {
+  const totalPaid = demoRevenue.reduce((sum, client) => sum + client.amount, 0);
+  const pending = demoClients.filter((client) => ["Quoted", "Booked", "Completed"].includes(client.status)).reduce((sum, client) => sum + client.value, 0);
+  return (
+    <div className="detail-layout single">
+      <div className="metric-grid revenue-metrics">
+        <Panel><span className="metric-label">Total paid</span><strong className="metric-value">${totalPaid.toLocaleString()}</strong></Panel>
+        <Panel><span className="metric-label">Pending payments</span><strong className="metric-value">${pending.toLocaleString()}</strong></Panel>
+        <Panel><span className="metric-label">Paystack</span><strong className="metric-value healthy">Live</strong><small>Webhook synced 2 min ago</small></Panel>
+        <Panel><span className="metric-label">Flutterwave</span><strong className="metric-value healthy">Live</strong><small>Settlement pending: $420</small></Panel>
+      </div>
+      <Panel className="table-panel wide-detail">
+        <div className="panel-head bordered"><h2>Recent paid clients</h2><span>{demoRevenue.length} payments</span></div>
+        <div className="table-wrap"><table><thead><tr><th>Client</th><th>Phone</th><th>Amount</th><th>Provider</th><th>Paid at</th></tr></thead><tbody>
+          {demoRevenue.map((client) => <tr key={`${client.phone}-${client.paidAt}`}><td>{client.name}</td><td>{client.phone}</td><td>${client.amount.toLocaleString()}</td><td>{client.provider}</td><td>{client.paidAt}</td></tr>)}
+        </tbody></table></div>
+      </Panel>
+    </div>
+  );
+}
+
 function FormField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
     <label className="field">
@@ -1077,7 +1271,7 @@ function demoResponse(path: string, init: RequestInit) {
       data: {
         id: `api_key_${Date.now()}`,
         key: "cp_live_demo123_generated_secret_444f",
-        scopes: body.scopes.split(",").map((scope) => scope.trim()).filter(Boolean),
+        scopes: Array.isArray(body.scopes) ? body.scopes : body.scopes.split(",").map((scope) => scope.trim()).filter(Boolean),
         billing_mode: body.plan_code === "free" ? "cloud_free" : "cloud_paid",
         monthly_request_limit: 10_000_000,
         rate_limit_per_minute: 1200,
@@ -1100,6 +1294,36 @@ const demoProjects: Project[] = [
   { id: "project_1a7d9c3e", workspace_id: "workspace_stage", name: "Staging API", slug: "staging-api", environment: "staging", owner_email: "ops@example.com", created_at: "2025-04-02T00:00:00Z" },
   { id: "project_c7b9a1f2", workspace_id: "workspace_tools", name: "Internal Tools", slug: "internal-tools", environment: "production", owner_email: "tools@example.com", created_at: "2025-04-15T00:00:00Z" },
   { id: "project_0d3f4b6a", workspace_id: "workspace_sandbox", name: "Sandbox", slug: "sandbox", environment: "development", owner_email: "dev@example.com", created_at: "2025-04-28T00:00:00Z" },
+];
+
+
+const demoClients: ClientRecord[] = [
+  { id: "client_ada", name: "Ada Okafor", phone: "+234 803 555 0198", status: "New Lead", service: "Solar audit", value: 320, lastMessage: "Please confirm roof photos." },
+  { id: "client_musa", name: "Musa Bello", phone: "+234 701 222 4444", status: "Quoted", service: "Generator repair", value: 460, lastMessage: "Quote sent on WhatsApp." },
+  { id: "client_zuri", name: "Zuri Homes", phone: "+254 711 300 902", status: "Booked", service: "Cleaning package", value: 780, lastMessage: "Technician booked for Friday." },
+  { id: "client_kofi", name: "Kofi Mensah", phone: "+233 24 900 1122", status: "In Progress", service: "AC servicing", value: 520, lastMessage: "Team is on-site." },
+  { id: "client_lina", name: "Lina Patel", phone: "+1 (404) 555-0188", status: "Completed", service: "Website handover", value: 1250, lastMessage: "Awaiting payment confirmation." },
+  { id: "client_noah", name: "Noah Carter", phone: "+44 7700 900123", status: "Paid", service: "Consulting sprint", value: 2100, lastMessage: "Receipt sent." },
+  { id: "client_amara", name: "Amara Nwosu", phone: "0803-777-4422", status: "Review Requested", service: "Salon booking flow", value: 640, lastMessage: "Review request delivered." },
+];
+
+const demoRevenue: RevenueClient[] = [
+  { name: "Noah Carter", phone: "+44 7700 900123", amount: 2100, paidAt: "May 8, 2026", provider: "Paystack" },
+  { name: "Amara Nwosu", phone: "0803-777-4422", amount: 640, paidAt: "May 7, 2026", provider: "Flutterwave" },
+  { name: "Kofi Mensah", phone: "+233 24 900 1122", amount: 520, paidAt: "May 6, 2026", provider: "Paystack" },
+];
+
+const demoConversations = [
+  { name: "Ada Okafor", preview: "Please confirm roof photos.", time: "09:42" },
+  { name: "Musa Bello", preview: "Can you discount the generator repair?", time: "08:18" },
+  { name: "Zuri Homes", preview: "Friday still works for us.", time: "Yesterday" },
+];
+
+const demoReplies = [
+  "Thanks — we are checking this now.",
+  "Here is your payment link.",
+  "Can you share your preferred time window?",
+  "Your booking is confirmed.",
 ];
 
 const demoUsage: UsageRow[] = [
@@ -1157,13 +1381,32 @@ function filterKeys(keys: ApiKeyRecord[], query: string, paidOnly: boolean) {
   });
 }
 
+function filterClients(clients: ClientRecord[], query: string) {
+  const normalizedQuery = normalizeLookup(query);
+  if (!normalizedQuery) return clients;
+  return clients.filter((client) => {
+    const name = client.name.toLowerCase();
+    const phone = normalizeLookup(client.phone);
+    return name.includes(query.toLowerCase()) || phone.includes(normalizedQuery);
+  });
+}
+
+function normalizeLookup(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
 function titleForPage(page: Page) {
   return {
     overview: "Overview",
+    connect: "Connect WhatsApp",
+    pipeline: "Live Pipeline",
+    clients: "Client Search",
+    inbox: "Team Inbox",
+    revenue: "Revenue",
+    usage: "Usage",
+    billing: "Usage & Billing",
     projects: "Projects",
     keys: "API Keys",
-    usage: "Usage",
-    billing: "Billing",
     docs: "Docs",
     settings: "Settings",
   }[page];
@@ -1172,10 +1415,15 @@ function titleForPage(page: Page) {
 function subtitleForPage(page: Page, project?: Project) {
   return {
     overview: "System status and workspace summary",
+    connect: "Paste Meta credentials and copy webhook setup steps",
+    pipeline: "Track every client across service stages in real time",
+    clients: "Fast lookup by normalized phone number or client name",
+    inbox: "Shared conversations, assignment, mentions, and quick replies",
+    revenue: "Paid totals, pending payments, gateway health, and recent clients",
+    usage: `${project?.name ?? "Workspace"} request activity and quota usage`,
+    billing: "Cloud quotas, plan limits, billing period, and upgrade controls",
     projects: "Create, inspect, and manage hosted workspaces",
     keys: "Issue, copy, and inspect developer access keys",
-    usage: `${project?.name ?? "Workspace"} request activity and quota usage`,
-    billing: "Plan limits, billing period, and upgrade controls",
     docs: "SDK and API snippets developers can copy into apps",
     settings: "Cloud connection and operator settings",
   }[page];
@@ -1212,4 +1460,14 @@ function toTitle(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((error) => {
+      console.warn("ClientPad service worker registration failed", error);
+    });
+  });
+}
+
 createRoot(document.getElementById("root")!).render(<App />);
+registerServiceWorker();
