@@ -1,0 +1,42 @@
+{
+  "name": "@abdulmuiz44/clientpad-whatsapp",
+  "version": "0.2.0",
+  "description": "Fetch-compatible WhatsApp Cloud API helpers for ClientPad service businesses.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "clientpad",
+    "whatsapp",
+    "meta",
+    "cloud-api",
+    "webhook",
+    "typescript"
+  ],
+  "scripts": {
+    "build": "pnpm --filter @abdulmuiz44/clientpad-core build && pnpm --filter @abdulmuiz44/clientpad-sdk build && tsc -p tsconfig.json",
+    "typecheck": "pnpm --filter @abdulmuiz44/clientpad-core build && pnpm --filter @abdulmuiz44/clientpad-sdk build && tsc -p tsconfig.json --noEmit",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@abdulmuiz44/clientpad-core": "workspace:*",
+    "@abdulmuiz44/clientpad-sdk": "workspace:*"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
