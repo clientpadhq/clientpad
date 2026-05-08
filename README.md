@@ -59,9 +59,16 @@ The `Plan.md` Phases 1–5 roadmap is implemented on this codebase, including po
    ```
 
 ## GitHub Packages npm publishing
-The root ClientPad repository is the full Next.js application and should **not** be published wholesale. The only publishable package in this repo is the dedicated core package, `@abdulmuiz44/clientpad-core`, which is configured for GitHub Packages.
+The root ClientPad repository is the full Next.js application and should **not** be published wholesale. The only publishable package in this repo is `@abdulmuiz44/clientpad-core`, a narrow core metadata/utilities package located at `packages/clientpad-core`.
 
-Authentication requires a GitHub token with package publishing permissions. Export it before running publish commands:
+`@abdulmuiz44/clientpad-core` currently exports only:
+
+- `CLIENTPAD_CORE_PACKAGE_NAME`
+- `CLIENTPAD_APP_NAME`
+- `ClientPadCoreInfo`
+- `getClientPadCoreInfo()`
+
+Authentication for GitHub Packages uses the repo `.npmrc` and a token supplied at publish or install time. Do not commit a real token; export one locally when needed:
 ```bash
 export GITHUB_TOKEN=<your_github_token>
 ```
@@ -72,7 +79,7 @@ npm --prefix packages/clientpad-core run build
 npm --prefix packages/clientpad-core run typecheck
 ```
 
-Preview the package contents before publishing:
+Preview the final package contents before publishing:
 ```bash
 npm pack ./packages/clientpad-core --dry-run
 ```
@@ -82,9 +89,8 @@ Publish the package with npm:
 npm publish ./packages/clientpad-core
 ```
 
-pnpm equivalents:
+Publish the package with pnpm:
 ```bash
-pnpm --dir packages/clientpad-core build
 pnpm --dir packages/clientpad-core publish
 ```
 
@@ -103,14 +109,14 @@ Consumer import example:
 import {
   CLIENTPAD_APP_NAME,
   CLIENTPAD_CORE_PACKAGE_NAME,
-  CLIENTPAD_CORE_VERSION,
-  CLIENTPAD_PACKAGE_NAME,
-  getClientPadPackageInfo,
-  type ClientPadPackageInfo,
+  getClientPadCoreInfo,
+  type ClientPadCoreInfo,
 } from "@abdulmuiz44/clientpad-core";
+
+const coreInfo: ClientPadCoreInfo = getClientPadCoreInfo();
 ```
 
-Limitation: the current package only exposes core metadata/utilities from `packages/clientpad-core/src/index.ts`; it does not expose or bundle the full ClientPad Next.js app.
+Limitation: the package only exposes the core metadata/utilities from `packages/clientpad-core/src/index.ts`; it does not expose or bundle the ClientPad Next.js app.
 
 ## Required environment variables
 - `NEXT_PUBLIC_APP_URL`
