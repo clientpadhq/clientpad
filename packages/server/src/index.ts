@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { Pool } from "pg";
 import { verifyPaymentWebhook, type PaymentProvider, type VerifiedPaymentWebhook } from "@abdulmuiz44/clientpad-whatsapp";
 import {
@@ -35,10 +35,24 @@ export type ApiKeyPrincipal = {
   rateLimitPerMinute: number | null;
 };
 
+export type ServiceBusinessFlowConfig = Record<string, unknown>;
+
+export type ClientPadWhatsAppConfig = {
+  verifyToken: string;
+  accessToken: string;
+  phoneNumberId: string;
+  clientpadBaseUrl: string;
+  clientpadApiKey: string;
+  appSecret?: string;
+  defaultCountryCode?: "+234" | (string & {});
+  flow?: ServiceBusinessFlowConfig;
+};
+
 export type ClientPadServerConfig = {
   databaseUrl?: string;
   apiKeyPepper: string;
   db?: Queryable;
+  whatsapp?: ClientPadWhatsAppConfig;
   payments?: PaymentWebhookConfig;
 };
 
@@ -121,6 +135,7 @@ export function createClientPadHandler(config: ClientPadServerConfig): ClientPad
 export class ClientPadServer {
   private readonly db: Queryable;
   private readonly apiKeyPepper: string;
+  private readonly whatsapp?: ClientPadWhatsAppConfig;
   private readonly payments: PaymentWebhookConfig;
 
   constructor(config: ClientPadServerConfig) {
@@ -133,6 +148,7 @@ export class ClientPadServer {
 
     this.db = config.db ?? new Pool({ connectionString: config.databaseUrl });
     this.apiKeyPepper = config.apiKeyPepper;
+    this.whatsapp = config.whatsapp;
     this.payments = config.payments ?? {};
   }
 
@@ -147,6 +163,8 @@ export class ClientPadServer {
       if (path === "/clients" && request.method === "GET") return this.listClients(request, url);
       if (path === "/clients" && request.method === "POST") return this.createClient(request);
       if (path === "/usage" && request.method === "GET") return this.getUsage(request);
+      if (path === "/whatsapp/webhook" && request.method === "GET") return this.verifyWhatsAppWebhook(url);
+      if (path === "/whatsapp/webhook" && request.method === "POST") return this.handleWhatsAppWebhook(request);
       if (path === "/payments/paystack/webhook" && request.method === "POST") {
         return this.handlePaymentWebhook(request, "paystack");
       }
@@ -416,6 +434,42 @@ export class ClientPadServer {
     return Response.json({ data: { id: clientId } }, { status: 201 });
   }
 
+  private verifyWhatsAppWebhook(url: URL) {
+    if (!this.whatsapp) return jsonError("WhatsApp integration is not configured.", 404);
+
+    const mode = url.searchParams.get("hub.mode");
+    const verifyToken = url.searchParams.get("hub.verify_token");
+    const challenge = url.searchParams.get("hub.challenge");
+
+    if (mode === "subscribe" && verifyToken === this.whatsapp.verifyToken && challenge !== null) {
+      return new Response(challenge, {
+        status: 200,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
+    }
+
+    return jsonError("Invalid WhatsApp webhook verification token.", 403);
+  }
+
+  private async handleWhatsAppWebhook(request: Request) {
+    if (!this.whatsapp) return jsonError("WhatsApp integration is not configured.", 404);
+
+    const rawBody = await request.arrayBuffer();
+    if (this.whatsapp.appSecret && !verifyMetaSignature(request, rawBody, this.whatsapp.appSecret)) {
+      return jsonError("Invalid WhatsApp webhook signature.", 401);
+    }
+
+    const forwardedRequest = new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+      body: rawBody,
+    });
+
+    return dispatchWhatsAppWebhook(forwardedRequest, {
+      ...this.whatsapp,
+      defaultCountryCode: this.whatsapp.defaultCountryCode ?? "+234",
+      db: this.db,
+    });
   private async handlePaymentWebhook(request: Request, provider: PaymentProvider) {
     const rawBody = await request.text();
     let webhook: VerifiedPaymentWebhook;
@@ -811,6 +865,54 @@ export class ClientPadServer {
 
     return Response.json({ data });
   }
+}
+
+type WhatsAppHandlerOptions = ClientPadWhatsAppConfig & { db: Queryable };
+type WhatsAppModule = Record<string, unknown>;
+
+async function dispatchWhatsAppWebhook(request: Request, options: WhatsAppHandlerOptions): Promise<Response> {
+  let module: WhatsAppModule;
+  try {
+    const packageName = "@abdulmuiz44/clientpad-whatsapp";
+    module = (await import(packageName)) as WhatsAppModule;
+  } catch (error) {
+    const cause = error instanceof Error ? ` ${error.message}` : "";
+    throw new Error(`WhatsApp integration package is unavailable. Install @abdulmuiz44/clientpad-whatsapp.${cause}`);
+  }
+
+  const createHandler = module.createWhatsAppHandler ?? module.createClientPadWhatsAppHandler;
+  if (typeof createHandler === "function") {
+    const handler = createHandler(options) as unknown;
+    if (typeof handler === "function") return handler(request) as Promise<Response>;
+  }
+
+  if (typeof module.handleWhatsAppWebhook === "function") {
+    return module.handleWhatsAppWebhook(request, options) as Promise<Response>;
+  }
+
+  if (typeof module.default === "function") {
+    const maybeHandler = module.default(options) as unknown;
+    if (typeof maybeHandler === "function") return maybeHandler(request) as Promise<Response>;
+    return module.default(request, options) as Promise<Response>;
+  }
+
+  throw new Error("@abdulmuiz44/clientpad-whatsapp does not export a compatible webhook handler.");
+}
+
+function verifyMetaSignature(request: Request, rawBody: ArrayBuffer, appSecret: string) {
+  const signature = request.headers.get("x-hub-signature-256");
+  if (!signature?.startsWith("sha256=")) return false;
+
+  const expected = createHmac("sha256", appSecret).update(Buffer.from(rawBody)).digest("hex");
+  return safeEqualHex(signature.slice("sha256=".length), expected);
+}
+
+function safeEqualHex(left: string, right: string) {
+  if (!/^[a-f0-9]+$/i.test(left) || !/^[a-f0-9]+$/i.test(right)) return false;
+
+  const leftBuffer = Buffer.from(left, "hex");
+  const rightBuffer = Buffer.from(right, "hex");
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
 function normalizePath(pathname: string) {
