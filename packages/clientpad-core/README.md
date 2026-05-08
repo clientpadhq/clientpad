@@ -3,7 +3,7 @@
 Shared dependency-free types and protocol utilities for ClientPad packages.
 
 ```bash
-pnpm add @clientpad/core
+pnpm add @abdulmuiz44/clientpad-core
 ```
 
 This package contains common API contracts used by:

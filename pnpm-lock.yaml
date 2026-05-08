@@ -25,15 +25,15 @@ importers:
         specifier: ^8.13.3
         version: 8.20.0
 
-  packages/core: {}
+  packages/clientpad-core: {}
 
   packages/sdk: {}
 
   packages/server:
     dependencies:
-      '@clientpad/core':
+      '@abdulmuiz44/clientpad-core':
         specifier: workspace:*
-        version: link:../core
+        version: link:../clientpad-core
       pg:
         specifier: ^8.13.3
         version: 8.20.0

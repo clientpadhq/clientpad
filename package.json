@@ -12,8 +12,8 @@
     "api-key:create": "node packages/cli/bin/clientpad.mjs api-key create",
     "db:migrate": "node packages/cli/bin/clientpad.mjs migrate",
     "lint": "node packages/cli/bin/clientpad.mjs help",
-    "typecheck": "pnpm --filter @clientpad/core typecheck && pnpm --filter @clientpad/sdk typecheck && pnpm --filter @clientpad/server typecheck",
-    "test:core": "pnpm --filter @clientpad/core typecheck",
+    "typecheck": "pnpm --filter @abdulmuiz44/clientpad-core typecheck && pnpm --filter @clientpad/sdk typecheck && pnpm --filter @clientpad/server typecheck",
+    "test:core": "pnpm --filter @abdulmuiz44/clientpad-core typecheck",
     "test:sdk": "pnpm --filter @clientpad/sdk test",
     "test:server": "pnpm --filter @clientpad/server test"
   },

@@ -6,7 +6,7 @@ import {
   parseBearerToken,
   type ApiScope,
   type LeadStatus,
-} from "@clientpad/core";
+} from "@abdulmuiz44/clientpad-core";
 
 export type QueryValue = string | number | boolean | Date | null | string[] | Record<string, unknown>;
 
@@ -19,7 +19,7 @@ export type Queryable = {
   query<T = Record<string, unknown>>(text: string, values?: QueryValue[]): Promise<QueryResult<T>>;
 };
 
-export type { ApiScope } from "@clientpad/core";
+export type { ApiScope } from "@abdulmuiz44/clientpad-core";
 
 export type ApiKeyPrincipal = {
   apiKeyId: string;

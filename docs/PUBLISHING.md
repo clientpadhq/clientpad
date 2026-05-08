@@ -1,6 +1,6 @@
 # Publishing ClientPad
 
-ClientPad's npm packages are `@clientpad/core`, `@clientpad/cli`, `@clientpad/sdk`, and `@clientpad/server`.
+ClientPad's npm packages are `@abdulmuiz44/clientpad-core`, `@clientpad/cli`, `@clientpad/sdk`, and `@clientpad/server`.
 
 ## Pre-Publish Checklist
 
@@ -23,7 +23,7 @@ ClientPad's npm packages are `@clientpad/core`, `@clientpad/cli`, `@clientpad/sd
 4. Inspect the tarball contents:
 
    ```bash
-   npm pack --workspace @clientpad/core --dry-run
+   npm pack --workspace @abdulmuiz44/clientpad-core --dry-run
    npm pack --workspace @clientpad/cli --dry-run
    npm pack --workspace @clientpad/sdk --dry-run
    npm pack --workspace @clientpad/server --dry-run
@@ -32,7 +32,7 @@ ClientPad's npm packages are `@clientpad/core`, `@clientpad/cli`, `@clientpad/sd
 5. Publish:
 
    ```bash
-   pnpm --filter @clientpad/core publish --access public
+   pnpm --filter @abdulmuiz44/clientpad-core publish --access public
    pnpm --filter @clientpad/cli publish --access public
    pnpm --filter @clientpad/sdk publish --access public
    pnpm --filter @clientpad/server publish --access public

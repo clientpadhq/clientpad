@@ -44,7 +44,7 @@ clientpad doctor
 Shared dependency-free types and protocol utilities are published as:
 
 ```bash
-pnpm add @clientpad/core
+pnpm add @abdulmuiz44/clientpad-core
 ```
 
 ## Publish Flow

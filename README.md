@@ -6,7 +6,7 @@ This repository now ships installable packages instead of a hosted product with 
 
 ## Packages
 
-- `@clientpad/core`: shared TypeScript types and dependency-free protocol utilities.
+- `@abdulmuiz44/clientpad-core`: shared TypeScript types and dependency-free protocol utilities.
 - `@clientpad/cli`: local project setup, SQL migrations, and API key creation.
 - `@clientpad/server`: fetch-standard public API handler for leads and clients.
 - `@clientpad/sdk`: TypeScript SDK for consuming ClientPad public APIs from apps, workers, and scripts.
@@ -14,7 +14,7 @@ This repository now ships installable packages instead of a hosted product with 
 ## Install
 
 ```bash
-pnpm add @clientpad/core @clientpad/server @clientpad/sdk
+pnpm add @abdulmuiz44/clientpad-core @clientpad/server @clientpad/sdk
 pnpm add -D @clientpad/cli
 ```
 

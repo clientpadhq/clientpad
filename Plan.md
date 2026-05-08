@@ -12,7 +12,7 @@ ClientPad is being built as open-source infrastructure that businesses and devel
 
 ## Current Package Surface
 
-- `@clientpad/core`
+- `@abdulmuiz44/clientpad-core`
   - Shared TypeScript types.
   - API response shapes.
   - URL, bearer-token, prefix, and status helpers.
@@ -41,7 +41,7 @@ ClientPad is being built as open-source infrastructure that businesses and devel
 
 1. Publish the source code to GitHub as an open-source infrastructure repository.
 2. Attach package tarballs for:
-   - `@clientpad/core`
+   - `@abdulmuiz44/clientpad-core`
    - `@clientpad/cli`
    - `@clientpad/sdk`
    - `@clientpad/server`
