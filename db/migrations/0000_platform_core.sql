@@ -10,7 +10,7 @@ BEGIN
   END IF;
 
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'lead_status') THEN
-    CREATE TYPE lead_status AS ENUM ('new', 'contacted', 'qualified', 'unqualified');
+    CREATE TYPE lead_status AS ENUM ('new', 'contacted', 'qualified', 'unqualified', 'paid');
   END IF;
 END $$;
 

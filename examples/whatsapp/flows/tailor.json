@@ -1,0 +1,120 @@
+{
+  "id": "tailor-whatsapp-flow",
+  "businessType": "tailor",
+  "language": "en",
+  "lowDataDefault": true,
+  "media": {
+    "optional": true,
+    "placeholdersOnly": true,
+    "imageUrls": [
+      "https://example.com/images/native-wear-sample.jpg",
+      "https://example.com/images/bridal-dress-sample.jpg"
+    ]
+  },
+  "constraints": {
+    "replyButtonsMax": 3,
+    "listRowsMax": 10,
+    "customerServiceWindowHours": 24,
+    "templatesRequiredOutsideWindow": true
+  },
+  "entry": {
+    "type": "text",
+    "body": "Welcome to StitchPro Tailors. What would you like to do today?"
+  },
+  "mainMenu": {
+    "type": "reply_buttons",
+    "body": "Choose an option below.",
+    "buttons": [
+      { "id": "sew_new_outfit", "title": "Sew New Outfit" },
+      { "id": "alter_clothes", "title": "Alter Clothes" },
+      { "id": "check_order", "title": "Check Order" }
+    ]
+  },
+  "outfitOptions": {
+    "type": "list",
+    "body": "Select what you want us to make or alter.",
+    "buttonText": "Choose outfit",
+    "sections": [
+      {
+        "title": "Native Wear",
+        "rows": [
+          { "id": "native_ankara", "title": "Ankara Style", "description": "Dress, skirt, blouse, or two-piece" },
+          { "id": "native_kaftan", "title": "Kaftan/Agbada", "description": "Men's or women's native wear" }
+        ]
+      },
+      {
+        "title": "Corporate Wear",
+        "rows": [
+          { "id": "corporate_suit", "title": "Suit", "description": "Jacket, trousers, skirt suit" },
+          { "id": "corporate_shirt", "title": "Shirt/Blouse", "description": "Office shirts and blouses" }
+        ]
+      },
+      {
+        "title": "Bridal",
+        "rows": [
+          { "id": "bridal_gown", "title": "Bridal Gown", "description": "New gown or adjustment" },
+          { "id": "bridal_train", "title": "Bridal Train", "description": "Bridesmaids and groomsmen" }
+        ]
+      },
+      {
+        "title": "School Uniforms",
+        "rows": [
+          { "id": "school_new", "title": "New Uniform", "description": "Shirts, skirts, shorts, dresses" },
+          { "id": "school_alter", "title": "Uniform Alteration", "description": "Resize or repair uniforms" }
+        ]
+      }
+    ]
+  },
+  "measurementAndPhotoPrompts": [
+    {
+      "id": "request_measurements",
+      "type": "text",
+      "body": "Please send your measurements: shoulder, chest/bust, waist, hips, sleeve, length, and trouser length if needed."
+    },
+    {
+      "id": "request_reference_photo",
+      "type": "text",
+      "body": "Optional: upload a clear reference photo or sketch of the style you want. Use low-resolution images if data is limited."
+    },
+    {
+      "id": "request_fabric_photo",
+      "type": "text",
+      "body": "Optional: send a photo of your fabric so we can advise on style and quantity."
+    }
+  ],
+  "orderStatusFlow": [
+    {
+      "id": "ask_order_number",
+      "type": "text",
+      "body": "Please send your order number or the phone number used for the order."
+    },
+    {
+      "id": "order_in_progress",
+      "type": "text",
+      "body": "Your order is in progress. We will notify you when fitting or pickup is ready."
+    }
+  ],
+  "completionPaymentReviewFlow": [
+    {
+      "id": "fitting_ready",
+      "type": "text",
+      "body": "Your outfit is ready for fitting. Reply FITTING to choose a fitting time."
+    },
+    {
+      "id": "payment_prompt",
+      "type": "text",
+      "body": "Please complete your balance payment before pickup. We can send a secure payment link."
+    },
+    {
+      "id": "completion_notice",
+      "type": "text",
+      "body": "Your order is complete and ready for pickup. Thank you for choosing StitchPro Tailors."
+    },
+    {
+      "id": "review_request",
+      "type": "text",
+      "sendAfter": "pickup_confirmed_plus_1_day",
+      "body": "We hope you love your outfit. Please rate us 1-5 or send a short review."
+    }
+  ]
+}

@@ -181,6 +181,41 @@ The machine-readable API contract is available at:
 GET /api/public/openapi
 ```
 
+### Upsert Lead
+
+```http
+POST /api/public/v1/leads/upsert
+Authorization: Bearer <api_key>
+Content-Type: application/json
+```
+
+Required scope: `leads:write`
+
+Upserts a lead by normalized Nigerian `phone` inside the API key workspace.
+
+Request:
+
+```json
+{
+  "name": "Ada Customer",
+  "phone": "08031234567",
+  "source": "WhatsApp",
+  "service_interest": "Solar installation",
+  "status": "new",
+  "notes": "Requested quote for inverter setup"
+}
+```
+
+Response:
+
+```json
+{
+  "data": {
+    "id": "uuid"
+  }
+}
+```
+
 ### Create Lead
 
 ```http
