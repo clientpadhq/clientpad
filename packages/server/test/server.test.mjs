@@ -98,11 +98,22 @@ const createLeadResponse = await handler(
   new Request("https://example.com/leads", {
     method: "POST",
     headers: { authorization: `Bearer ${rawKey}`, "content-type": "application/json" },
-    body: JSON.stringify({ name: "Ada", phone: "+234" }),
+    body: JSON.stringify({ name: "Ada", phone: "08031234567" }),
   })
 );
 assert.equal(createLeadResponse.status, 201);
 assert.deepEqual(await createLeadResponse.json(), { data: { id: "lead_created" } });
+
+const upsertLeadResponse = await handler(
+  new Request("https://example.com/leads/upsert", {
+    method: "POST",
+    headers: { authorization: `Bearer ${rawKey}`, "content-type": "application/json" },
+    body: JSON.stringify({ name: "Ada", phone: "2348031234567" }),
+  })
+);
+assert.equal(upsertLeadResponse.status, 200);
+assert.deepEqual(await upsertLeadResponse.json(), { data: { id: "lead_created" } });
+assert.equal(queries.some((query) => query.text.includes("on conflict (workspace_id, phone)")), true);
 
 const createClientResponse = await handler(
   new Request("https://example.com/clients", {

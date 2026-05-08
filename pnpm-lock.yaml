@@ -21,6 +21,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@abdulmuiz44/clientpad-core':
+        specifier: workspace:*
+        version: link:../clientpad-core
       pg:
         specifier: ^8.13.3
         version: 8.20.0
@@ -68,6 +71,15 @@ importers:
         version: 6.4.2(@types/node@22.19.17)
 
   packages/sdk: {}
+
+  packages/whatsapp:
+    dependencies:
+      '@abdulmuiz44/clientpad-core':
+        specifier: workspace:*
+        version: link:../clientpad-core
+      '@abdulmuiz44/clientpad-sdk':
+        specifier: workspace:*
+        version: link:../sdk
 
   packages/server:
     dependencies:

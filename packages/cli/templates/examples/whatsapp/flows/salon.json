@@ -1,0 +1,35 @@
+{
+  "id": "salon",
+  "name": "Salon booking starter",
+  "description": "Collects a salon service, preferred time, customer details, and optional deposit payment.",
+  "steps": [
+    {
+      "id": "welcome",
+      "type": "message",
+      "text": "Welcome to our salon. Which service would you like to book?",
+      "quick_replies": ["Hair styling", "Braids", "Manicure", "Pedicure"]
+    },
+    {
+      "id": "preferred_time",
+      "type": "question",
+      "text": "What date and time works best for you?"
+    },
+    {
+      "id": "customer_name",
+      "type": "question",
+      "text": "Please share your full name."
+    },
+    {
+      "id": "deposit",
+      "type": "payment",
+      "provider": "paystack",
+      "text": "A deposit may be required to confirm peak-hour appointments."
+    },
+    {
+      "id": "handoff",
+      "type": "action",
+      "action": "create_lead",
+      "tags": ["whatsapp", "salon", "booking"]
+    }
+  ]
+}

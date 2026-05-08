@@ -1,0 +1,109 @@
+{
+  "id": "mechanic-whatsapp-flow",
+  "businessType": "mechanic",
+  "language": "en",
+  "lowDataDefault": true,
+  "media": {
+    "optional": true,
+    "placeholdersOnly": true,
+    "imageUrls": [
+      "https://example.com/images/workshop-front.jpg",
+      "https://example.com/images/tow-truck.jpg"
+    ]
+  },
+  "constraints": {
+    "replyButtonsMax": 3,
+    "listRowsMax": 10,
+    "customerServiceWindowHours": 24,
+    "templatesRequiredOutsideWindow": true
+  },
+  "entry": {
+    "type": "text",
+    "body": "Welcome to RapidFix Auto. What do you need help with today?"
+  },
+  "mainMenu": {
+    "type": "reply_buttons",
+    "body": "Choose one option so we can route your request.",
+    "buttons": [
+      { "id": "book_inspection", "title": "Book Inspection" },
+      { "id": "get_quote", "title": "Get Quote" },
+      { "id": "emergency_help", "title": "Emergency Help" }
+    ]
+  },
+  "serviceCategories": {
+    "type": "list",
+    "body": "Select the service category that best matches your issue.",
+    "buttonText": "Choose service",
+    "sections": [
+      {
+        "title": "Repairs",
+        "rows": [
+          { "id": "diagnostics", "title": "Diagnostics", "description": "Warning lights, scan, troubleshooting" },
+          { "id": "oil_change", "title": "Oil Change", "description": "Engine oil and filter replacement" },
+          { "id": "brake_repair", "title": "Brake Repair", "description": "Pads, discs, fluid, inspection" },
+          { "id": "ac_repair", "title": "AC Repair", "description": "Cooling checks, gas refill, leaks" }
+        ]
+      },
+      {
+        "title": "Roadside",
+        "rows": [
+          { "id": "towing", "title": "Towing", "description": "Tow to workshop or safe location" }
+        ]
+      }
+    ]
+  },
+  "locationRequestFlow": [
+    {
+      "id": "request_vehicle_location",
+      "type": "location_request",
+      "body": "Please share your vehicle location so we can estimate arrival time and towing cost."
+    },
+    {
+      "id": "request_vehicle_details",
+      "type": "text",
+      "body": "Send your car make, model, year, and a short description of the problem. Example: Toyota Camry 2012, not starting."
+    },
+    {
+      "id": "optional_photo_prompt",
+      "type": "text",
+      "body": "Optional: send one clear photo of the dashboard warning light, damaged area, or leaking part."
+    }
+  ],
+  "inspectionSlots": {
+    "type": "list",
+    "body": "Choose an inspection window.",
+    "buttonText": "Pick time",
+    "sections": [
+      {
+        "title": "Workshop visit",
+        "rows": [
+          { "id": "inspection_morning", "title": "Morning", "description": "8:00 AM - 11:00 AM" },
+          { "id": "inspection_afternoon", "title": "Afternoon", "description": "12:00 PM - 3:00 PM" },
+          { "id": "inspection_evening", "title": "Evening", "description": "4:00 PM - 6:00 PM" }
+        ]
+      }
+    ]
+  },
+  "pickupReminderFlow": [
+    {
+      "id": "pickup_ready",
+      "type": "text",
+      "body": "Your vehicle is ready for pickup. Please reply PICKUP to confirm your pickup time."
+    },
+    {
+      "id": "pickup_time_options",
+      "type": "reply_buttons",
+      "body": "When would you like to pick up?",
+      "buttons": [
+        { "id": "pickup_today", "title": "Today" },
+        { "id": "pickup_tomorrow", "title": "Tomorrow" },
+        { "id": "call_me", "title": "Call Me" }
+      ]
+    },
+    {
+      "id": "payment_before_release",
+      "type": "text",
+      "body": "Please complete any outstanding payment before vehicle release. We can send a secure payment link if needed."
+    }
+  ]
+}

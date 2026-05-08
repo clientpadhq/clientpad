@@ -10,6 +10,7 @@ import {
   type ApiKeyBillingMode,
   type LeadStatus,
 } from "@abdulmuiz44/clientpad-core";
+import { normalizeNigerianPhoneNumber } from "@abdulmuiz44/clientpad-core/phone";
 
 export type QueryValue = string | number | boolean | Date | null | string[] | Record<string, unknown>;
 
@@ -142,6 +143,7 @@ export class ClientPadServer {
 
       if (path === "/leads" && request.method === "GET") return this.listLeads(request, url);
       if (path === "/leads" && request.method === "POST") return this.createLead(request);
+      if (path === "/leads/upsert" && request.method === "POST") return this.upsertLead(request);
       if (path === "/clients" && request.method === "GET") return this.listClients(request, url);
       if (path === "/clients" && request.method === "POST") return this.createClient(request);
       if (path === "/usage" && request.method === "GET") return this.getUsage(request);
@@ -256,6 +258,68 @@ export class ClientPadServer {
       status: payload.status,
     });
     return Response.json({ data: { id: leadId } }, { status: 201 });
+  }
+
+
+  private async upsertLead(request: Request) {
+    const context = await this.requireApiKey(request, ["leads:write"]);
+    if (context instanceof Response) return context;
+
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") return jsonError("Request body must be a JSON object.", 400);
+
+    const payload = normalizeLeadPayload(body as Record<string, unknown>);
+    if (!payload.ok) return jsonError(payload.error, 400);
+
+    const { rows } = await this.db.query<{ id: string }>(
+      `
+        insert into leads (
+          workspace_id,
+          name,
+          phone,
+          source,
+          service_interest,
+          status,
+          next_follow_up_at,
+          urgency,
+          budget_clue,
+          notes
+        )
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        on conflict (workspace_id, phone)
+        do update set
+          name = excluded.name,
+          source = excluded.source,
+          service_interest = excluded.service_interest,
+          status = excluded.status,
+          next_follow_up_at = excluded.next_follow_up_at,
+          urgency = excluded.urgency,
+          budget_clue = excluded.budget_clue,
+          notes = excluded.notes,
+          updated_at = now()
+        returning id
+      `,
+      [
+        context.workspaceId,
+        payload.name,
+        payload.phone,
+        payload.source,
+        payload.service_interest,
+        payload.status,
+        payload.next_follow_up_at,
+        payload.urgency,
+        payload.budget_clue,
+        payload.notes,
+      ]
+    );
+
+    const leadId = rows[0]?.id;
+    await this.auditPublicApiEvent(context, request, "leads.upsert", {
+      lead_id: leadId,
+      source: payload.source,
+      status: payload.status,
+    });
+    return Response.json({ data: { id: leadId } });
   }
 
   private async listClients(request: Request, url: URL) {
@@ -795,11 +859,13 @@ function optionalString(value: unknown) {
 
 function normalizeLeadPayload(body: Record<string, unknown>) {
   const name = optionalString(body.name);
-  const phone = optionalString(body.phone);
+  const rawPhone = optionalString(body.phone);
+  const phone = normalizeNigerianPhoneNumber(rawPhone);
   const status = optionalString(body.status) ?? "new";
 
   if (!name) return { ok: false as const, error: "name is required." };
-  if (!phone) return { ok: false as const, error: "phone is required." };
+  if (!rawPhone) return { ok: false as const, error: "phone is required." };
+  if (!phone) return { ok: false as const, error: "phone must be a valid Nigerian phone number." };
   if (!isLeadStatus(status)) {
     return { ok: false as const, error: "Invalid lead status." };
   }
