@@ -39,6 +39,8 @@ The `Plan.md` Phases 1–5 roadmap is implemented on this codebase, including po
 - Message history per contact/lead/client
 - Send endpoint: `POST /api/whatsapp/send`
 - Webhook endpoint: `POST /api/whatsapp/webhook`
+- Internal WhatsApp workspace route: `/whatsapp` with `/whatsapp/[conversationId]` thread views
+- Conversation assignment/status, CRM linking, quick lead/client creation, and reply-from-thread workflow
 
 ## Local setup
 1. Install dependencies:
@@ -69,31 +71,15 @@ The `Plan.md` Phases 1–5 roadmap is implemented on this codebase, including po
 - `FOLLOW_UP_AUTOMATION_TOKEN` (required for `/api/automation/follow-ups`)
 - `FOLLOW_UP_DELIVERY_WEBHOOK_URL` (destination webhook for automated follow-up delivery)
 - `FOLLOW_UP_DELIVERY_WEBHOOK_TOKEN` (optional bearer token sent to delivery webhook)
-- `WHATSAPP_PHONE_NUMBER_UMBER_ID` (WhatsApp Business phone number ID)
+- `WHATSAPP_PHONE_NUMBER_ID` (WhatsApp Business phone number ID)
 - `WHATSAPP_BUSINESS_ACCOUNT_ID` (WhatsApp Business account ID)
 - `WHATSAPP_ACCESS_TOKEN` (WhatsApp API access token)
 - `WHATSAPP_WEBHOOK_VERIFY_TOKEN` (verify token for webhook validation)
+- `WHATSAPP_DEFAULT_WORKSPACE_ID` (optional fallback workspace for webhook payloads when no `workspace_whatsapp_config.phone_number_id` match exists)
 
 ## Migration order (forward-safe)
 Apply files exactly in this order:
 1. `supabase/migrations/202604090001_init_phase1.sql`
-2. `supabase/migrations/202604090002_revenue_flow.sql`
-3. `supabase/migrations/202604090002_active_workspace_selection.sql`
-4. `supabase/migrations/202604090003_execution_workflow.sql`
-5. `supabase/migrations/202604090004_ai_layer.sql`
-6. `supabase/migrations/202604090005_phase5_polish.sql`
-7. `supabase/migrations/202604090006_workspace_scoped_fks.sql`
-8. `supabase/migrations/202604090006_remove_workspace_webhook_hash.sql`
-9. `supabase/migrations/202604090006_invite_acceptance_guard.sql`
-10. `supabase/migrations/202604090006_owner_role_hardening.sql`
-11. `supabase/migrations/202604090006_document_number_counters.sql`
-12. `supabase/migrations/202604100001_workspace_onboarding_state.sql`
-13. `supabase/migrations/202604100001_workspace_branding_settings.sql`
-14. `supabase/migrations/202604100001_pipeline_stage_archive_support.sql`
-15. `supabase/migrations/202604100001_onboarding_presets.sql`
-16. `supabase/migrations/202605010001_whatsapp_layer.sql`
-
-> Note: several hardening migrations share the `202604090006` prefix. Preserve the order above for deterministic local bootstrap.
 2. `supabase/migrations/202604090002_active_workspace_selection.sql`
 3. `supabase/migrations/202604090003_revenue_flow.sql`
 4. `supabase/migrations/202604090004_execution_workflow.sql`
@@ -108,10 +94,14 @@ Apply files exactly in this order:
 13. `supabase/migrations/202604100003_pipeline_stage_archive_support.sql`
 14. `supabase/migrations/202604100004_workspace_branding_settings.sql`
 15. `supabase/migrations/202604100005_workspace_onboarding_state.sql`
-16. `supabase/migrations/202604120003_pilot_learning_layer.sql`
-17. `supabase/migrations/202604130001_pilot_portfolio_follow_up.sql`
+16. `supabase/migrations/202604120001_workspace_creation_rls_fix.sql`
+17. `supabase/migrations/202604120002_workspace_creator_select_policy.sql`
+18. `supabase/migrations/202604120003_pilot_learning_layer.sql`
+19. `supabase/migrations/202604130001_pilot_portfolio_follow_up.sql`
+20. `supabase/migrations/202605010001_whatsapp_layer.sql`
+21. `supabase/migrations/202605080001_whatsapp_conversation_workspace.sql`
 
-> Note: follow the exact filenames above. They reflect the normalized migration history currently merged on `main`.
+> Note: apply `202605080001_whatsapp_conversation_workspace.sql` after the merged WhatsApp Business layer because it adds conversation threading, assignment/status metadata, RLS policies, and `conversation_id` back-references for existing `whatsapp_messages`.
 
 ## Operational notes
 ### Workspace switching
@@ -141,8 +131,11 @@ Apply files exactly in this order:
 - Direct message sending via WhatsApp Business API (not just share links)
 - Send endpoint: `POST /api/whatsapp/send` (requires workspace membership)
 - Webhook endpoint: `POST /api/whatsapp/webhook` (receives inbound messages + status updates)
-- Message history stored in `whatsapp_messages` table
+- Message history stored in `whatsapp_messages` and grouped deterministically into `whatsapp_conversations` by workspace + remote phone/wa_id.
 - Supports status tracking: sent, delivered, read, failed
+- Workspace users can triage `/whatsapp` by open, pending, resolved, unassigned, mine, linked/unlinked, and unread queues.
+- Thread views support manual assignment, open/pending/resolved handling, linking to leads/clients/deals, quick lead/client creation with WhatsApp source notes, and replies through the existing send infrastructure.
+- Webhook workspace resolution first checks `workspace_whatsapp_config.phone_number_id`; `WHATSAPP_DEFAULT_WORKSPACE_ID` is only a fallback for legacy/dev payloads.
 
 ### Automated follow-up delivery
 - Dispatch endpoint:

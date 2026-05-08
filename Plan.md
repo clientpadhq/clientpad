@@ -478,6 +478,15 @@ Nail one vertical workflow deeply before broadening to adjacent service categori
 - Template message support for automated workflows
 - WhatsApp Business configuration per workspace
 
+## Phase 6A: WhatsApp Conversation Workspace
+- Dedicated internal `/whatsapp` workspace for daily WhatsApp triage
+- Deterministic conversation threading by workspace + remote phone/wa_id
+- Open/pending/resolved handling status, assignment, unread/recent queues, and owner accountability
+- Manual CRM linking with deterministic phone-match hints for leads/clients and optional deal linkage
+- Quick lead/client creation from conversation context with WhatsApp source notes and optional follow-up task
+- Reply-from-thread flow using existing WhatsApp Business sending infrastructure
+- Operational shortcuts from threads into tasks, deals, quotes, invoices, and linked CRM records
+
 ---
 
 ## 17) Risks and Product Challenges

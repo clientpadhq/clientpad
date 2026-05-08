@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/api";
+import { getOrCreateWhatsAppConversation } from "@/lib/db/whatsapp";
+import { logActivity } from "@/lib/db/activity";
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,8 +56,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const conversation = await getOrCreateWhatsAppConversation({
+      workspaceId: workspace_id,
+      remotePhone: to,
+      createdBy: user.id,
+    });
+
     await supabase.from("whatsapp_messages").insert({
       workspace_id,
+      conversation_id: conversation.id,
       whatsapp_message_id: result.message_id,
       from_phone: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
       to_phone: to,
@@ -65,6 +74,23 @@ export async function POST(request: NextRequest) {
       status: "sent",
       linked_entity_type,
       linked_entity_id,
+      metadata: { sent_from: "api" },
+    });
+
+    await supabase
+      .from("whatsapp_conversations")
+      .update({ last_message_at: new Date().toISOString(), last_handled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("workspace_id", workspace_id)
+      .eq("id", conversation.id);
+
+    await logActivity({
+      workspaceId: workspace_id,
+      actorUserId: user.id,
+      entityType: "whatsapp_conversation",
+      entityId: conversation.id,
+      type: "whatsapp.message_sent",
+      description: "WhatsApp message sent",
+      metadata: { message_id: result.message_id, linked_entity_type, linked_entity_id },
     });
 
     return NextResponse.json({ success: true, message_id: result.message_id });
