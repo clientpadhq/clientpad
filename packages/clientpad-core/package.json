@@ -24,7 +24,7 @@
     "directory": "packages/clientpad-core"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
     "typescript": "^5.8.2"
