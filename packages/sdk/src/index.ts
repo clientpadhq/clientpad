@@ -1,6 +1,71 @@
-export const LEAD_STATUSES = ["new", "contacted", "qualified", "unqualified"] as const;
+export const LEAD_STATUSES = ["new", "contacted", "qualified", "unqualified", "paid"] as const;
 
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
+
+export type WhatsAppConversationStatus = "open" | "closed" | "pending" | "archived";
+
+export type WhatsAppConversation = {
+  id: string;
+  workspace_id: string;
+  phone: string;
+  wa_contact_id: string | null;
+  contact_name: string | null;
+  lead_id: string | null;
+  status: WhatsAppConversationStatus;
+  last_message_at: string | null;
+  ai_summary: string | null;
+  ai_intent: string | null;
+  requires_owner_approval: boolean;
+};
+
+export type WhatsAppMessage = {
+  id: string;
+  conversation_id: string;
+  direction: "inbound" | "outbound";
+  message_type: string;
+  message_text: string | null;
+  interactive_payload: any | null;
+  media_metadata: any | null;
+  location_payload: any | null;
+  sent_at: string | null;
+  delivered_at: string | null;
+  read_at: string | null;
+  failed_at: string | null;
+  created_at: string;
+};
+
+export type WhatsAppSuggestion = {
+  body: string;
+  intent: string;
+  confidence: number;
+  requiresOwnerApproval: boolean;
+  reason?: string;
+  sensitiveCategory?: string | null;
+};
+
+export type WhatsAppReplyInput = {
+  message_text: string;
+  send?: boolean;
+  pipeline_stage?: string | null;
+};
+
+export type WhatsAppApproveSuggestionInput = {
+  suggestion_index: number;
+  edited_text?: string | null;
+  send?: boolean;
+};
+
+export type WhatsAppConversationStatusInput = {
+  status?: WhatsAppConversationStatus | null;
+  pipeline_stage?: string | null;
+};
+
+export type ListWhatsAppConversationsParams = PaginationParams & {
+  status?: WhatsAppConversationStatus | null;
+  q?: string | null;
+  needs_approval?: boolean | null;
+  pipeline_stage?: string | null;
+};
 
 export type PaginationParams = {
   limit?: number | null;
@@ -141,6 +206,7 @@ export class ClientPadError extends Error {
 export class ClientPad {
   readonly leads: LeadsResource;
   readonly clients: ClientsResource;
+  readonly whatsapp: WhatsAppResource;
   readonly usage: UsageResource;
 
   private readonly baseUrl: string;
@@ -169,6 +235,7 @@ export class ClientPad {
 
     this.leads = new LeadsResource(resourceConfig);
     this.clients = new ClientsResource(resourceConfig);
+    this.whatsapp = new WhatsAppResource(resourceConfig);
     this.usage = new UsageResource(resourceConfig);
   }
 
@@ -231,6 +298,62 @@ class ClientsResource {
 
   create(input: CreateClientInput): Promise<CreatedIdResponse> {
     return this.config.request<CreatedIdResponse>("/clients", {
+      method: "POST",
+      body: input,
+    });
+  }
+}
+
+class WhatsAppResource {
+  constructor(private readonly config: ResourceConfig) {}
+
+  list(params?: ListWhatsAppConversationsParams): Promise<PaginatedResponse<WhatsAppConversation>> {
+    return this.config.request<PaginatedResponse<WhatsAppConversation>>("/whatsapp/conversations", {
+      query: params,
+    });
+  }
+
+  retrieve(id: string): Promise<{ data: WhatsAppConversation }> {
+    return this.config.request<{ data: WhatsAppConversation }>(`/whatsapp/conversations/${id}`);
+  }
+
+  messages(id: string, params?: PaginationParams): Promise<PaginatedResponse<WhatsAppMessage>> {
+    return this.config.request<PaginatedResponse<WhatsAppMessage>>(`/whatsapp/conversations/${id}/messages`, {
+      query: params,
+    });
+  }
+
+  suggestions(id: string): Promise<{ data: { suggestions: WhatsAppSuggestion[]; safety: any } }> {
+    return this.config.request<{ data: { suggestions: WhatsAppSuggestion[]; safety: any } }>(
+      `/whatsapp/conversations/${id}/suggestions`
+    );
+  }
+
+  reply(id: string, input: WhatsAppReplyInput): Promise<{ data: { id: string; meta_message_id?: string | null } }> {
+    return this.config.request<{ data: { id: string; meta_message_id?: string | null } }>(
+      `/whatsapp/conversations/${id}/reply`,
+      {
+        method: "POST",
+        body: input,
+      }
+    );
+  }
+
+  approveSuggestion(
+    id: string,
+    input: WhatsAppApproveSuggestionInput
+  ): Promise<{ data: { id: string; meta_message_id?: string | null } }> {
+    return this.config.request<{ data: { id: string; meta_message_id?: string | null } }>(
+      `/whatsapp/conversations/${id}/approve-suggestion`,
+      {
+        method: "POST",
+        body: input,
+      }
+    );
+  }
+
+  updateStatus(id: string, input: WhatsAppConversationStatusInput): Promise<{ ok: boolean }> {
+    return this.config.request<{ ok: boolean }>(`/whatsapp/conversations/${id}/status`, {
       method: "POST",
       body: input,
     });

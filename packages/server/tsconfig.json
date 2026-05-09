@@ -14,7 +14,10 @@
     "baseUrl": ".",
     "paths": {
       "@abdulmuiz44/clientpad-core": ["../clientpad-core/src/index.ts"],
-      "@abdulmuiz44/clientpad-whatsapp": ["../whatsapp/src/index.ts"]
+      "@abdulmuiz44/clientpad-core/*": ["../clientpad-core/src/*"],
+      "@abdulmuiz44/clientpad-whatsapp": ["../whatsapp/src/index.ts"],
+      "@abdulmuiz44/clientpad-sdk": ["../sdk/src/index.ts"],
+      "@abdulmuiz44/clientpad-sdk/*": ["../sdk/src/*"]
     }
   },
   "include": ["src/**/*.ts"],

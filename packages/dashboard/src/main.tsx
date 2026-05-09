@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
+import { ClientPad, type WhatsAppConversation, type WhatsAppMessage, type WhatsAppSuggestion } from "@abdulmuiz44/clientpad-sdk";
 import {
   Bell,
   BookOpen,
@@ -30,12 +31,20 @@ import {
   Trash2,
   TrendingUp,
   WalletCards,
+  Send,
+  User,
+  Bot,
+  AlertCircle,
+  Clock,
+  Archive,
+  CheckCircle2,
 } from "lucide-react";
 import "./styles.css";
 
 type Session = {
   baseUrl: string;
   adminToken: string;
+  publicApiKey?: string;
   demo?: boolean;
 };
 
@@ -212,6 +221,7 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
   const [usage, setUsage] = useState<UsageRow[]>([]);
   const [keys, setKeys] = useState<ApiKeyRecord[]>([]);
   const [selectedWorkspace, setSelectedWorkspace] = useState("");
+  const [publicApiKey, setPublicApiKey] = useState(session.publicApiKey || "");
   const [query, setQuery] = useState("");
   const [dateRange, setDateRange] = useState("May 12 - May 19, 2025");
   const [showFilters, setShowFilters] = useState(false);
@@ -276,6 +286,12 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
     setNotice(`Selected ${plans.find((plan) => plan.code === code)?.name ?? code} plan.`);
   }
 
+  function updatePublicApiKey(key: string) {
+    setPublicApiKey(key);
+    const next = { ...session, publicApiKey: key };
+    localStorage.setItem(sessionKey, JSON.stringify(next));
+  }
+
   const selectedProject = projects.find((project) => project.workspace_id === selectedWorkspace) ?? projects[0];
   const selectedPlan = plans.find((plan) => plan.code === selectedPlanCode) ?? plans[2] ?? plans[0];
   const filteredProjects = filterProjects(projects, query, showFilters);
@@ -310,7 +326,7 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
           {page === "connect" && <ConnectWhatsApp onCopy={(text) => copyText(text, setNotice)} />}
           {page === "pipeline" && <PipelineScreen clients={filterClients(demoClients, query)} />}
           {page === "clients" && <ClientSearch clients={filterClients(demoClients, query)} query={query} setQuery={setQuery} />}
-          {page === "inbox" && <TeamInbox />}
+          {page === "inbox" && <TeamInbox session={session} publicApiKey={publicApiKey} />}
           {page === "revenue" && <RevenueDashboard />}
 
           {page === "overview" && (
@@ -349,7 +365,10 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
               onCopy={(text) => copyText(text, setNotice)}
             />
           )}
-          {page === "settings" && <SettingsPage session={session} onSave={(url) => setNotice(`Saved cloud URL ${url}.`)} />}
+          {page === "settings" && <SettingsPage session={session} publicApiKey={publicApiKey} onSave={(url, key) => {
+            setNotice(`Saved settings.`);
+            updatePublicApiKey(key);
+          }} />}
         </section>
       </main>
     </div>
@@ -805,8 +824,9 @@ function Docs({
   );
 }
 
-function SettingsPage({ session, onSave }: { session: Session; onSave: (baseUrl: string) => void }) {
+function SettingsPage({ session, publicApiKey: initialKey, onSave }: { session: Session; publicApiKey: string; onSave: (baseUrl: string, publicApiKey: string) => void }) {
   const [baseUrl, setBaseUrl] = useState(session.baseUrl);
+  const [publicApiKey, setPublicApiKey] = useState(initialKey);
   const [tokenLabel, setTokenLabel] = useState(session.demo ? "Demo token" : "Configured admin token");
 
   return (
@@ -815,7 +835,16 @@ function SettingsPage({ session, onSave }: { session: Session; onSave: (baseUrl:
         <h2>Cloud connection</h2>
         <FormField label="Cloud API URL" value={baseUrl} onChange={setBaseUrl} />
         <FormField label="Token label" value={tokenLabel} onChange={setTokenLabel} />
-        <button className="button primary blue" onClick={() => onSave(baseUrl)}>
+        
+        <h2 style={{ marginTop: "2rem" }}>Workspace Preview</h2>
+        <FormField 
+          label="Workspace Public API Key" 
+          value={publicApiKey} 
+          onChange={setPublicApiKey} 
+        />
+        <p className="helper-text">Enter a `cp_live_...` key to enable live WhatsApp inbox and pipeline preview.</p>
+        
+        <button className="button primary blue" onClick={() => onSave(baseUrl, publicApiKey)}>
           <Check size={16} /> Save settings
         </button>
       </Panel>
@@ -1124,7 +1153,262 @@ function ClientSearch({ clients, query, setQuery }: { clients: ClientRecord[]; q
   );
 }
 
-function TeamInbox() {
+function TeamInbox({ session, publicApiKey }: { session: Session; publicApiKey: string }) {
+  const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
+  const [suggestions, setSuggestions] = useState<WhatsAppSuggestion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const sdk = useMemo(() => {
+    return new ClientPad({
+      baseUrl: session.baseUrl.replace("/api/cloud/v1", "/api/public/v1"),
+      apiKey: publicApiKey || "",
+    });
+  }, [session.baseUrl, publicApiKey]);
+
+  useEffect(() => {
+    if (!publicApiKey) {
+      setConversations([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    sdk.whatsapp.list().then((res) => {
+      setConversations(res.data);
+      if (res.data.length > 0 && !selectedId) {
+        setSelectedId(res.data[0].id);
+      }
+      setLoading(false);
+    }).catch(err => {
+      console.error("Failed to load conversations", err);
+      setLoading(false);
+    });
+  }, [sdk, publicApiKey]);
+
+  useEffect(() => {
+    if (!selectedId || !publicApiKey) {
+      setMessages([]);
+      setSuggestions([]);
+      return;
+    }
+    
+    Promise.all([
+      sdk.whatsapp.messages(selectedId),
+      sdk.whatsapp.suggestions(selectedId)
+    ]).then(([msgRes, sugRes]) => {
+      setMessages(msgRes.data);
+      setSuggestions(sugRes.data.suggestions);
+    }).catch(err => console.error("Failed to load conversation detail", err));
+  }, [selectedId, sdk, publicApiKey]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const selectedConversation = conversations.find(c => c.id === selectedId);
+
+  async function sendReply(textOverride?: string) {
+    if (!selectedId) return;
+    const text = textOverride || replyText;
+    if (!text.trim()) return;
+
+    setSending(true);
+    try {
+      await sdk.whatsapp.reply(selectedId, { message_text: text, send: true });
+      setReplyText("");
+      const msgRes = await sdk.whatsapp.messages(selectedId);
+      setMessages(msgRes.data);
+    } catch (err) {
+      alert("Failed to send reply");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function approveSuggestion(index: number) {
+    if (!selectedId) return;
+    setSending(true);
+    try {
+      await sdk.whatsapp.approveSuggestion(selectedId, { suggestion_index: index, send: true });
+      const msgRes = await sdk.whatsapp.messages(selectedId);
+      setMessages(msgRes.data);
+    } catch (err) {
+      alert("Failed to approve suggestion");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function updateStatus(status: WhatsAppConversation["status"]) {
+    if (!selectedId) return;
+    try {
+      await sdk.whatsapp.updateStatus(selectedId, { status });
+      setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, status } : c));
+    } catch (err) {
+      alert("Failed to update status");
+    }
+  }
+
+  if (!publicApiKey) {
+    return (
+      <div className="empty-state-panel">
+        <AlertCircle size={48} />
+        <h2>Public API Key Required</h2>
+        <p>Please configure a workspace API key in Settings to view the live WhatsApp inbox.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="inbox-layout">
+      <Panel className="conversation-list">
+        <div className="panel-head">
+          <h2>Conversations</h2>
+          <button className="button icon" onClick={() => {}}><Filter size={16} /></button>
+        </div>
+        <div className="scroll-area">
+          {loading ? <p className="loading">Loading...</p> : conversations.map((c) => (
+            <button 
+              key={c.id} 
+              className={`conversation ${selectedId === c.id ? "active" : ""}`}
+              onClick={() => setSelectedId(c.id)}
+            >
+              <div className="conv-header">
+                <strong>{c.contact_name || c.phone}</strong>
+                <small>{c.last_message_at ? new Date(c.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}</small>
+              </div>
+              <p className="preview">{c.ai_summary || "No messages yet"}</p>
+              <div className="conv-badges">
+                {c.requires_owner_approval && <Badge tone="blue">Owner Approval</Badge>}
+                {c.ai_intent && <Badge tone="gray">{c.ai_intent}</Badge>}
+              </div>
+            </button>
+          ))}
+          {!loading && conversations.length === 0 && <p className="empty">No conversations found.</p>}
+        </div>
+      </Panel>
+
+      <Panel className="timeline-panel">
+        {selectedConversation ? (
+          <>
+            <div className="panel-head">
+              <div className="header-info">
+                <h2>{selectedConversation.contact_name || selectedConversation.phone}</h2>
+                <Badge tone={selectedConversation.status === "open" ? "green" : "gray"}>
+                  {selectedConversation.status.toUpperCase()}
+                </Badge>
+              </div>
+              <div className="header-actions">
+                <button className="button outline" onClick={() => updateStatus("closed")}>Close</button>
+                <button className="button outline" onClick={() => updateStatus("archived")}>Archive</button>
+              </div>
+            </div>
+            <div className="messages" ref={scrollRef}>
+              {messages.map((m) => (
+                <div key={m.id} className={`bubble-row ${m.direction}`}>
+                  <div className="bubble-icon">
+                    {m.direction === "inbound" ? <User size={14} /> : <Bot size={14} />}
+                  </div>
+                  <div className="bubble">
+                    <p>{m.message_text}</p>
+                    <small>{new Date(m.created_at).toLocaleTimeString()}</small>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="composer">
+              <textarea 
+                placeholder="Type a reply..." 
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                disabled={sending}
+              />
+              <button 
+                className="button primary blue" 
+                onClick={() => sendReply()}
+                disabled={sending || !replyText.trim()}
+              >
+                <Send size={16} />
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="empty-state">Select a conversation to start messaging</div>
+        )}
+      </Panel>
+
+      <Panel className="quick-replies">
+        <div className="panel-head">
+          <h2>AI Drafts</h2>
+        </div>
+        <div className="suggestions-list">
+          {suggestions.length > 0 ? suggestions.map((s, i) => (
+            <div key={i} className="suggestion-card">
+              <div className="suggestion-meta">
+                <Badge tone={s.requiresOwnerApproval ? "blue" : "gray"}>
+                  {s.intent} ({(s.confidence * 100).toFixed(0)}%)
+                </Badge>
+                {s.requiresOwnerApproval && <AlertCircle size={14} className="warning-icon" />}
+              </div>
+              <p>{s.body}</p>
+              <div className="suggestion-actions">
+                <button 
+                  className="button outline"
+                  onClick={() => setReplyText(s.body)}
+                >
+                  Edit
+                </button>
+                <button 
+                  className="button primary"
+                  onClick={() => approveSuggestion(i)}
+                  disabled={sending}
+                >
+                  Approve & Send
+                </button>
+              </div>
+            </div>
+          )) : <p className="empty">No AI suggestions available.</p>}
+        </div>
+
+        {selectedConversation && (
+          <div className="lead-panel">
+            <h3>Lead Context</h3>
+            <div className="lead-info">
+              <div className="info-row">
+                <span>Pipeline Stage</span>
+                <strong>{(selectedConversation as any).lead_pipeline_stage || "New Lead"}</strong>
+              </div>
+              <div className="info-row">
+                <span>Phone</span>
+                <strong>{selectedConversation.phone}</strong>
+              </div>
+              <div className="info-row">
+                <span>Intent</span>
+                <strong>{selectedConversation.ai_intent || "General"}</strong>
+              </div>
+            </div>
+            <div className="pipeline-actions">
+              <select 
+                onChange={(e) => sdk.whatsapp.updateStatus(selectedConversation.id, { pipeline_stage: e.target.value })}
+                defaultValue={(selectedConversation as any).lead_pipeline_stage}
+              >
+                {serviceStages.map(s => <option key={s} value={s.toLowerCase().replace(" ", "_")}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+      </Panel>
+    </div>
+  );
+}
+
+function TeamInboxDemo() {
   return (
     <div className="inbox-layout">
       <Panel className="conversation-list">

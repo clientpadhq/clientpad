@@ -173,6 +173,20 @@ export class ClientPadServer {
         return this.handlePaymentWebhook(request, "flutterwave");
       }
 
+      if (path === "/whatsapp/conversations" && request.method === "GET") return this.listWhatsAppConversations(request, url);
+      if (path.startsWith("/whatsapp/conversations/") && request.method === "GET") {
+        const parts = path.split("/");
+        if (parts.length === 4) return this.getWhatsAppConversation(request, parts[3]);
+        if (parts.length === 5 && parts[4] === "messages") return this.getWhatsAppMessages(request, parts[3], url);
+        if (parts.length === 5 && parts[4] === "suggestions") return this.getWhatsAppSuggestions(request, parts[3]);
+      }
+      if (path.startsWith("/whatsapp/conversations/") && request.method === "POST") {
+        const parts = path.split("/");
+        if (parts.length === 5 && parts[4] === "reply") return this.replyToWhatsAppConversation(request, parts[3]);
+        if (parts.length === 5 && parts[4] === "approve-suggestion") return this.approveWhatsAppSuggestion(request, parts[3]);
+        if (parts.length === 5 && parts[4] === "status") return this.updateWhatsAppConversationStatus(request, parts[3]);
+      }
+
       return jsonError("Route not found.", 404);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Internal server error.";
@@ -180,259 +194,344 @@ export class ClientPadServer {
     }
   }
 
-  private async listLeads(request: Request, url: URL) {
-    const context = await this.requireApiKey(request, ["leads:read"]);
+  private async listWhatsAppConversations(request: Request, url: URL) {
+    const context = await this.requireApiKey(request, ["whatsapp:read"]);
     if (context instanceof Response) return context;
 
     const limit = parseLimit(url.searchParams.get("limit"));
     const offset = parseOffset(url.searchParams.get("offset"));
     const status = url.searchParams.get("status");
-
-    if (status && !isLeadStatus(status)) {
-      return jsonError("Invalid lead status.", 400);
-    }
+    const q = url.searchParams.get("q");
+    const needsApproval = url.searchParams.get("needs_approval") === "true";
+    const pipelineStage = url.searchParams.get("pipeline_stage");
 
     const values: QueryValue[] = [context.workspaceId, limit, offset];
-    let statusFilter = "";
+    let filters = "";
+
     if (status) {
       values.push(status);
-      statusFilter = "and status = $4";
+      filters += ` and c.status = $${values.length}`;
     }
-
-    const { rows } = await this.db.query(
-      `
-        select
-          id,
-          workspace_id,
-          name,
-          phone,
-          source,
-          service_interest,
-          status,
-          owner_user_id,
-          next_follow_up_at,
-          urgency,
-          budget_clue,
-          notes,
-          intent,
-          ai_summary,
-          created_at,
-          updated_at
-        from leads
-        where workspace_id = $1
-        ${statusFilter}
-        order by created_at desc
-        limit $2 offset $3
-      `,
-      values
-    );
-
-    await this.auditPublicApiEvent(context, request, "leads.list", { limit, offset, status });
-    return Response.json({ data: rows, pagination: { limit, offset } });
-  }
-
-  private async createLead(request: Request) {
-    const context = await this.requireApiKey(request, ["leads:write"]);
-    if (context instanceof Response) return context;
-
-    const body = await request.json().catch(() => null);
-    if (!body || typeof body !== "object") return jsonError("Request body must be a JSON object.", 400);
-
-    const payload = normalizeLeadPayload(body as Record<string, unknown>);
-    if (!payload.ok) return jsonError(payload.error, 400);
-
-    const { rows } = await this.db.query<{ id: string }>(
-      `
-        insert into leads (
-          workspace_id,
-          name,
-          phone,
-          source,
-          service_interest,
-          status,
-          next_follow_up_at,
-          urgency,
-          budget_clue,
-          notes,
-          intent,
-          ai_summary
-        )
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-        returning id
-      `,
-      [
-        context.workspaceId,
-        payload.name,
-        payload.phone,
-        payload.source,
-        payload.service_interest,
-        payload.status,
-        payload.next_follow_up_at,
-        payload.urgency,
-        payload.budget_clue,
-        payload.notes,
-        payload.intent,
-        payload.ai_summary,
-      ]
-    );
-
-    const leadId = rows[0]?.id;
-    await this.auditPublicApiEvent(context, request, "leads.create", {
-      lead_id: leadId,
-      source: payload.source,
-      status: payload.status,
-    });
-    return Response.json({ data: { id: leadId } }, { status: 201 });
-  }
-
-
-  private async upsertLead(request: Request) {
-    const context = await this.requireApiKey(request, ["leads:write"]);
-    if (context instanceof Response) return context;
-
-    const body = await request.json().catch(() => null);
-    if (!body || typeof body !== "object") return jsonError("Request body must be a JSON object.", 400);
-
-    const payload = normalizeLeadPayload(body as Record<string, unknown>);
-    if (!payload.ok) return jsonError(payload.error, 400);
-
-    const { rows } = await this.db.query<{ id: string }>(
-      `
-        insert into leads (
-          workspace_id,
-          name,
-          phone,
-          source,
-          service_interest,
-          status,
-          next_follow_up_at,
-          urgency,
-          budget_clue,
-          notes
-        )
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        on conflict (workspace_id, phone)
-        do update set
-          name = excluded.name,
-          source = excluded.source,
-          service_interest = excluded.service_interest,
-          status = excluded.status,
-          next_follow_up_at = excluded.next_follow_up_at,
-          urgency = excluded.urgency,
-          budget_clue = excluded.budget_clue,
-          notes = excluded.notes,
-          updated_at = now()
-        returning id
-      `,
-      [
-        context.workspaceId,
-        payload.name,
-        payload.phone,
-        payload.source,
-        payload.service_interest,
-        payload.status,
-        payload.next_follow_up_at,
-        payload.urgency,
-        payload.budget_clue,
-        payload.notes,
-      ]
-    );
-
-    const leadId = rows[0]?.id;
-    await this.auditPublicApiEvent(context, request, "leads.upsert", {
-      lead_id: leadId,
-      source: payload.source,
-      status: payload.status,
-    });
-    return Response.json({ data: { id: leadId } });
-  }
-
-  private async listClients(request: Request, url: URL) {
-    const context = await this.requireApiKey(request, ["clients:read"]);
-    if (context instanceof Response) return context;
-
-    const limit = parseLimit(url.searchParams.get("limit"));
-    const offset = parseOffset(url.searchParams.get("offset"));
-    const q = optionalString(url.searchParams.get("q"));
-
-    const values: QueryValue[] = [context.workspaceId, limit, offset];
-    let searchFilter = "";
     if (q) {
       values.push(`%${q}%`);
-      searchFilter = `
-        and (
-          business_name ilike $4
-          or primary_contact ilike $4
-          or email ilike $4
-          or phone ilike $4
-        )
-      `;
+      filters += ` and (c.contact_name ilike $${values.length} or c.phone ilike $${values.length})`;
+    }
+    if (needsApproval) {
+      filters += " and (c.metadata->'ai'->'safety'->>'requiresOwnerApproval')::boolean = true";
+    }
+    if (pipelineStage) {
+      values.push(pipelineStage);
+      filters += ` and l.pipeline_stage = $${values.length}`;
     }
 
     const { rows } = await this.db.query(
       `
         select
-          id,
-          workspace_id,
-          business_name,
-          primary_contact,
-          phone,
-          email,
-          location,
-          notes,
-          created_at,
-          updated_at
-        from clients
-        where workspace_id = $1
-        ${searchFilter}
-        order by created_at desc
+          c.id,
+          c.workspace_id,
+          c.phone,
+          c.wa_contact_id,
+          c.contact_name,
+          c.lead_id,
+          c.status,
+          c.last_message_at,
+          c.metadata->'ai'->>'summary' as ai_summary,
+          c.metadata->'ai'->>'intent' as ai_intent,
+          (c.metadata->'ai'->'safety'->>'requiresOwnerApproval')::boolean as requires_owner_approval
+        from whatsapp_conversations c
+        left join leads l on c.lead_id = l.id
+        where c.workspace_id = $1
+        ${filters}
+        order by c.last_message_at desc nulls last
         limit $2 offset $3
       `,
       values
     );
 
-    await this.auditPublicApiEvent(context, request, "clients.list", { limit, offset, q });
     return Response.json({ data: rows, pagination: { limit, offset } });
   }
 
-  private async createClient(request: Request) {
-    const context = await this.requireApiKey(request, ["clients:write"]);
+  private async getWhatsAppConversation(request: Request, id: string) {
+    const context = await this.requireApiKey(request, ["whatsapp:read"]);
+    if (context instanceof Response) return context;
+
+    const { rows } = await this.db.query(
+      `
+        select
+          c.*,
+          l.name as lead_name,
+          l.status as lead_status,
+          l.pipeline_stage as lead_pipeline_stage
+        from whatsapp_conversations c
+        left join leads l on c.lead_id = l.id
+        where c.id = $1 and c.workspace_id = $2
+      `,
+      [id, context.workspaceId]
+    );
+
+    const conversation = rows[0];
+    if (!conversation) return jsonError("Conversation not found.", 404);
+
+    return Response.json({ data: conversation });
+  }
+
+  private async getWhatsAppMessages(request: Request, conversationId: string, url: URL) {
+    const context = await this.requireApiKey(request, ["whatsapp:read"]);
+    if (context instanceof Response) return context;
+
+    const limit = parseLimit(url.searchParams.get("limit") ?? "100");
+    const offset = parseOffset(url.searchParams.get("offset"));
+
+    const { rows } = await this.db.query(
+      `
+        select
+          m.id,
+          m.conversation_id,
+          m.direction,
+          m.message_type,
+          m.message_text,
+          m.interactive_payload,
+          m.media_metadata,
+          m.location_payload,
+          m.sent_at,
+          m.delivered_at,
+          m.read_at,
+          m.failed_at,
+          m.created_at
+        from whatsapp_messages m
+        join whatsapp_conversations c on m.conversation_id = c.id
+        where c.id = $1 and c.workspace_id = $2
+        order by m.created_at asc
+        limit $3 offset $4
+      `,
+      [conversationId, context.workspaceId, limit, offset]
+    );
+
+    return Response.json({ data: rows, pagination: { limit, offset } });
+  }
+
+  private async getWhatsAppSuggestions(request: Request, conversationId: string) {
+    const context = await this.requireApiKey(request, ["whatsapp:read"]);
+    if (context instanceof Response) return context;
+
+    const { rows } = await this.db.query(
+      `
+        select
+          metadata->'ai'->'suggestedReplies' as suggestions,
+          metadata->'ai'->'safety' as safety
+        from whatsapp_conversations
+        where id = $1 and workspace_id = $2
+      `,
+      [conversationId, context.workspaceId]
+    );
+
+    const row = rows[0];
+    if (!row) return jsonError("Conversation not found.", 404);
+
+    return Response.json({
+      data: {
+        suggestions: row.suggestions ?? [],
+        safety: row.safety ?? {},
+      },
+    });
+  }
+
+  private async replyToWhatsAppConversation(request: Request, conversationId: string) {
+    const context = await this.requireApiKey(request, ["whatsapp:write"]);
     if (context instanceof Response) return context;
 
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== "object") return jsonError("Request body must be a JSON object.", 400);
 
-    const payload = normalizeClientPayload(body as Record<string, unknown>);
-    if (!payload.ok) return jsonError(payload.error, 400);
+    const messageText = optionalString(body.message_text);
+    const shouldSend = body.send === true;
+    const pipelineStage = optionalString(body.pipeline_stage);
 
-    const { rows } = await this.db.query<{ id: string }>(
+    if (!messageText) return jsonError("message_text is required.", 400);
+
+    const { rows: convRows } = await this.db.query(
+      "select phone, lead_id from whatsapp_conversations where id = $1 and workspace_id = $2",
+      [conversationId, context.workspaceId]
+    );
+    const conversation = convRows[0];
+    if (!conversation) return jsonError("Conversation not found.", 404);
+
+    let metaMessageId: string | null = null;
+    if (shouldSend) {
+      if (!this.whatsapp) return jsonError("WhatsApp integration is not configured.", 503);
+      const pkg = await import("@abdulmuiz44/clientpad-whatsapp");
+      const result = await pkg.sendWhatsAppMessage({
+        whatsAppAccessToken: this.whatsapp.accessToken,
+        phoneNumberId: this.whatsapp.phoneNumberId,
+        to: conversation.phone as string,
+        message: {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          type: "text",
+          text: { body: messageText },
+        },
+      });
+      metaMessageId = result.messages?.[0]?.id ?? null;
+    }
+
+    const { rows: msgRows } = await this.db.query<{ id: string }>(
       `
-        insert into clients (
-          workspace_id,
-          business_name,
-          primary_contact,
-          phone,
-          email,
-          location,
-          notes
+        insert into whatsapp_messages (
+          conversation_id,
+          direction,
+          message_type,
+          message_text,
+          meta_message_id,
+          sent_at
         )
-        values ($1, $2, $3, $4, $5, $6, $7)
+        values ($1, 'outbound', 'text', $2, $3, now())
         returning id
       `,
-      [
-        context.workspaceId,
-        payload.business_name,
-        payload.primary_contact,
-        payload.phone,
-        payload.email,
-        payload.location,
-        payload.notes,
-      ]
+      [conversationId, messageText, metaMessageId]
     );
 
-    const clientId = rows[0]?.id;
-    await this.auditPublicApiEvent(context, request, "clients.create", { client_id: clientId });
-    return Response.json({ data: { id: clientId } }, { status: 201 });
+    await this.db.query(
+      `
+        update whatsapp_conversations
+        set last_outbound_at = now(), last_message_at = now(), updated_at = now()
+        where id = $1
+      `,
+      [conversationId]
+    );
+
+    if (pipelineStage && conversation.lead_id) {
+      await this.db.query(
+        "update leads set pipeline_stage = $1, updated_at = now() where id = $2",
+        [pipelineStage, conversation.lead_id as string]
+      );
+    }
+
+    return Response.json({ data: { id: msgRows[0].id, meta_message_id: metaMessageId } });
+  }
+
+  private async approveWhatsAppSuggestion(request: Request, conversationId: string) {
+    const context = await this.requireApiKey(request, ["whatsapp:write"]);
+    if (context instanceof Response) return context;
+
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") return jsonError("Request body must be a JSON object.", 400);
+
+    const suggestionIndex = Number(body.suggestion_index);
+    const editedText = optionalString(body.edited_text);
+    const shouldSend = body.send !== false;
+
+    if (Number.isNaN(suggestionIndex)) return jsonError("suggestion_index is required.", 400);
+
+    const { rows: convRows } = await this.db.query(
+      "select phone, lead_id, metadata from whatsapp_conversations where id = $1 and workspace_id = $2",
+      [conversationId, context.workspaceId]
+    );
+    const conversation = convRows[0] as any;
+    if (!conversation) return jsonError("Conversation not found.", 404);
+
+    const suggestions = conversation.metadata?.ai?.suggestedReplies ?? [];
+    const suggestion = suggestions[suggestionIndex];
+    if (!suggestion) return jsonError("Suggestion not found at given index.", 404);
+
+    const messageText = editedText || suggestion.body;
+
+    let metaMessageId: string | null = null;
+    if (shouldSend) {
+      if (!this.whatsapp) return jsonError("WhatsApp integration is not configured.", 503);
+      const pkg = await import("@abdulmuiz44/clientpad-whatsapp");
+      const result = await pkg.sendWhatsAppMessage({
+        whatsAppAccessToken: this.whatsapp.accessToken,
+        phoneNumberId: this.whatsapp.phoneNumberId,
+        to: conversation.phone as string,
+        message: {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          type: "text",
+          text: { body: messageText },
+        },
+      });
+      metaMessageId = result.messages?.[0]?.id ?? null;
+    }
+
+    const { rows: msgRows } = await this.db.query<{ id: string }>(
+      `
+        insert into whatsapp_messages (
+          conversation_id,
+          direction,
+          message_type,
+          message_text,
+          meta_message_id,
+          sent_at
+        )
+        values ($1, 'outbound', 'text', $2, $3, now())
+        returning id
+      `,
+      [conversationId, messageText, metaMessageId]
+    );
+
+    const approvalMetadata = {
+      approved_at: new Date().toISOString(),
+      approved_text: messageText,
+      original_text: suggestion.body,
+      suggestion_index: suggestionIndex,
+    };
+
+    await this.db.query(
+      `
+        update whatsapp_conversations
+        set
+          last_outbound_at = now(),
+          last_message_at = now(),
+          metadata = jsonb_set(
+            metadata,
+            '{approval_history}',
+            coalesce(metadata->'approval_history', '[]'::jsonb) || $2::jsonb
+          ),
+          updated_at = now()
+        where id = $1
+      `,
+      [conversationId, JSON.stringify(approvalMetadata)]
+    );
+
+    return Response.json({ data: { id: msgRows[0].id, meta_message_id: metaMessageId } });
+  }
+
+  private async updateWhatsAppConversationStatus(request: Request, conversationId: string) {
+    const context = await this.requireApiKey(request, ["whatsapp:write"]);
+    if (context instanceof Response) return context;
+
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") return jsonError("Request body must be a JSON object.", 400);
+
+    const status = optionalString(body.status);
+    const pipelineStage = optionalString(body.pipeline_stage);
+
+    if (!status && !pipelineStage) {
+      return jsonError("Either status or pipeline_stage is required.", 400);
+    }
+
+    const { rows: convRows } = await this.db.query(
+      "select lead_id from whatsapp_conversations where id = $1 and workspace_id = $2",
+      [conversationId, context.workspaceId]
+    );
+    const conversation = convRows[0] as any;
+    if (!conversation) return jsonError("Conversation not found.", 404);
+
+    if (status) {
+      await this.db.query(
+        "update whatsapp_conversations set status = $1, updated_at = now() where id = $2",
+        [status, conversationId]
+      );
+    }
+
+    if (pipelineStage && conversation.lead_id) {
+      await this.db.query(
+        "update leads set pipeline_stage = $1, updated_at = now() where id = $2",
+        [pipelineStage, conversation.lead_id as string]
+      );
+    }
+
+    return Response.json({ ok: true });
   }
 
   private verifyWhatsAppWebhook(url: URL) {
@@ -829,6 +928,260 @@ export class ClientPadServer {
         request.headers.get("user-agent"),
       ]
     );
+  }
+
+  private async listLeads(request: Request, url: URL) {
+    const context = await this.requireApiKey(request, ["leads:read"]);
+    if (context instanceof Response) return context;
+
+    const limit = parseLimit(url.searchParams.get("limit"));
+    const offset = parseOffset(url.searchParams.get("offset"));
+    const status = url.searchParams.get("status");
+
+    if (status && !isLeadStatus(status)) {
+      return jsonError("Invalid lead status.", 400);
+    }
+
+    const values: QueryValue[] = [context.workspaceId, limit, offset];
+    let statusFilter = "";
+    if (status) {
+      values.push(status);
+      statusFilter = "and status = $4";
+    }
+
+    const { rows } = await this.db.query(
+      `
+        select
+          id,
+          workspace_id,
+          name,
+          phone,
+          source,
+          service_interest,
+          status,
+          owner_user_id,
+          next_follow_up_at,
+          urgency,
+          budget_clue,
+          notes,
+          intent,
+          ai_summary,
+          created_at,
+          updated_at
+        from leads
+        where workspace_id = $1
+        ${statusFilter}
+        order by created_at desc
+        limit $2 offset $3
+      `,
+      values
+    );
+
+    await this.auditPublicApiEvent(context, request, "leads.list", { limit, offset, status });
+    return Response.json({ data: rows, pagination: { limit, offset } });
+  }
+
+  private async createLead(request: Request) {
+    const context = await this.requireApiKey(request, ["leads:write"]);
+    if (context instanceof Response) return context;
+
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") return jsonError("Request body must be a JSON object.", 400);
+
+    const payload = normalizeLeadPayload(body as Record<string, unknown>);
+    if (!payload.ok) return jsonError(payload.error, 400);
+
+    const { rows } = await this.db.query<{ id: string }>(
+      `
+        insert into leads (
+          workspace_id,
+          name,
+          phone,
+          source,
+          service_interest,
+          status,
+          next_follow_up_at,
+          urgency,
+          budget_clue,
+          notes,
+          intent,
+          ai_summary
+        )
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        returning id
+      `,
+      [
+        context.workspaceId,
+        payload.name,
+        payload.phone,
+        payload.source,
+        payload.service_interest,
+        payload.status,
+        payload.next_follow_up_at,
+        payload.urgency,
+        payload.budget_clue,
+        payload.notes,
+        payload.intent,
+        payload.ai_summary,
+      ]
+    );
+
+    const leadId = rows[0]?.id;
+    await this.auditPublicApiEvent(context, request, "leads.create", {
+      lead_id: leadId,
+      source: payload.source,
+      status: payload.status,
+    });
+    return Response.json({ data: { id: leadId } }, { status: 201 });
+  }
+
+  private async upsertLead(request: Request) {
+    const context = await this.requireApiKey(request, ["leads:write"]);
+    if (context instanceof Response) return context;
+
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") return jsonError("Request body must be a JSON object.", 400);
+
+    const payload = normalizeLeadPayload(body as Record<string, unknown>);
+    if (!payload.ok) return jsonError(payload.error, 400);
+
+    const { rows } = await this.db.query<{ id: string }>(
+      `
+        insert into leads (
+          workspace_id,
+          name,
+          phone,
+          source,
+          service_interest,
+          status,
+          next_follow_up_at,
+          urgency,
+          budget_clue,
+          notes
+        )
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        on conflict (workspace_id, phone)
+        do update set
+          name = excluded.name,
+          source = excluded.source,
+          service_interest = excluded.service_interest,
+          status = excluded.status,
+          next_follow_up_at = excluded.next_follow_up_at,
+          urgency = excluded.urgency,
+          budget_clue = excluded.budget_clue,
+          notes = excluded.notes,
+          updated_at = now()
+        returning id
+      `,
+      [
+        context.workspaceId,
+        payload.name,
+        payload.phone,
+        payload.source,
+        payload.service_interest,
+        payload.status,
+        payload.next_follow_up_at,
+        payload.urgency,
+        payload.budget_clue,
+        payload.notes,
+      ]
+    );
+
+    const leadId = rows[0]?.id;
+    await this.auditPublicApiEvent(context, request, "leads.upsert", {
+      lead_id: leadId,
+      source: payload.source,
+      status: payload.status,
+    });
+    return Response.json({ data: { id: leadId } });
+  }
+
+  private async listClients(request: Request, url: URL) {
+    const context = await this.requireApiKey(request, ["clients:read"]);
+    if (context instanceof Response) return context;
+
+    const limit = parseLimit(url.searchParams.get("limit"));
+    const offset = parseOffset(url.searchParams.get("offset"));
+    const q = optionalString(url.searchParams.get("q"));
+
+    const values: QueryValue[] = [context.workspaceId, limit, offset];
+    let searchFilter = "";
+    if (q) {
+      values.push(`%${q}%`);
+      searchFilter = `
+        and (
+          business_name ilike $4
+          or primary_contact ilike $4
+          or email ilike $4
+          or phone ilike $4
+        )
+      `;
+    }
+
+    const { rows } = await this.db.query(
+      `
+        select
+          id,
+          workspace_id,
+          business_name,
+          primary_contact,
+          phone,
+          email,
+          location,
+          notes,
+          created_at,
+          updated_at
+        from clients
+        where workspace_id = $1
+        ${searchFilter}
+        order by created_at desc
+        limit $2 offset $3
+      `,
+      values
+    );
+
+    await this.auditPublicApiEvent(context, request, "clients.list", { limit, offset, q });
+    return Response.json({ data: rows, pagination: { limit, offset } });
+  }
+
+  private async createClient(request: Request) {
+    const context = await this.requireApiKey(request, ["clients:write"]);
+    if (context instanceof Response) return context;
+
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") return jsonError("Request body must be a JSON object.", 400);
+
+    const payload = normalizeClientPayload(body as Record<string, unknown>);
+    if (!payload.ok) return jsonError(payload.error, 400);
+
+    const { rows } = await this.db.query<{ id: string }>(
+      `
+        insert into clients (
+          workspace_id,
+          business_name,
+          primary_contact,
+          phone,
+          email,
+          location,
+          notes
+        )
+        values ($1, $2, $3, $4, $5, $6, $7)
+        returning id
+      `,
+      [
+        context.workspaceId,
+        payload.business_name,
+        payload.primary_contact,
+        payload.phone,
+        payload.email,
+        payload.location,
+        payload.notes,
+      ]
+    );
+
+    const clientId = rows[0]?.id;
+    await this.auditPublicApiEvent(context, request, "clients.create", { client_id: clientId });
+    return Response.json({ data: { id: clientId } }, { status: 201 });
   }
 
   private async getUsage(request: Request) {

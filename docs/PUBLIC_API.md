@@ -83,6 +83,62 @@ Required scope: `usage:read`
 
 When a hosted key exceeds quota or rate limits, the API returns `429`.
 
+## WhatsApp Inbox
+
+ClientPad provides a live inbox for Nigerian service businesses to manage WhatsApp flows, inspect AI suggested replies, and track conversation state.
+
+Required scopes:
+- `whatsapp:read`: View WhatsApp conversations and messages.
+- `whatsapp:write`: Send WhatsApp replies, approve suggestions, and update conversation status.
+
+### List Conversations
+
+`GET /api/public/v1/whatsapp/conversations`
+
+**Query Parameters:**
+- `status`: Filter by conversation status (`open`, `pending`, `closed`, `archived`).
+- `q`: Search contact name or phone.
+- `needs_approval`: Filter for conversations where AI requires owner approval (`true`).
+- `pipeline_stage`: Filter by linked lead pipeline stage.
+- `limit`/`offset`: Pagination.
+
+### Get Messages
+
+`GET /api/public/v1/whatsapp/conversations/:id/messages`
+
+Returns chronological message thread for a conversation.
+
+### Send Reply
+
+`POST /api/public/v1/whatsapp/conversations/:id/reply`
+
+Sends a manual reply and optionally updates the lead's pipeline stage.
+
+**Body:**
+```json
+{
+  "message_text": "We can book you for 3 PM tomorrow.",
+  "send": true,
+  "pipeline_stage": "booked"
+}
+```
+
+### Approve Suggestion
+
+`POST /api/public/v1/whatsapp/conversations/:id/approve-suggestion`
+
+Approves an AI-suggested reply from the conversation metadata.
+
+**Body:**
+```json
+{
+  "suggestion_index": 0,
+  "edited_text": "Optional override of AI draft",
+  "send": true
+}
+```
+
+
 ## Local Platform Setup
 
 Run PostgreSQL, set environment variables, then apply neutral migrations:
