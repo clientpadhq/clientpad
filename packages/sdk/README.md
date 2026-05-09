@@ -27,6 +27,34 @@ await clientpad.leads.create({
 });
 ```
 
+## WhatsApp Inbox
+
+The `whatsapp` resource manages live owner approval workflows.
+
+```ts
+// List conversations
+const conversations = await clientpad.whatsapp.list({ status: "open" });
+
+// Get chronological thread
+const messages = await clientpad.whatsapp.messages(conversations.data[0].id);
+
+// Fetch AI-suggested replies
+const suggestions = await clientpad.whatsapp.suggestions(conversations.data[0].id);
+
+// Approve and send an AI suggestion
+await clientpad.whatsapp.approveSuggestion(conversations.data[0].id, {
+  suggestion_index: 0,
+  send: true,
+});
+
+// Send a manual reply and move pipeline stage
+await clientpad.whatsapp.reply(conversations.data[0].id, {
+  message_text: "Checking availability now.",
+  send: true,
+  pipeline_stage: "in_progress",
+});
+```
+
 ## Upsert Leads
 
 ```ts

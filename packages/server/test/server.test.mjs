@@ -325,3 +325,119 @@ const flutterwaveWebhookResponse = await flutterwaveHandler(
 );
 assert.equal(flutterwaveWebhookResponse.status, 200);
 assert.deepEqual(await flutterwaveWebhookResponse.json(), { received: true });
+
+// WhatsApp Inbox API tests
+const inboxDb = {
+  async query(text, values = []) {
+    queries.push({ text, values });
+    if (text.includes("from api_keys")) {
+      return {
+        rows: [{
+          id: "api_key_inbox",
+          workspace_id: "workspace_1",
+          name: "Inbox key",
+          key_hash: keyHash,
+          scopes: ["leads:read", "leads:write", "whatsapp:read", "whatsapp:write"],
+          billing_mode: "cloud_free",
+          monthly_request_limit: 1000,
+          rate_limit_per_minute: 60,
+        }],
+        rowCount: 1,
+      };
+    }
+    if (text.includes("api_key_rate_limit_windows")) return { rows: [{ request_count: 1, allowed: true }], rowCount: 1 };
+    if (text.includes("insert into api_key_usage_months")) return { rows: [{ request_count: 1, rejected_count: 0, allowed: true }], rowCount: 1 };
+
+    if (text.includes("select") && text.includes("whatsapp_conversations")) {
+      if (text.includes("limit")) {
+        return {
+          rows: [{ id: "conv_1", contact_name: "Ada", status: "open", last_message_at: new Date().toISOString() }],
+          rowCount: 1,
+        };
+      }
+      return {
+        rows: [{ id: "conv_1", workspace_id: "workspace_1", phone: "+234123", metadata: { ai: { suggestedReplies: [{ body: "AI reply" }] } } }],
+        rowCount: 1,
+      };
+    }
+
+    if (text.includes("from whatsapp_messages")) {
+      return {
+        rows: [{ id: "msg_1", conversation_id: "conv_1", direction: "inbound", message_text: "Hi" }],
+        rowCount: 1,
+      };
+    }
+
+    if (text.includes("insert into whatsapp_messages")) {
+      return { rows: [{ id: "msg_sent" }], rowCount: 1 };
+    }
+
+    return { rows: [], rowCount: 0 };
+  }
+};
+
+const inboxHandler = createClientPadHandler({ db: inboxDb, apiKeyPepper: pepper });
+
+const listConversationsResponse = await inboxHandler(
+  new Request("https://example.com/api/public/v1/whatsapp/conversations", {
+    headers: { authorization: `Bearer ${rawKey}` },
+  })
+);
+assert.equal(listConversationsResponse.status, 200);
+const listData = await listConversationsResponse.json();
+assert.equal(listData.data[0].id, "conv_1");
+
+const convMessagesResponse = await inboxHandler(
+  new Request("https://example.com/api/public/v1/whatsapp/conversations/conv_1/messages", {
+    headers: { authorization: `Bearer ${rawKey}` },
+  })
+);
+assert.equal(convMessagesResponse.status, 200);
+const msgData = await convMessagesResponse.json();
+assert.equal(msgData.data[0].message_text, "Hi");
+
+const suggestionsResponse = await inboxHandler(
+  new Request("https://example.com/api/public/v1/whatsapp/conversations/conv_1/suggestions", {
+    headers: { authorization: `Bearer ${rawKey}` },
+  })
+);
+assert.equal(suggestionsResponse.status, 200);
+const sugData = await suggestionsResponse.json();
+assert.equal(sugData.data.suggestions[0].body, "AI reply");
+
+const replyResponse = await inboxHandler(
+  new Request("https://example.com/api/public/v1/whatsapp/conversations/conv_1/reply", {
+    method: "POST",
+    headers: { authorization: `Bearer ${rawKey}`, "content-type": "application/json" },
+    body: JSON.stringify({ message_text: "Hello", send: false }),
+  })
+);
+assert.equal(replyResponse.status, 200);
+assert.deepEqual(await replyResponse.json(), { data: { id: "msg_sent", meta_message_id: null } });
+
+const approveResponse = await inboxHandler(
+  new Request("https://example.com/api/public/v1/whatsapp/conversations/conv_1/approve-suggestion", {
+    method: "POST",
+    headers: { authorization: `Bearer ${rawKey}`, "content-type": "application/json" },
+    body: JSON.stringify({ suggestion_index: 0, send: false }),
+  })
+);
+assert.equal(approveResponse.status, 200);
+
+const statusResponse = await inboxHandler(
+  new Request("https://example.com/api/public/v1/whatsapp/conversations/conv_1/status", {
+    method: "POST",
+    headers: { authorization: `Bearer ${rawKey}`, "content-type": "application/json" },
+    body: JSON.stringify({ status: "closed" }),
+  })
+);
+assert.equal(statusResponse.status, 200);
+assert.equal(queries.some(q => q.text.includes("update whatsapp_conversations set status = $1")), true);
+
+// Workspace permission test
+const wrongWorkspaceResponse = await inboxHandler(
+  new Request("https://example.com/api/public/v1/whatsapp/conversations/wrong_id", {
+    headers: { authorization: `Bearer ${rawKey}` },
+  })
+);
+assert.equal(wrongWorkspaceResponse.status, 404); // Mock DB returns empty for other IDs
