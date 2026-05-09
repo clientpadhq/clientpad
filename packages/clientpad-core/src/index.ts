@@ -44,6 +44,13 @@ export const API_SCOPES = [
   "usage:read",
   "whatsapp:read",
   "whatsapp:write",
+  "services:read",
+  "services:write",
+  "bookings:read",
+  "bookings:write",
+  "payments:read",
+  "payments:write",
+  "reviews:write",
 ] as const;
 
 export type ApiScope = (typeof API_SCOPES)[number];
