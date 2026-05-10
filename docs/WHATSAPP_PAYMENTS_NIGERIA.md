@@ -39,7 +39,7 @@ Migration `0004_whatsapp_payments.sql` adds:
 A WhatsApp flow action can include a `payment` config with the provider, amount, currency, service item, and customer details. Currency defaults to `NGN` when omitted.
 
 ```ts
-import { createStoredPaymentLink, type WhatsAppFlowAction } from "@abdulmuiz44/clientpad-whatsapp";
+import { createStoredPaymentLink, type WhatsAppFlowAction } from "@clientpad/whatsapp";
 
 const action: WhatsAppFlowAction = {
   type: "payment",
@@ -78,7 +78,7 @@ Paystack receives the amount in kobo/subunits. Flutterwave receives the major-un
 Mount the ClientPad handler and configure optional callbacks for WhatsApp confirmations and review requests:
 
 ```ts
-import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
+import { createClientPadHandler } from "@clientpad/server";
 
 const handler = createClientPadHandler({
   databaseUrl: process.env.DATABASE_URL,

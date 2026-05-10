@@ -1,4 +1,4 @@
-import { normalizeBaseUrl } from "@abdulmuiz44/clientpad-core";
+import { normalizeBaseUrl } from "@clientpad/core";
 import type { WhatsAppFetch, WhatsAppApiConfig } from "./types.js";
 
 export type WhatsAppMediaKind = "audio" | "document" | "image" | "sticker" | "video";

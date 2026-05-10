@@ -1,6 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { Pool } from "pg";
-import { verifyPaymentWebhook, type PaymentProvider, type VerifiedPaymentWebhook } from "@abdulmuiz44/clientpad-whatsapp";
+import { verifyPaymentWebhook, type PaymentProvider, type VerifiedPaymentWebhook } from "@clientpad/whatsapp";
 import {
   getPublicPrefix,
   isLeadStatus,
@@ -9,8 +9,8 @@ import {
   type ApiScope,
   type ApiKeyBillingMode,
   type LeadStatus,
-} from "@abdulmuiz44/clientpad-core";
-import { normalizeNigerianPhoneNumber } from "@abdulmuiz44/clientpad-core/phone";
+} from "@clientpad/core";
+import { normalizeNigerianPhoneNumber } from "@clientpad/core/phone";
 
 export type QueryValue = string | number | boolean | Date | null | string[] | Record<string, unknown>;
 
@@ -23,7 +23,7 @@ export type Queryable = {
   query<T = Record<string, unknown>>(text: string, values?: QueryValue[]): Promise<QueryResult<T>>;
 };
 
-export type { ApiScope } from "@abdulmuiz44/clientpad-core";
+export type { ApiScope } from "@clientpad/core";
 
 export type ApiKeyPrincipal = {
   apiKeyId: string;
@@ -332,9 +332,12 @@ export class ClientPadServer {
       data: {
         suggestions: row.suggestions ?? [],
         safety: row.safety ?? {},
-      },
-    });
-  }
+        },
+        });
+        }
+
+        return jsonError("Conversation not found.", 404);
+        }
 
   private async replyToWhatsAppConversation(request: Request, conversationId: string) {
     const context = await this.requireApiKey(request, ["whatsapp:write"]);
@@ -359,7 +362,7 @@ export class ClientPadServer {
     let metaMessageId: string | null = null;
     if (shouldSend) {
       if (!this.whatsapp) return jsonError("WhatsApp integration is not configured.", 503);
-      const pkg = await import("@abdulmuiz44/clientpad-whatsapp");
+      const pkg = await import("@clientpad/whatsapp");
       const result = await pkg.sendWhatsAppMessage({
         whatsAppAccessToken: this.whatsapp.accessToken,
         phoneNumberId: this.whatsapp.phoneNumberId,
@@ -438,7 +441,7 @@ export class ClientPadServer {
     let metaMessageId: string | null = null;
     if (shouldSend) {
       if (!this.whatsapp) return jsonError("WhatsApp integration is not configured.", 503);
-      const pkg = await import("@abdulmuiz44/clientpad-whatsapp");
+      const pkg = await import("@clientpad/whatsapp");
       const result = await pkg.sendWhatsAppMessage({
         whatsAppAccessToken: this.whatsapp.accessToken,
         phoneNumberId: this.whatsapp.phoneNumberId,
@@ -1229,11 +1232,11 @@ type WhatsAppModule = Record<string, unknown>;
 async function dispatchWhatsAppWebhook(request: Request, options: WhatsAppHandlerOptions): Promise<Response> {
   let module: WhatsAppModule;
   try {
-    const packageName = "@abdulmuiz44/clientpad-whatsapp";
+    const packageName = "@clientpad/whatsapp";
     module = (await import(packageName)) as WhatsAppModule;
   } catch (error) {
     const cause = error instanceof Error ? ` ${error.message}` : "";
-    throw new Error(`WhatsApp integration package is unavailable. Install @abdulmuiz44/clientpad-whatsapp.${cause}`);
+    throw new Error(`WhatsApp integration package is unavailable. Install @clientpad/whatsapp.${cause}`);
   }
 
   const createHandler = module.createWhatsAppHandler ?? module.createClientPadWhatsAppHandler;
@@ -1252,7 +1255,7 @@ async function dispatchWhatsAppWebhook(request: Request, options: WhatsAppHandle
     return module.default(request, options) as Promise<Response>;
   }
 
-  throw new Error("@abdulmuiz44/clientpad-whatsapp does not export a compatible webhook handler.");
+  throw new Error("@clientpad/whatsapp does not export a compatible webhook handler.");
 }
 
 function verifyMetaSignature(request: Request, rawBody: ArrayBuffer, appSecret: string) {

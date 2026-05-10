@@ -348,6 +348,13 @@ const inboxDb = {
     if (text.includes("api_key_rate_limit_windows")) return { rows: [{ request_count: 1, allowed: true }], rowCount: 1 };
     if (text.includes("insert into api_key_usage_months")) return { rows: [{ request_count: 1, rejected_count: 0, allowed: true }], rowCount: 1 };
 
+    if (text.includes("from whatsapp_messages")) {
+      return {
+        rows: [{ id: "msg_1", conversation_id: "conv_1", direction: "inbound", message_text: "Hi" }],
+        rowCount: 1,
+      };
+    }
+
     if (text.includes("select") && text.includes("whatsapp_conversations")) {
       if (text.includes("limit")) {
         return {
@@ -355,15 +362,16 @@ const inboxDb = {
           rowCount: 1,
         };
       }
+      // This handles getting conversation details, including AI metadata
+      if (text.includes("metadata->'ai'->'suggestedReplies'")) {
+        return {
+          rows: [{ id: "conv_1", workspace_id: "workspace_1", phone: "+234123", metadata: { ai: { suggestedReplies: [{ body: "AI reply" }] } } }],
+          rowCount: 1,
+        };
+      }
+      // Default for other whatsapp_conversations queries if not specific enough
       return {
-        rows: [{ id: "conv_1", workspace_id: "workspace_1", phone: "+234123", metadata: { ai: { suggestedReplies: [{ body: "AI reply" }] } } }],
-        rowCount: 1,
-      };
-    }
-
-    if (text.includes("from whatsapp_messages")) {
-      return {
-        rows: [{ id: "msg_1", conversation_id: "conv_1", direction: "inbound", message_text: "Hi" }],
+        rows: [{ id: "conv_1", workspace_id: "workspace_1", phone: "+234123", metadata: {} }],
         rowCount: 1,
       };
     }

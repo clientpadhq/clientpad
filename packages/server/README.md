@@ -5,19 +5,19 @@ Fetch-standard server handlers for ClientPad public APIs.
 ## Install
 
 ```bash
-pnpm add @abdulmuiz44/clientpad-server
+pnpm add @clientpad/server
 ```
 
 Install the optional WhatsApp package when you want the same handler to receive Meta WhatsApp Cloud API webhooks:
 
 ```bash
-pnpm add @abdulmuiz44/clientpad-whatsapp
+pnpm add @clientpad/whatsapp
 ```
 
 ## Basic Usage
 
 ```ts
-import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
+import { createClientPadHandler } from "@clientpad/server";
 
 export const handler = createClientPadHandler({
   databaseUrl: process.env.DATABASE_URL!,
@@ -30,7 +30,7 @@ The handler accepts a standard `Request` and returns a standard `Response`.
 ## Next.js Route Handler
 
 ```ts
-import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
+import { createClientPadHandler } from "@clientpad/server";
 
 const handler = createClientPadHandler({
   databaseUrl: process.env.DATABASE_URL!,
@@ -54,7 +54,7 @@ Mount it under routes that forward to:
 Add the optional `whatsapp` config to enable `GET /whatsapp/webhook` for Meta verification and `POST /whatsapp/webhook` for inbound WhatsApp Cloud API messages. Full public API paths also work, so `/api/public/v1/whatsapp/webhook` is equivalent.
 
 ```ts
-import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
+import { createClientPadHandler } from "@clientpad/server";
 
 export const handler = createClientPadHandler({
   databaseUrl: process.env.DATABASE_URL!,
@@ -68,7 +68,7 @@ export const handler = createClientPadHandler({
     appSecret: process.env.WHATSAPP_APP_SECRET,
     defaultCountryCode: "+234",
     flow: {
-      // Service/business pipeline flow config consumed by @abdulmuiz44/clientpad-whatsapp.
+      // Service/business pipeline flow config consumed by @clientpad/whatsapp.
     },
   },
 });
@@ -80,7 +80,7 @@ When `appSecret` is set, the server validates Meta's `X-Hub-Signature-256` HMAC 
 
 ```ts
 import express from "express";
-import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
+import { createClientPadHandler } from "@clientpad/server";
 
 const app = express();
 const clientpad = createClientPadHandler({
@@ -112,7 +112,7 @@ app.all(["/api/public/v1/*path", "/whatsapp/webhook"], async (req, res) => {
 
 ```ts
 import { Hono } from "hono";
-import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
+import { createClientPadHandler } from "@clientpad/server";
 
 const app = new Hono();
 const clientpad = createClientPadHandler({

@@ -8,29 +8,29 @@ ClientPad is being built as open-source infrastructure that businesses and devel
 - PostgreSQL is the default database layer.
 - API keys are the gateway for integrations, automations, SDK access, and third-party apps.
 - Packages should be dependency-light and usable outside any single web framework.
-- The repository should be ready for GitHub releases and npm publishing under the `@abdulmuiz44` scope.
+- The repository should be ready for GitHub releases and npm publishing under the `@clientpadhq` scope.
 
 ## Current Package Surface
 
-- `@abdulmuiz44/clientpad-core`
+- `@clientpad/core`
   - Shared TypeScript types.
   - API response shapes.
   - URL, bearer-token, prefix, and status helpers.
   - No runtime dependencies.
 
-- `@abdulmuiz44/clientpad-cli`
+- `@clientpad/cli`
   - `clientpad init`
   - `clientpad migrate`
   - `clientpad api-key create`
   - SQL migrations shipped with the package.
 
-- `@abdulmuiz44/clientpad-server`
+- `@clientpad/server`
   - Fetch-standard public API handler.
   - API key verification.
   - Workspace-scoped lead and client endpoints.
   - PostgreSQL-backed storage.
 
-- `@abdulmuiz44/clientpad-sdk`
+- `@clientpad/sdk`
   - `ClientPad` class.
   - `leads.list`, `leads.create`.
   - `clients.list`, `clients.create`.
@@ -41,10 +41,10 @@ ClientPad is being built as open-source infrastructure that businesses and devel
 
 1. Publish the source code to GitHub as an open-source infrastructure repository.
 2. Publish packages to the public npm registry:
-   - `@abdulmuiz44/clientpad-core`
-   - `@abdulmuiz44/clientpad-cli`
-   - `@abdulmuiz44/clientpad-sdk`
-   - `@abdulmuiz44/clientpad-server`
+   - `@clientpad/core`
+   - `@clientpad/cli`
+   - `@clientpad/sdk`
+   - `@clientpad/server`
 3. Document the local install, migration, API key, SDK, and server handler flows.
 4. Keep the first public API intentionally small: leads and clients.
 5. Verify there are no hosted backend, app-framework, or subscription-billing dependencies in the publishable package graph.

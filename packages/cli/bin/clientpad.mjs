@@ -5,7 +5,7 @@ import { copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
-import { normalizeNigerianPhoneNumber } from "@abdulmuiz44/clientpad-core/phone";
+import { normalizeNigerianPhoneNumber } from "@clientpad/core/phone";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const command = process.argv[2];

@@ -1,5 +1,5 @@
 import express from "express";
-import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
+import { createClientPadHandler } from "@clientpad/server";
 
 const app = express();
 const clientpad = createClientPadHandler({

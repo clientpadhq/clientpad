@@ -5,15 +5,15 @@ TypeScript SDK for ClientPad's public API.
 ## Install
 
 ```bash
-pnpm add @abdulmuiz44/clientpad-sdk
+pnpm add @clientpad/sdk
 ```
 
 ## Basic Usage
 
-Expose APIs with `@abdulmuiz44/clientpad-server`, then consume them with this SDK.
+Expose APIs with `@clientpad/server`, then consume them with this SDK.
 
 ```ts
-import { ClientPad } from "@abdulmuiz44/clientpad-sdk";
+import { ClientPad } from "@clientpad/sdk";
 
 const clientpad = new ClientPad({
   baseUrl: "https://example.com/api/public/v1",
@@ -80,7 +80,7 @@ const leads = await clientpad.leads.list({
 ## Next.js Route Handler
 
 ```ts
-import { ClientPad } from "@abdulmuiz44/clientpad-sdk";
+import { ClientPad } from "@clientpad/sdk";
 
 const clientpad = new ClientPad({
   baseUrl: process.env.CLIENTPAD_API_URL!,
@@ -127,7 +127,7 @@ console.log(usage.data.remaining_requests);
 ## Error Handling
 
 ```ts
-import { ClientPadError } from "@abdulmuiz44/clientpad-sdk";
+import { ClientPadError } from "@clientpad/sdk";
 
 try {
   await clientpad.leads.list();

@@ -1,5 +1,5 @@
 {
-  "name": "@abdulmuiz44/clientpad-sdk",
+  "name": "@clientpad/sdk",
   "version": "0.2.0",
   "description": "TypeScript SDK for ClientPad public APIs.",
   "license": "MIT",

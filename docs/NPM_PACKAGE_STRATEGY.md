@@ -3,10 +3,10 @@
 ClientPad's infrastructure starts with a CLI package developers can install globally:
 
 ```bash
-pnpm install -g @abdulmuiz44/clientpad-cli
+pnpm install -g @clientpad/cli
 ```
 
-The package name is `@abdulmuiz44/clientpad-cli` because npm scoped packages require a slash. The installed binary is:
+The package name is `@clientpad/cli` because npm scoped packages require a slash. The installed binary is:
 
 ```bash
 clientpad
@@ -44,25 +44,35 @@ clientpad doctor
 Shared dependency-free types and protocol utilities are published as:
 
 ```bash
-pnpm add @abdulmuiz44/clientpad-core
+pnpm add @clientpad/core
 ```
 
 ## Publish Flow
 
 ```bash
 pnpm install
-pnpm --filter @abdulmuiz44/clientpad-cli pack
-pnpm --filter @abdulmuiz44/clientpad-cli publish --access public
+node scripts/check-deps.mjs
+pnpm --filter @clientpad/core build
+pnpm --filter @clientpad/cli pack
+pnpm --filter @clientpad/cli publish --access public
 ```
 
-Before publishing, create the npm organization or scope owner for `@clientpad`.
+Before publishing, run the full CI check locally:
+
+```bash
+npm run ci
+```
+
+This validates typecheck, tests, dependency boundaries, and examples in one command.
+
+Create the npm organization or scope owner for `@clientpadhq` before first publish.
 
 ## SDK Package
 
 Developers should install the runtime SDK inside applications:
 
 ```bash
-pnpm add @abdulmuiz44/clientpad-sdk
+pnpm add @clientpad/sdk
 ```
 
 The SDK is HTTP-only, uses native `fetch`, and currently supports leads and clients.
@@ -72,7 +82,7 @@ The SDK is HTTP-only, uses native `fetch`, and currently supports leads and clie
 Developers should install the server package to expose ClientPad APIs from their own apps:
 
 ```bash
-pnpm add @abdulmuiz44/clientpad-server
+pnpm add @clientpad/server
 ```
 
 The server package exports a fetch-standard handler and currently supports leads and clients.
@@ -82,7 +92,7 @@ The server package exports a fetch-standard handler and currently supports leads
 Hosted control planes should install:
 
 ```bash
-pnpm add @abdulmuiz44/clientpad-cloud
+pnpm add @clientpad/cloud
 ```
 
 The cloud package handles managed projects, public plans, subscriptions, hosted API key issuance, usage dashboards, billing event intake, and health checks.
@@ -92,7 +102,7 @@ The cloud package handles managed projects, public plans, subscriptions, hosted 
 The hosted developer interface ships as:
 
 ```bash
-pnpm add @abdulmuiz44/clientpad-dashboard
+pnpm add @clientpad/dashboard
 ```
 
 It provides login, overview, projects, API key creation, usage activity, billing plan views, docs quickstart, and cloud connection settings.
@@ -104,7 +114,7 @@ The npm packages stay open source. Paid usage happens through an optional hosted
 - developers install the SDK for free
 - self-hosted API keys are free
 - hosted ClientPad Cloud API keys can be metered
-- quotas are enforced by `@abdulmuiz44/clientpad-server`
+- quotas are enforced by `@clientpad/server`
 - usage is exposed through `clientpad.usage.retrieve()`
 
 This lets developers start locally and pay only when they choose managed infrastructure.

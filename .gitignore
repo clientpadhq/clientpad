@@ -9,8 +9,19 @@ node_modules/
 # production
 /build
 /dist
+packages/dist/
 packages/*/dist
 *.tgz
+
+# generated build artifacts in source packages (committed by mistake)
+packages/clientpad-core/src/*.js
+packages/clientpad-core/src/*.js.map
+packages/clientpad-core/src/*.d.ts
+packages/clientpad-core/src/*.d.ts.map
+packages/sdk/src/*.js
+packages/sdk/src/*.js.map
+packages/sdk/src/*.d.ts
+packages/sdk/src/*.d.ts.map
 
 # misc
 .DS_Store

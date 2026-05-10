@@ -1,4 +1,4 @@
-# @abdulmuiz44/clientpad-whatsapp
+# @clientpad/whatsapp
 
 Fetch-standard WhatsApp webhook handler and AI assistant utilities for ClientPad.
 Fetch-compatible WhatsApp Cloud API helpers for ClientPad. The package is designed for self-hosted runtimes (Node, Workers, Bun, Deno-compatible servers) by accepting injected `fetch`, ClientPad credentials, Meta WhatsApp credentials, and webhook verification tokens.
@@ -6,7 +6,7 @@ Fetch-compatible WhatsApp Cloud API helpers for ClientPad. The package is design
 ## Install
 
 ```sh
-pnpm add @abdulmuiz44/clientpad-whatsapp @abdulmuiz44/clientpad-core @abdulmuiz44/clientpad-sdk
+pnpm add @clientpad/whatsapp @clientpad/core @clientpad/sdk
 ```
 
 ## Environment
@@ -26,7 +26,7 @@ Use `WHATSAPP_VERIFY_TOKEN` as the verify token when configuring the Meta webhoo
 ## Minimal webhook handler
 
 ```ts
-import { createWhatsAppWebhookHandler } from "@abdulmuiz44/clientpad-whatsapp";
+import { createWhatsAppWebhookHandler } from "@clientpad/whatsapp";
 
 export const handler = createWhatsAppWebhookHandler({
   databaseUrl: process.env.DATABASE_URL,
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
 ## Create ClientPad leads from WhatsApp messages
 
 ```ts
-import { createServiceBusinessFlow } from "@abdulmuiz44/clientpad-whatsapp";
+import { createServiceBusinessFlow } from "@clientpad/whatsapp";
 
 export const handleWhatsAppWebhook = createServiceBusinessFlow({
   clientpadBaseUrl: process.env.CLIENTPAD_BASE_URL!,
@@ -86,7 +86,7 @@ The service-business flow parses incoming webhook messages, normalizes Nigerian 
 import {
   createReplyButtonsMessage,
   sendWhatsAppMessage,
-} from "@abdulmuiz44/clientpad-whatsapp";
+} from "@clientpad/whatsapp";
 
 await sendWhatsAppMessage({
   whatsAppAccessToken: process.env.WHATSAPP_ACCESS_TOKEN!,

@@ -10,15 +10,15 @@ ClientPad Cloud is the managed gateway that monetizes hosted `CLIENTPAD_API_KEY`
    - Do not depend on hosted backend-specific SDKs.
 
 2. Public API
-   - Mount `@abdulmuiz44/clientpad-server` at `/api/public/v1`.
+   - Mount `@clientpad/server` at `/api/public/v1`.
    - Developers use this with `CLIENTPAD_API_KEY`.
 
 3. Cloud Control Plane
-   - Mount `@abdulmuiz44/clientpad-cloud` at `/api/cloud/v1`.
+   - Mount `@clientpad/cloud` at `/api/cloud/v1`.
    - Operators use it to create projects, issue hosted keys, inspect usage, and record billing events.
 
 4. Developer Dashboard
-   - Deploy `@abdulmuiz44/clientpad-dashboard` as the web interface.
+   - Deploy `@clientpad/dashboard` as the web interface.
    - Developers and operators use it to log in, create projects, create keys, inspect activity, view plans, and copy quickstart code.
 
 5. Billing
@@ -65,9 +65,9 @@ npm run test:dashboard
 
 Then deploy:
 
-- `/api/public/v1/*` with `@abdulmuiz44/clientpad-server`
-- `/api/cloud/v1/*` with `@abdulmuiz44/clientpad-cloud`
-- dashboard static app with `@abdulmuiz44/clientpad-dashboard`
+- `/api/public/v1/*` with `@clientpad/server`
+- `/api/cloud/v1/*` with `@clientpad/cloud`
+- dashboard static app with `@clientpad/dashboard`
 
 ## Default Plans
 

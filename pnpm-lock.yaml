@@ -21,7 +21,7 @@ importers:
 
   packages/cli:
     dependencies:
-      '@abdulmuiz44/clientpad-core':
+      '@clientpad/core':
         specifier: workspace:*
         version: link:../clientpad-core
       pg:
@@ -32,7 +32,7 @@ importers:
 
   packages/cloud:
     dependencies:
-      '@abdulmuiz44/clientpad-core':
+      '@clientpad/core':
         specifier: workspace:*
         version: link:../clientpad-core
       pg:
@@ -45,7 +45,7 @@ importers:
 
   packages/dashboard:
     devDependencies:
-      '@abdulmuiz44/clientpad-sdk':
+      '@clientpad/sdk':
         specifier: workspace:*
         version: link:../sdk
       '@types/react':
@@ -77,10 +77,10 @@ importers:
 
   packages/server:
     dependencies:
-      '@abdulmuiz44/clientpad-core':
+      '@clientpad/core':
         specifier: workspace:*
         version: link:../clientpad-core
-      '@abdulmuiz44/clientpad-whatsapp':
+      '@clientpad/whatsapp':
         specifier: workspace:*
         version: link:../whatsapp
       pg:
@@ -93,10 +93,10 @@ importers:
 
   packages/whatsapp:
     dependencies:
-      '@abdulmuiz44/clientpad-core':
+      '@clientpad/core':
         specifier: workspace:*
         version: link:../clientpad-core
-      '@abdulmuiz44/clientpad-sdk':
+      '@clientpad/sdk':
         specifier: workspace:*
         version: link:../sdk
       pg:

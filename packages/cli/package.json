@@ -1,5 +1,5 @@
 {
-  "name": "@abdulmuiz44/clientpad-cli",
+  "name": "@clientpad/cli",
   "version": "0.2.0",
   "description": "Open-source ClientPad infrastructure CLI for PostgreSQL-backed business APIs.",
   "license": "MIT",
@@ -22,7 +22,7 @@
     "open-source"
   ],
   "dependencies": {
-    "@abdulmuiz44/clientpad-core": "workspace:*",
+    "@clientpad/core": "workspace:*",
     "pg": "^8.13.3"
   },
   "engines": {

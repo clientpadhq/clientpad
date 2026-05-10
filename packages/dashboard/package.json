@@ -1,5 +1,5 @@
 {
-  "name": "@abdulmuiz44/clientpad-dashboard",
+  "name": "@clientpad/dashboard",
   "version": "0.2.0",
   "description": "ClientPad Cloud developer dashboard for projects, API keys, usage, billing, and docs.",
   "license": "MIT",
@@ -23,7 +23,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "lucide-react": "^0.468.0",
-    "@abdulmuiz44/clientpad-sdk": "workspace:*",
+    "@clientpad/sdk": "workspace:*",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.2"
   },
