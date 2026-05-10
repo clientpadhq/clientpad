@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import express from "express";
-import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
+import { createClientPadHandler } from "@clientpad/server";
 
 const {
   API_KEY_PEPPER,

@@ -10,7 +10,7 @@ Install or import the workspace package:
 import {
   createWhatsAppWebhookHandler,
   type WhatsAppAIProvider,
-} from "@abdulmuiz44/clientpad-whatsapp";
+} from "@clientpad/whatsapp";
 ```
 
 ## AI provider interface

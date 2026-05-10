@@ -1,46 +1,98 @@
 # Publishing ClientPad
 
-ClientPad's npm packages are `@abdulmuiz44/clientpad-core`, `@abdulmuiz44/clientpad-cli`, `@abdulmuiz44/clientpad-sdk`, `@abdulmuiz44/clientpad-server`, `@abdulmuiz44/clientpad-cloud`, and `@abdulmuiz44/clientpad-dashboard`.
+> [!NOTE]
+> **Migration Note:** The canonical npm scope for ClientPad packages has been moved from `@abdulmuiz44/*` to `@clientpadhq/*`.
+
+ClientPad's npm packages are published under the `@clientpadhq` scope.
+
+## Release-Critical Packages (0.1.0)
+
+These packages are enforced in CI and must pass all checks before any release:
+
+| Package | Role |
+|---|---|
+| `@clientpad/core` | Shared types, zero runtime deps |
+| `@clientpad/cli` | Local setup, migrations, API key creation |
+| `@clientpad/sdk` | TypeScript SDK for consuming the public API |
+| `@clientpad/server` | Fetch-standard public API handler |
+
+## Secondary / Experimental Packages
+
+These packages are validated in CI but are not hard-blocked on the 0.1.0 release path:
+
+| Package | Status |
+|---|---|
+| `@clientpad/whatsapp` | Validated in CI, secondary for 0.1.0 |
+| `@clientpad/cloud` | Validated in CI, secondary for 0.1.0 |
+| `@clientpad/dashboard` | Build-validated, secondary for 0.1.0 |
+
+## CI Safety Model
+
+Every push and pull request to `main` runs the following checks automatically:
+
+1. **Typecheck** — all packages typecheck clean
+2. **Tests** — sdk, server, whatsapp, cloud tests pass
+3. **Dependency boundaries** — no forbidden deps (supabase, next, react in core packages)
+4. **Pack dry-run** — release-critical packages pack cleanly with correct file contents
+5. **Examples smoke check** — referenced files and docs exist
 
 ## Pre-Publish Checklist
 
-1. Confirm the package scope exists on npm: `@clientpad`.
-2. Confirm the package graph has no hosted backend or removed app-framework dependencies. React is allowed for `@abdulmuiz44/clientpad-dashboard`.
+Before publishing any package, verify CI is green on `main`, then run locally:
 
-   ```bash
-   Select-String -Path package.json,packages/*/package.json,pnpm-lock.yaml -Pattern "supabase|@supabase|next@"
-   ```
+```bash
+# 1. Install dependencies
+pnpm install
 
-3. Run checks:
+# 2. Run the full CI check locally
+npm run ci
 
-   ```bash
-   pnpm install
-   npm run typecheck
-   node packages/cli/bin/clientpad.mjs help
-   npm run build
-   ```
+# 3. Build all packages
+pnpm --filter @clientpad/core build
+pnpm --filter @clientpad/sdk build
+pnpm --filter @clientpad/whatsapp build
+pnpm --filter @clientpad/server build
+pnpm --filter @clientpad/cloud build
 
-4. Inspect the tarball contents:
+# 4. Validate dependency boundaries
+node scripts/check-deps.mjs
 
-   ```bash
-   npm pack --workspace @abdulmuiz44/clientpad-core --dry-run
-   npm pack --workspace @abdulmuiz44/clientpad-cli --dry-run
-   npm pack --workspace @abdulmuiz44/clientpad-sdk --dry-run
-   npm pack --workspace @abdulmuiz44/clientpad-server --dry-run
-   npm pack --workspace @abdulmuiz44/clientpad-cloud --dry-run
-   npm pack --workspace @abdulmuiz44/clientpad-dashboard --dry-run
-   ```
+# 5. Validate pack dry-runs
+node scripts/validate-packs.mjs
 
-5. Publish:
+# 6. Inspect tarball contents manually
+npm pack --workspace @clientpad/core --dry-run
+npm pack --workspace @clientpad/cli --dry-run
+npm pack --workspace @clientpad/sdk --dry-run
+npm pack --workspace @clientpad/server --dry-run
+```
 
-   ```bash
-   pnpm --filter @abdulmuiz44/clientpad-core publish --access public
-   pnpm --filter @abdulmuiz44/clientpad-cli publish --access public
-   pnpm --filter @abdulmuiz44/clientpad-sdk publish --access public
-   pnpm --filter @abdulmuiz44/clientpad-server publish --access public
-   pnpm --filter @abdulmuiz44/clientpad-cloud publish --access public
-   pnpm --filter @abdulmuiz44/clientpad-dashboard publish --access public
-   ```
+Also confirm no hosted backend or app-framework dependencies leaked in:
+
+```bash
+# PowerShell
+Select-String -Path package.json,packages/*/package.json -Pattern "supabase|@supabase|next@"
+
+# bash
+grep -r "supabase\|next@" package.json packages/*/package.json
+```
+
+## Publish
+
+```bash
+pnpm --filter @clientpad/core publish --access public
+pnpm --filter @clientpad/cli publish --access public
+pnpm --filter @clientpad/sdk publish --access public
+pnpm --filter @clientpad/server publish --access public
+```
+
+Secondary packages (when ready):
+
+```bash
+pnpm --filter @clientpad/whatsapp publish --access public
+pnpm --filter @clientpad/cloud publish --access public
+pnpm --filter @clientpad/dashboard publish --access public
+```
 
 ## GitHub Release
 
@@ -51,4 +103,21 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-Attach release notes that describe CLI commands, migrations, and breaking schema changes.
+Attach release notes describing CLI commands, migrations, and any breaking schema changes.
+
+## Local Developer Parity
+
+Maintainers can mirror CI locally with these commands:
+
+| Command | What it does |
+|---|---|
+| `npm run typecheck` | Typecheck all packages |
+| `npm run test:sdk` | Build + test SDK |
+| `npm run test:server` | Build + test server |
+| `npm run test:cloud` | Build + test cloud |
+| `npm run test:whatsapp` | Build + test whatsapp |
+| `npm run check:deps` | Dependency boundary scan |
+| `npm run check:examples` | Examples and docs smoke check |
+| `npm run check:packs` | Pack dry-run for release-critical packages |
+| `npm run ci` | Full CI-equivalent local check |
+| `npm run verify` | Extended verify including all secondary packages |

@@ -1,5 +1,5 @@
 {
-  "name": "@abdulmuiz44/clientpad-server",
+  "name": "@clientpad/server",
   "version": "0.2.0",
   "description": "Fetch-standard ClientPad public API server for PostgreSQL-backed apps.",
   "license": "MIT",
@@ -20,13 +20,13 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "pnpm --filter @abdulmuiz44/clientpad-core build && pnpm --filter @abdulmuiz44/clientpad-whatsapp build && tsc -p tsconfig.json --noEmit",
-    "test": "pnpm --filter @abdulmuiz44/clientpad-core build && pnpm --filter @abdulmuiz44/clientpad-whatsapp build && npm run build && node test/server.test.mjs",
+    "typecheck": "pnpm --filter @clientpad/core build && pnpm --filter @clientpad/whatsapp build && tsc -p tsconfig.json --noEmit",
+    "test": "pnpm --filter @clientpad/core build && pnpm --filter @clientpad/whatsapp build && npm run build && node test/server.test.mjs",
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@abdulmuiz44/clientpad-core": "workspace:*",
-    "@abdulmuiz44/clientpad-whatsapp": "workspace:*",
+    "@clientpad/core": "workspace:*",
+    "@clientpad/whatsapp": "workspace:*",
     "pg": "^8.13.3"
   },
   "devDependencies": {

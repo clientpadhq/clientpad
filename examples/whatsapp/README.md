@@ -17,7 +17,7 @@ From the repository root:
 
 ```bash
 pnpm add express
-pnpm add @abdulmuiz44/clientpad-server
+pnpm add @clientpad/server
 ```
 
 ## Environment variables

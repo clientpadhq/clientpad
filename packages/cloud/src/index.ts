@@ -1,6 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { Pool } from "pg";
-import { API_SCOPES, type ApiScope, type ApiKeyBillingMode } from "@abdulmuiz44/clientpad-core";
+import { API_SCOPES, type ApiScope, type ApiKeyBillingMode } from "@clientpad/core";
 
 export type QueryValue = string | number | boolean | Date | null | string[] | Record<string, unknown>;
 
@@ -103,7 +103,7 @@ export class ClientPadCloud {
     await this.db.query("select 1");
     return Response.json({
       status: "ok",
-      service: "clientpad-cloud",
+      service: "@clientpad/cloud",
       time: new Date().toISOString(),
     });
   }

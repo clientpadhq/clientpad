@@ -1,4 +1,4 @@
-import { ClientPad } from "@abdulmuiz44/clientpad-sdk";
+import { ClientPad } from "@clientpad/sdk";
 
 const clientpad = new ClientPad({
   baseUrl: process.env.CLIENTPAD_API_URL ?? "https://api.clientpad.com/api/public/v1",

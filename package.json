@@ -8,19 +8,22 @@
   "scripts": {
     "cli": "node packages/cli/bin/clientpad.mjs",
     "dev": "node packages/cli/bin/clientpad.mjs help",
-    "dashboard:dev": "pnpm --filter @abdulmuiz44/clientpad-dashboard dev",
+    "dashboard:dev": "pnpm --filter @clientpad/dashboard dev",
     "build": "node scripts/pack-packages.mjs",
     "api-key:create": "node packages/cli/bin/clientpad.mjs api-key create",
     "db:migrate": "node packages/cli/bin/clientpad.mjs migrate",
-    "lint": "node packages/cli/bin/clientpad.mjs help",
-    "typecheck": "pnpm --filter @abdulmuiz44/clientpad-core typecheck && pnpm --filter @abdulmuiz44/clientpad-sdk typecheck && pnpm --filter @abdulmuiz44/clientpad-whatsapp typecheck && pnpm --filter @abdulmuiz44/clientpad-server typecheck && pnpm --filter @abdulmuiz44/clientpad-cloud typecheck && pnpm --filter @abdulmuiz44/clientpad-dashboard typecheck",
-    "test:core": "pnpm --filter @abdulmuiz44/clientpad-core typecheck",
-    "test:sdk": "pnpm --filter @abdulmuiz44/clientpad-sdk test",
-    "test:whatsapp": "pnpm --filter @abdulmuiz44/clientpad-whatsapp test",
-    "test:server": "pnpm --filter @abdulmuiz44/clientpad-server test",
-    "test:cloud": "pnpm --filter @abdulmuiz44/clientpad-cloud test",
-    "test:dashboard": "pnpm --filter @abdulmuiz44/clientpad-dashboard build",
-    "verify": "pnpm run typecheck && pnpm run test:sdk && pnpm run test:whatsapp && pnpm run test:server && pnpm run test:cloud && pnpm run test:dashboard"
+    "typecheck": "pnpm --filter @clientpad/core typecheck && pnpm --filter @clientpad/sdk typecheck && pnpm --filter @clientpad/whatsapp typecheck && pnpm --filter @clientpad/server typecheck && pnpm --filter @clientpad/cloud typecheck && pnpm --filter @clientpad/dashboard typecheck",
+    "test:core": "pnpm --filter @clientpad/core build",
+    "test:sdk": "pnpm --filter @clientpad/sdk test",
+    "test:whatsapp": "pnpm --filter @clientpad/whatsapp test",
+    "test:server": "pnpm --filter @clientpad/server test",
+    "test:cloud": "pnpm --filter @clientpad/cloud test",
+    "test:dashboard": "pnpm --filter @clientpad/dashboard build",
+    "check:deps": "node scripts/check-deps.mjs",
+    "check:examples": "node scripts/check-examples.mjs",
+    "check:packs": "node scripts/validate-packs.mjs --critical-only",
+    "ci": "pnpm run typecheck && pnpm run test:core && pnpm run test:sdk && pnpm run test:server && pnpm run check:deps && pnpm run check:examples",
+    "verify": "pnpm run typecheck && pnpm run test:sdk && pnpm run test:whatsapp && pnpm run test:server && pnpm run test:cloud && pnpm run test:dashboard && pnpm run check:deps && pnpm run check:examples"
   },
   "dependencies": {
     "pg": "^8.13.3"

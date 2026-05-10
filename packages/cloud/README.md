@@ -3,11 +3,11 @@
 Hosted control plane for ClientPad projects, plans, subscriptions, API keys, usage, and operational health.
 
 ```bash
-pnpm add @abdulmuiz44/clientpad-cloud
+pnpm add @clientpad/cloud
 ```
 
 ```ts
-import { createClientPadCloudHandler } from "@abdulmuiz44/clientpad-cloud";
+import { createClientPadCloudHandler } from "@clientpad/cloud";
 
 export const handler = createClientPadCloudHandler({
   databaseUrl: process.env.DATABASE_URL!,
@@ -16,7 +16,7 @@ export const handler = createClientPadCloudHandler({
 });
 ```
 
-The cloud handler is for your hosted ClientPad Cloud control plane. It is separate from the public API handler in `@abdulmuiz44/clientpad-server`.
+The cloud handler is for your hosted ClientPad Cloud control plane. It is separate from the public API handler in `@clientpad/server`.
 
 ## Routes
 

@@ -1,4 +1,4 @@
-import { ClientPad, type CreateLeadInput } from "@abdulmuiz44/clientpad-sdk";
+import { ClientPad, type CreateLeadInput } from "@clientpad/sdk";
 import { parseWhatsAppWebhook } from "./webhook.js";
 import { sendWhatsAppMessage } from "./messages.js";
 import { normalizeNigerianPhoneNumber } from "./index.js";

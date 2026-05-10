@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const criticalOnly = process.argv.includes("--critical-only");
 
-const RELEASE_CRITICAL = ["clientpad-core", "cli", "sdk", "server"];
+const RELEASE_CRITICAL = ["@clientpad/core", "cli", "sdk", "server"];
 const SECONDARY = criticalOnly ? [] : ["whatsapp", "cloud"];
 
 // Files that must NEVER appear in a published tarball
@@ -39,7 +39,7 @@ const FORBIDDEN_IN_TARBALL = [
 
 // Files that MUST be present in a published tarball
 const REQUIRED_IN_TARBALL = {
-  "clientpad-core": ["dist/index.js", "dist/index.d.ts", "README.md"],
+  "@clientpad/core": ["dist/index.js", "dist/index.d.ts", "README.md"],
   cli: ["bin/clientpad.mjs", "README.md"],
   sdk: ["dist/index.js", "dist/index.d.ts", "README.md"],
   server: ["dist/index.js", "dist/index.d.ts", "README.md"],

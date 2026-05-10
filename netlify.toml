@@ -1,5 +1,5 @@
 [build]
-  command = "pnpm --filter @abdulmuiz44/clientpad-dashboard build"
+  command = "npm install -g pnpm@9.12.0 && pnpm install --frozen-lockfile && pnpm --filter @clientpad/dashboard build"
   publish = "packages/dashboard/dist"
 
 [[redirects]]

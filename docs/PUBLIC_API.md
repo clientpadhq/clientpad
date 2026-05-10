@@ -17,11 +17,11 @@ API keys are workspace-scoped and permissioned with scopes. Raw keys are shown o
 Install the SDK in application code:
 
 ```bash
-pnpm add @abdulmuiz44/clientpad-sdk
+pnpm add @clientpad/sdk
 ```
 
 ```ts
-import { ClientPad } from "@abdulmuiz44/clientpad-sdk";
+import { ClientPad } from "@clientpad/sdk";
 
 const clientpad = new ClientPad({
   baseUrl: "https://example.com/api/public/v1",
@@ -31,14 +31,14 @@ const clientpad = new ClientPad({
 
 ## Server Handler
 
-Expose the public API from your own app with `@abdulmuiz44/clientpad-server`:
+Expose the public API from your own app with `@clientpad/server`:
 
 ```bash
-pnpm add @abdulmuiz44/clientpad-server
+pnpm add @clientpad/server
 ```
 
 ```ts
-import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
+import { createClientPadHandler } from "@clientpad/server";
 
 export const handler = createClientPadHandler({
   databaseUrl: process.env.DATABASE_URL!,

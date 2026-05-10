@@ -14,9 +14,9 @@
     "isolatedModules": true,
     "baseUrl": ".",
     "paths": {
-      "@abdulmuiz44/clientpad-sdk": ["../sdk/src/index.ts"],
-      "@abdulmuiz44/clientpad-sdk/*": ["../sdk/src/*"],
-      "@abdulmuiz44/clientpad-core/*": ["src/*"]
+      "@clientpad/sdk": ["../sdk/src/index.ts"],
+      "@clientpad/sdk/*": ["../sdk/src/*"],
+      "@clientpad/core/*": ["src/*"]
     }
   },
   "include": ["src/**/*.ts"],

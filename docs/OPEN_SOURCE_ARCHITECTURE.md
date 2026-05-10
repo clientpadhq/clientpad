@@ -81,7 +81,7 @@ Every public API request should resolve a workspace through the API key, then en
 
 1. Add PostgreSQL driver, migration tooling, and a database access layer.
 2. Keep SQL migrations in `db/migrations`.
-3. Provide reusable package migrations through `@abdulmuiz44/clientpad-cli`.
+3. Provide reusable package migrations through `@clientpad/cli`.
 4. Add app-owned users, sessions, and workspace membership checks.
 5. Add API key tables and middleware.
 6. Publish public APIs, OpenAPI specs, and SDK-ready contracts.

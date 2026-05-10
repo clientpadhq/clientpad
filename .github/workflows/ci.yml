@@ -1,0 +1,192 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────
+  # 1. Install & typecheck all packages
+  # ─────────────────────────────────────────────
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck all packages
+        run: npm run typecheck
+
+  # ─────────────────────────────────────────────
+  # 2. Tests for release-critical packages
+  # ─────────────────────────────────────────────
+  test-core:
+    name: Test / clientpad-core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build and typecheck core
+        run: pnpm --filter @clientpad/core build
+
+  test-sdk:
+    name: Test / clientpad-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build core (sdk dependency)
+        run: pnpm --filter @clientpad/core build
+      - name: Build and test sdk
+        run: pnpm --filter @clientpad/sdk test
+
+  test-server:
+    name: Test / clientpad-server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build dependencies
+        run: |
+          pnpm --filter @clientpad/core build
+          pnpm --filter @clientpad/sdk build
+          pnpm --filter @clientpad/whatsapp build
+      - name: Build and test server
+        run: pnpm --filter @clientpad/server test
+
+  # ─────────────────────────────────────────────
+  # 3. Tests for secondary packages
+  # ─────────────────────────────────────────────
+  test-whatsapp:
+    name: Test / clientpad-whatsapp
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build dependencies
+        run: |
+          pnpm --filter @clientpad/core build
+          pnpm --filter @clientpad/sdk build
+      - name: Build and test whatsapp
+        run: pnpm --filter @clientpad/whatsapp test
+
+  test-cloud:
+    name: Test / clientpad-cloud
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build dependencies
+        run: pnpm --filter @clientpad/core build
+      - name: Build and test cloud
+        run: pnpm --filter @clientpad/cloud test
+
+  # ─────────────────────────────────────────────
+  # 4. Dependency boundary guardrails
+  # ─────────────────────────────────────────────
+  dep-boundaries:
+    name: Dependency Boundaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check dependency boundaries
+        run: node scripts/check-deps.mjs
+
+  # ─────────────────────────────────────────────
+  # 5. Pack dry-run for release-critical packages
+  # ─────────────────────────────────────────────
+  pack-validate:
+    name: Pack Validation
+    runs-on: ubuntu-latest
+    needs: [typecheck, test-core, test-sdk, test-server]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build all release-critical packages
+        run: |
+          pnpm --filter @clientpad/core build
+          pnpm --filter @clientpad/sdk build
+          pnpm --filter @clientpad/whatsapp build
+          pnpm --filter @clientpad/server build
+          pnpm --filter @clientpad/cloud build
+
+      - name: Pack dry-run (release-critical only)
+        run: node scripts/validate-packs.mjs --critical-only
+
+  # ─────────────────────────────────────────────
+  # 6. Examples smoke check
+  # ─────────────────────────────────────────────
+  examples-smoke:
+    name: Examples Smoke Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate example files exist
+        run: node scripts/check-examples.mjs

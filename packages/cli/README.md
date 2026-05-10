@@ -5,7 +5,7 @@ Open-source infrastructure for business apps: PostgreSQL schema, migrations, wor
 Install globally:
 
 ```bash
-pnpm install -g @abdulmuiz44/clientpad-cli
+pnpm install -g @clientpad/cli
 ```
 
 Use:

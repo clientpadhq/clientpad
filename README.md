@@ -6,26 +6,26 @@ This repository ships installable packages instead of a hosted product with subs
 
 ## Packages
 
-- `@abdulmuiz44/clientpad-core`: shared TypeScript types and dependency-free protocol utilities.
-- `@abdulmuiz44/clientpad-cli`: local project setup, SQL migrations, and API key creation.
-- `@abdulmuiz44/clientpad-server`: fetch-standard public API handler for leads and clients.
-- `@abdulmuiz44/clientpad-sdk`: TypeScript SDK for consuming ClientPad public APIs from apps, workers, and scripts.
-- `@abdulmuiz44/clientpad-whatsapp`: WhatsApp automation, lead capture, booking flows, payments, and review prompts for service businesses.
-- `@abdulmuiz44/clientpad-cloud`: hosted control plane for projects, plans, subscriptions, usage, and API keys.
-- `@abdulmuiz44/clientpad-dashboard`: developer web dashboard for projects, API keys, usage, billing, and docs.
+- `@clientpad/core`: shared TypeScript types and dependency-free protocol utilities.
+- `@clientpad/cli`: local project setup, SQL migrations, and API key creation.
+- `@clientpad/server`: fetch-standard public API handler for leads and clients.
+- `@clientpad/sdk`: TypeScript SDK for consuming ClientPad public APIs from apps, workers, and scripts.
+- `@clientpad/whatsapp`: WhatsApp automation, lead capture, booking flows, payments, and review prompts for service businesses.
+- `@clientpad/cloud`: hosted control plane for projects, plans, subscriptions, usage, and API keys.
+- `@clientpad/dashboard`: developer web dashboard for projects, API keys, usage, billing, and docs.
 
 ## Install
 
 ```bash
-pnpm add @abdulmuiz44/clientpad-core @abdulmuiz44/clientpad-server @abdulmuiz44/clientpad-sdk
-pnpm add @abdulmuiz44/clientpad-cloud @abdulmuiz44/clientpad-dashboard
-pnpm add -D @abdulmuiz44/clientpad-cli
+pnpm add @clientpad/core @clientpad/server @clientpad/sdk
+pnpm add @clientpad/cloud @clientpad/dashboard
+pnpm add -D @clientpad/cli
 ```
 
 For a global CLI install:
 
 ```bash
-pnpm install -g @abdulmuiz44/clientpad-cli
+pnpm install -g @clientpad/cli
 clientpad help
 ```
 
@@ -47,7 +47,7 @@ clientpad api-key create --workspace-id <workspace-id> --name "Local app"
 Use the SDK from an app:
 
 ```ts
-import { ClientPad } from "@abdulmuiz44/clientpad-sdk";
+import { ClientPad } from "@clientpad/sdk";
 
 const clientpad = new ClientPad({
   baseUrl: "https://example.com/api/public/v1",
@@ -64,7 +64,7 @@ await clientpad.leads.create({
 Expose the public API from any fetch-compatible server runtime:
 
 ```ts
-import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
+import { createClientPadHandler } from "@clientpad/server";
 
 export const handler = createClientPadHandler({
   databaseUrl: process.env.DATABASE_URL!,
@@ -92,8 +92,8 @@ clientpad whatsapp:flows salon
 Wire the WhatsApp webhook into any fetch-compatible runtime alongside the public ClientPad API:
 
 ```ts
-import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
-import { createWhatsAppWebhookHandler } from "@abdulmuiz44/clientpad-whatsapp";
+import { createClientPadHandler } from "@clientpad/server";
+import { createWhatsAppWebhookHandler } from "@clientpad/whatsapp";
 
 const clientpad = createClientPadHandler({
   databaseUrl: process.env.DATABASE_URL!,
@@ -188,6 +188,36 @@ npm run build
 ```
 
 `npm run build` packs all publishable packages into `dist/`.
+
+### CI parity
+
+Run the same checks CI runs, locally:
+
+```bash
+# Full CI-equivalent check (typecheck + tests + dep boundaries + examples)
+npm run ci
+
+# Extended verify (includes secondary packages)
+npm run verify
+
+# Individual checks
+npm run check:deps       # dependency boundary scan
+npm run check:examples   # docs and examples smoke check
+npm run check:packs      # pack dry-run for release-critical packages
+```
+
+### Release-critical packages
+
+The following packages are enforced in CI and must pass all checks before publishing:
+
+- `@clientpad/core`
+- `@clientpad/cli`
+- `@clientpad/sdk`
+- `@clientpad/server`
+
+Secondary packages (`whatsapp`, `cloud`, `dashboard`) are validated in CI but are not hard-blocked on the 0.1.0 release path.
+
+See [docs/PUBLISHING.md](docs/PUBLISHING.md) for the full release safety workflow.
 
 ## Documentation
 

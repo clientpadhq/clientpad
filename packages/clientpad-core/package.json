@@ -1,5 +1,5 @@
 {
-  "name": "@abdulmuiz44/clientpad-core",
+  "name": "@clientpad/core",
   "version": "0.2.0",
   "description": "Shared ClientPad types and dependency-free protocol utilities.",
   "license": "MIT",
@@ -36,7 +36,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Abdulmuiz44/ClientPad.git",
+    "url": "git+https://github.com/clientpadhq/clientpad.git",
     "directory": "packages/clientpad-core"
   },
   "engines": {

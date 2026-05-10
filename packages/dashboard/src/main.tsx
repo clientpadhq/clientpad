@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { ClientPad, type WhatsAppConversation, type WhatsAppMessage, type WhatsAppSuggestion } from "@abdulmuiz44/clientpad-sdk";
+import { ClientPad, type WhatsAppConversation, type WhatsAppMessage, type WhatsAppSuggestion } from "@clientpad/sdk";
 import {
   Bell,
   BookOpen,
@@ -851,7 +851,7 @@ function SettingsPage({ session, publicApiKey: initialKey, onSave }: { session: 
       <Panel className="wide-detail">
         <h2>Deployment checklist</h2>
         <ul className="plan-list">
-          <li>Mount `@abdulmuiz44/clientpad-cloud` at `/api/cloud/v1`.</li>
+          <li>Mount `@clientpad/cloud` at `/api/cloud/v1`.</li>
           <li>Set `CLIENTPAD_CLOUD_ADMIN_TOKEN` for operator access.</li>
           <li>Deploy this dashboard as a static app.</li>
           <li>Use hosted API keys for paid gateway access.</li>
@@ -1637,7 +1637,7 @@ function quickstartSnippet(language: QuickstartLanguage, selectedProject?: Proje
   const snippets: Record<QuickstartLanguage, string> = {
     curl: `curl https://api.clientpad.cloud/v1/resources \\\n  -H "Authorization: Bearer cp_live_your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d '{"name":"${resource}"}'`,
     python: `import requests\n\nrequests.post(\n  "https://api.clientpad.cloud/v1/resources",\n  headers={"Authorization": "Bearer cp_live_your_api_key_here"},\n  json={"name": "${resource}"},\n)`,
-    node: `import { ClientPad } from "@abdulmuiz44/clientpad-sdk";\n\nconst clientpad = new ClientPad({\n  baseUrl: "https://api.clientpad.cloud/v1",\n  apiKey: process.env.CLIENTPAD_API_KEY!,\n});\n\nawait clientpad.leads.create({ name: "${resource}" });`,
+    node: `import { ClientPad } from "@clientpad/sdk";\n\nconst clientpad = new ClientPad({\n  baseUrl: "https://api.clientpad.cloud/v1",\n  apiKey: process.env.CLIENTPAD_API_KEY!,\n});\n\nawait clientpad.leads.create({ name: "${resource}" });`,
     go: `req, _ := http.NewRequest("POST", "https://api.clientpad.cloud/v1/resources", body)\nreq.Header.Set("Authorization", "Bearer cp_live_your_api_key_here")`,
     ruby: `Net::HTTP.post(\n  URI("https://api.clientpad.cloud/v1/resources"),\n  { name: "${resource}" }.to_json,\n  "Authorization" => "Bearer cp_live_your_api_key_here"\n)`,
   };

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { createClientPadHandler } from "@abdulmuiz44/clientpad-server";
+import { createClientPadHandler } from "@clientpad/server";
 
 const app = new Hono();
 const clientpad = createClientPadHandler({
