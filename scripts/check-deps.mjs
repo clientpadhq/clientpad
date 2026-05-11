@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // Packages to enforce strict boundary checks on
-const RELEASE_CRITICAL = ["@clientpad/core", "cli", "sdk", "server"];
+const RELEASE_CRITICAL = ["clientpad-core", "cli", "sdk", "server"];
 
 // Secondary packages — validated but not hard-blocked on CI
 const SECONDARY = ["whatsapp", "cloud", "dashboard"];
@@ -70,7 +70,7 @@ async function checkPackage(packageName, isCritical) {
 
   for (const dep of depNames) {
     // Skip workspace deps
-    if (dep.startsWith("@clientpadhq/")) continue;
+    if (dep.startsWith("@clientpad/")) continue;
 
     // Check if this dep is in the allowed exceptions for this package
     const isException = exceptions.some((rx) => rx.test(dep));

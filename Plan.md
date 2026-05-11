@@ -8,7 +8,7 @@ ClientPad is being built as open-source infrastructure that businesses and devel
 - PostgreSQL is the default database layer.
 - API keys are the gateway for integrations, automations, SDK access, and third-party apps.
 - Packages should be dependency-light and usable outside any single web framework.
-- The repository should be ready for GitHub releases and npm publishing under the `@clientpadhq` scope.
+- The repository should be ready for GitHub releases and npm publishing under the `@clientpad` scope.
 
 ## Current Package Surface
 
