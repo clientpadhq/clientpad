@@ -1,4 +1,4 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+﻿import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { Pool } from "pg";
 import { verifyPaymentWebhook, type PaymentProvider, type VerifiedPaymentWebhook } from "@clientpad/whatsapp";
 import {
@@ -332,13 +332,9 @@ export class ClientPadServer {
       data: {
         suggestions: row.suggestions ?? [],
         safety: row.safety ?? {},
-        },
-        });
-        }
-
-        return jsonError("Conversation not found.", 404);
-        }
-
+      },
+    });
+  }
   private async replyToWhatsAppConversation(request: Request, conversationId: string) {
     const context = await this.requireApiKey(request, ["whatsapp:write"]);
     if (context instanceof Response) return context;

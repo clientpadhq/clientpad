@@ -65,7 +65,7 @@ npm run ci
 
 This validates typecheck, tests, dependency boundaries, and examples in one command.
 
-Create the npm organization or scope owner for `@clientpadhq` before first publish.
+Create the npm organization or scope owner for `@clientpad` before first publish.
 
 ## SDK Package
 

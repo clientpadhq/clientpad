@@ -1,9 +1,9 @@
 # Publishing ClientPad
 
 > [!NOTE]
-> **Migration Note:** The canonical npm scope for ClientPad packages has been moved from `@abdulmuiz44/*` to `@clientpadhq/*`.
+> **Migration Note:** The canonical npm scope for ClientPad packages has been moved from `@abdulmuiz44/*` to `@clientpad/*`.
 
-ClientPad's npm packages are published under the `@clientpadhq` scope.
+ClientPad's npm packages are published under the `@clientpad` scope.
 
 ## Release-Critical Packages (0.1.0)
 
