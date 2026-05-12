@@ -1,0 +1,25 @@
+{
+  "name": "@clientpad/marketing",
+  "version": "0.2.0",
+  "description": "ClientPad public marketing and docs site with Dualmark AEO infrastructure for AI answer engines.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "node --loader ts-node/esm src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@dualmark/core": ">=0.5.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.11",
+    "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

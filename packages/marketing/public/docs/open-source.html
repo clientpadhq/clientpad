@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open-Source Architecture — ClientPad</title>
+<meta name="description" content="ClientPad open-source architecture: PostgreSQL-backed, API-key-gated, with TypeScript packages for developers to run, inspect, and extend.">
+<link rel="alternate" type="text/markdown" href="/docs/open-source.md">
+<style>
+  :root { --bg: #fafbfc; --fg: #1a1a2e; --accent: #1f6feb; --muted: #6b7280; --card: #fff; --border: #e5e7eb; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.7; }
+  nav { background: var(--fg); padding: 0.75rem 1.5rem; }
+  nav a { color: #fff; text-decoration: none; font-weight: 500; }
+  main { max-width: 760px; margin: 0 auto; padding: 3rem 1.5rem; }
+  h1 { font-size: 2rem; margin-bottom: 1rem; }
+  h2 { font-size: 1.35rem; margin: 2rem 0 0.75rem; }
+  p, li { color: var(--muted); margin-bottom: 0.75rem; }
+  ul { padding-left: 1.5rem; margin-bottom: 1rem; }
+  pre { background: var(--fg); color: #e5e7eb; padding: 1rem 1.25rem; border-radius: 0.5rem; overflow-x: auto; margin: 1rem 0; font-size: 0.9rem; }
+  code { background: #f3f4f6; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-size: 0.9em; }
+  pre code { background: none; padding: 0; }
+  a { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  th { font-weight: 600; color: var(--fg); }
+  td { color: var(--muted); }
+</style>
+</head>
+<body>
+<nav><a href="/">&larr; ClientPad</a></nav>
+<main>
+<h1>Open-Source Architecture</h1>
+<p>ClientPad is free, open-source, self-hostable CRM infrastructure. The architecture avoids proprietary platform dependencies and is designed for developers to run, inspect, modify, and extend.</p>
+
+<h2>Database</h2>
+<ul>
+<li>PostgreSQL is the primary database</li>
+<li>Local development uses PostgreSQL via Docker Compose</li>
+<li>No proprietary database platform dependency</li>
+<li>Migrations live in <code>db/migrations</code></li>
+<li>Authorization is enforced server-side</li>
+</ul>
+
+<h2>Authentication</h2>
+<ul>
+<li>Users stored in the application database</li>
+<li>Sessions issued by the application</li>
+<li>Password hashing via Argon2id</li>
+<li>Magic link support through configurable email providers</li>
+<li>Role-based workspace access: owner, admin, staff</li>
+</ul>
+
+<h2>API Key Gateway</h2>
+<pre><code>Authorization: Bearer cp_live_&lt;prefix&gt;_&lt;secret&gt;</code></pre>
+<p>Keys are created via CLI or dashboard and are shown only once.</p>
+
+<h2>Package Architecture</h2>
+<table>
+<tr><th>Package</th><th>Purpose</th></tr>
+<tr><td><code>@clientpad/core</code></td><td>Shared TypeScript types and protocol utilities</td></tr>
+<tr><td><code>@clientpad/cli</code></td><td>Project setup, migrations, API key management</td></tr>
+<tr><td><code>@clientpad/server</code></td><td>Public API handler for leads and clients</td></tr>
+<tr><td><code>@clientpad/sdk</code></td><td>TypeScript SDK for consuming ClientPad APIs</td></tr>
+<tr><td><code>@clientpad/whatsapp</code></td><td>WhatsApp automation and messaging</td></tr>
+<tr><td><code>@clientpad/cloud</code></td><td>Hosted control plane for projects and billing</td></tr>
+<tr><td><code>@clientpad/dashboard</code></td><td>Developer web dashboard</td></tr>
+</table>
+
+<h2>Monetization</h2>
+<p>ClientPad is MIT-licensed and fully open source. Self-hosted API keys are free and unlimited. Revenue comes from the optional ClientPad Cloud hosted gateway.</p>
+
+<p><a href="/">&larr; Back to ClientPad</a></p>
+</main>
+</body>
+</html>

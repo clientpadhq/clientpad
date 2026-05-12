@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Public API — ClientPad</title>
+<meta name="description" content="ClientPad versioned REST API for developers. Manage leads, clients, and usage with bearer token auth and the TypeScript SDK.">
+<link rel="alternate" type="text/markdown" href="/docs/public-api.md">
+<style>
+  :root { --bg: #fafbfc; --fg: #1a1a2e; --accent: #1f6feb; --muted: #6b7280; --card: #fff; --border: #e5e7eb; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.7; }
+  nav { background: var(--fg); padding: 0.75rem 1.5rem; }
+  nav a { color: #fff; text-decoration: none; font-weight: 500; }
+  main { max-width: 760px; margin: 0 auto; padding: 3rem 1.5rem; }
+  h1 { font-size: 2rem; margin-bottom: 1rem; }
+  h2 { font-size: 1.35rem; margin: 2rem 0 0.75rem; }
+  h3 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
+  p, li { color: var(--muted); margin-bottom: 0.75rem; }
+  ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+  pre { background: var(--fg); color: #e5e7eb; padding: 1rem 1.25rem; border-radius: 0.5rem; overflow-x: auto; margin: 1rem 0; font-size: 0.9rem; }
+  code { background: #f3f4f6; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-size: 0.9em; }
+  pre code { background: none; padding: 0; }
+  a { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+  th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+  th { font-weight: 600; color: var(--fg); }
+  td { color: var(--muted); }
+</style>
+</head>
+<body>
+<nav><a href="/">&larr; ClientPad</a></nav>
+<main>
+<h1>Public API</h1>
+<p>ClientPad exposes a versioned REST API for developers and integrations. All endpoints are scoped to a workspace and authenticated with API keys.</p>
+
+<h2>Authentication</h2>
+<pre><code>Authorization: Bearer cp_live_&lt;public_prefix&gt;_&lt;secret&gt;</code></pre>
+<p>API keys are workspace-scoped and permissioned. Raw keys are shown only once when created.</p>
+
+<h2>Endpoints</h2>
+
+<h3>Leads</h3>
+<ul>
+<li><code>GET /api/public/v1/leads</code> — List leads with pagination</li>
+<li><code>POST /api/public/v1/leads</code> — Create a lead</li>
+</ul>
+
+<h3>Clients</h3>
+<ul>
+<li><code>GET /api/public/v1/clients</code> — List clients with pagination</li>
+<li><code>POST /api/public/v1/clients</code> — Create a client</li>
+</ul>
+
+<h3>Usage</h3>
+<ul>
+<li><code>GET /api/public/v1/usage</code> — Retrieve API key usage stats</li>
+</ul>
+
+<p>List responses: <code>{ data: T[], pagination: { limit, offset } }</code><br>Create responses: <code>{ data: { id: string } }</code></p>
+
+<h2>TypeScript SDK</h2>
+<pre><code>pnpm add @clientpad/sdk</code></pre>
+<pre><code>import { ClientPad } from "@clientpad/sdk";
+
+const clientpad = new ClientPad({
+  baseUrl: "https://example.com/api/public/v1",
+  apiKey: process.env.CLIENTPAD_API_KEY!,
+});
+
+const { data: leads } = await clientpad.leads.list({ limit: 20 });
+const { data: { id } } = await clientpad.leads.create({
+  name: "Ada Customer",
+  phone: "+234...",
+  source: "Website",
+});
+const usage = await clientpad.usage.retrieve();</code></pre>
+
+<h2>Rate Limits</h2>
+<p>Rate limits are configured per API key. Self-hosted deployments can leave limits empty for unlimited local usage. ClientPad Cloud keys have plan-based quotas.</p>
+
+<p><a href="/">&larr; Back to ClientPad</a></p>
+</main>
+</body>
+</html>
