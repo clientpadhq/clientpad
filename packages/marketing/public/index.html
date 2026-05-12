@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClientPad — Open-Source WhatsApp-First CRM Infrastructure</title>
+<meta name="description" content="ClientPad is open-source WhatsApp-first CRM infrastructure for service businesses and developers. Turns WhatsApp conversations into leads, bookings, payments, follow-ups, reviews, and client pipelines.">
+<link rel="alternate" type="text/markdown" href="/index.md">
+<style>
+  :root { --bg: #fafbfc; --fg: #1a1a2e; --accent: #1f6feb; --muted: #6b7280; --card: #fff; --border: #e5e7eb; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; }
+  header { background: var(--fg); color: #fff; padding: 3rem 1.5rem; text-align: center; }
+  header h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.75rem; }
+  header p { font-size: 1.15rem; opacity: 0.85; max-width: 640px; margin: 0 auto; }
+  header .badge { display: inline-block; background: var(--accent); color: #fff; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; margin-top: 1rem; }
+  main { max-width: 960px; margin: 0 auto; padding: 3rem 1.5rem; }
+  h2 { font-size: 1.5rem; margin-bottom: 1rem; color: var(--fg); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.5rem; }
+  .card h3 { font-size: 1.1rem; margin-bottom: 0.5rem; }
+  .card p, .card li { color: var(--muted); font-size: 0.95rem; }
+  .card ul { padding-left: 1.25rem; margin-top: 0.5rem; }
+  .cta { text-align: center; margin-top: 2rem; }
+  .cta a { display: inline-block; background: var(--accent); color: #fff; padding: 0.75rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; font-size: 1rem; }
+  footer { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--border); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>ClientPad</h1>
+  <p>Open-source WhatsApp-first CRM infrastructure for service businesses and developers building client workflows.</p>
+  <span class="badge">MIT Licensed</span>
+</header>
+<main>
+  <section>
+    <h2>Turn WhatsApp into your business backend</h2>
+    <p style="color:var(--muted);max-width:640px;margin-bottom:2rem;">ClientPad converts everyday WhatsApp conversations into structured CRM activity — leads, bookings, payments, follow-ups, reviews, and client pipelines — without locking you into a hosted platform.</p>
+  </section>
+
+  <h2>What ClientPad handles</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Lead Capture</h3>
+      <p>WhatsApp messages automatically create leads with contact info, source, and intent detection.</p>
+    </div>
+    <div class="card">
+      <h3>Service Bookings</h3>
+      <p>Clients can request and confirm bookings through WhatsApp conversations. Pipeline stages track every job from lead to completed.</p>
+    </div>
+    <div class="card">
+      <h3>Provider-Based Payments</h3>
+      <p>Payment links and confirmations through supported providers. Track paid status directly in the client pipeline.</p>
+    </div>
+    <div class="card">
+      <h3>Smart Follow-Ups</h3>
+      <p>Automated follow-up prompts and review requests keep clients engaged after service completion.</p>
+    </div>
+    <div class="card">
+      <h3>Client Pipeline</h3>
+      <p>Visual pipeline from New Lead → Quoted → Booked → In Progress → Completed → Paid → Review Requested.</p>
+    </div>
+    <div class="card">
+      <h3>Team Inbox</h3>
+      <p>Shared WhatsApp inbox with assignment, AI-suggested replies, and owner-approval workflows.</p>
+    </div>
+  </div>
+
+  <h2>Built for developers</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>REST API</h3>
+      <p>Versioned public API at <code>/api/public/v1</code>. Manage leads, clients, and usage with bearer token auth.</p>
+    </div>
+    <div class="card">
+      <h3>TypeScript SDK</h3>
+      <p><code>@clientpad/sdk</code> — typed client with auto-complete. Works in Node.js, Deno, Bun, and edge runtimes.</p>
+    </div>
+    <div class="card">
+      <h3>CLI Tool</h3>
+      <p><code>clientpad init</code>, <code>migrate</code>, <code>api-key create</code>, and WhatsApp project scaffolding in one command.</p>
+    </div>
+    <div class="card">
+      <h3>Bring Your Own DB</h3>
+      <p>PostgreSQL-backed. No vendor lock-in. Run migrations locally and deploy anywhere.</p>
+    </div>
+  </div>
+
+  <h2>Optional Cloud</h2>
+  <div class="card" style="max-width:640px;">
+    <h3>ClientPad Cloud</h3>
+    <p>Hosted PostgreSQL, managed API endpoint, usage analytics, rate limiting, and a developer dashboard. Self-hosted API keys remain free and unlimited.</p>
+  </div>
+
+  <div class="cta">
+    <a href="https://github.com/clientpadhq/clientpad">View on GitHub</a>
+    <p style="margin-top:1rem;color:var(--muted);">pnpm add @clientpad/core @clientpad/server @clientpad/sdk</p>
+  </div>
+</main>
+<footer>
+  <p>ClientPad · Open Source · <a href="/docs/whatsapp-magic">WhatsApp Magic</a> · <a href="/docs/public-api">API Docs</a> · <a href="https://github.com/clientpadhq/clientpad">GitHub</a></p>
+</footer>
+</body>
+</html>

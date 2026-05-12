@@ -9,10 +9,13 @@
     "cli": "node packages/cli/bin/clientpad.mjs",
     "dev": "node packages/cli/bin/clientpad.mjs help",
     "dashboard:dev": "pnpm --filter @clientpad/dashboard dev",
+    "marketing:dev": "pnpm --filter @clientpad/marketing dev",
+    "marketing:build": "pnpm --filter @clientpad/marketing build",
+    "aeo:verify": "pnpm dualmark verify http://localhost:3099",
     "build": "node scripts/pack-packages.mjs",
     "api-key:create": "node packages/cli/bin/clientpad.mjs api-key create",
     "db:migrate": "node packages/cli/bin/clientpad.mjs migrate",
-    "typecheck": "pnpm --filter @clientpad/core typecheck && pnpm --filter @clientpad/sdk typecheck && pnpm --filter @clientpad/whatsapp typecheck && pnpm --filter @clientpad/server typecheck && pnpm --filter @clientpad/cloud typecheck && pnpm --filter @clientpad/dashboard typecheck",
+    "typecheck": "pnpm --filter @clientpad/core typecheck && pnpm --filter @clientpad/sdk typecheck && pnpm --filter @clientpad/whatsapp typecheck && pnpm --filter @clientpad/server typecheck && pnpm --filter @clientpad/cloud typecheck && pnpm --filter @clientpad/dashboard typecheck && pnpm --filter @clientpad/marketing typecheck",
     "test:core": "pnpm --filter @clientpad/core build",
     "test:sdk": "pnpm --filter @clientpad/sdk test",
     "test:whatsapp": "pnpm --filter @clientpad/whatsapp test",
@@ -26,6 +29,8 @@
     "verify": "pnpm run typecheck && pnpm run test:sdk && pnpm run test:whatsapp && pnpm run test:server && pnpm run test:cloud && pnpm run test:dashboard && pnpm run check:deps && pnpm run check:examples"
   },
   "dependencies": {
+    "@dualmark/cli": "^0.5.2",
+    "@dualmark/core": "^0.5.2",
     "pg": "^8.13.3"
   },
   "devDependencies": {
