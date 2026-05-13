@@ -2,6 +2,19 @@
 
 Installable developer and operations web interface for ClientPad Cloud. The dashboard now includes PWA support, WhatsApp onboarding, a service pipeline, phone/name client search, team inbox, revenue reporting, usage, billing, docs, and settings.
 
+The dashboard has two entry modes:
+
+- **Preview mode** uses sample data so operators can explore the UI without connecting a live Cloud API.
+- **Live mode** connects to a real ClientPad Cloud endpoint with an operator token and a workspace public API key.
+
+On first run, the dashboard highlights the activation steps for:
+
+1. Connecting the Cloud API
+2. Selecting or creating a workspace project
+3. Issuing a public API key
+4. Connecting WhatsApp
+5. Getting the first live lead or conversation
+
 ```bash
 pnpm add @clientpad/dashboard
 ```
@@ -23,6 +36,8 @@ http://localhost:3000/api/cloud/v1
 
 The dashboard expects the Cloud API health endpoint at `/health` and uses `CLIENTPAD_CLOUD_ADMIN_TOKEN` as the operator login token.
 
+Preview mode does not require the Cloud API URL or admin token. Live mode should only be used by operators who manage the ClientPad Cloud control plane.
+
 Useful checks:
 
 ```bash
@@ -42,9 +57,17 @@ pnpm --filter @clientpad/dashboard preview
 2. Serve `packages/dashboard/dist` from any static host, CDN, or container web server.
 3. Mount `@clientpad/cloud` behind HTTPS at `/api/cloud/v1` or another public URL.
 4. Set `CLIENTPAD_CLOUD_ADMIN_TOKEN` in the Cloud API environment and share it only with operators.
-5. Configure your reverse proxy for SPA fallback so unknown dashboard paths return `index.html`.
-6. Keep `/manifest.webmanifest`, `/sw.js`, and `/offline.html` cacheable so Android users can install the app and load the offline shell.
-7. For WhatsApp webhooks, point Meta to the generated dashboard webhook URL shown on **Connect WhatsApp** and use the same verify token in your backend webhook handler.
+5. Add a workspace public API key in the dashboard to unlock live inbox and pipeline data.
+6. Configure your reverse proxy for SPA fallback so unknown dashboard paths return `index.html`.
+7. Keep `/manifest.webmanifest`, `/sw.js`, and `/offline.html` cacheable so Android users can install the app and load the offline shell.
+8. For WhatsApp webhooks, point Meta to the generated dashboard webhook URL shown on **Connect WhatsApp** and use the same verify token in your backend webhook handler.
+
+### Operational states
+
+- **Preview mode** means the dashboard is showing simulated data.
+- **Live mode** means the dashboard is connected to a real Cloud API.
+- **Public API key missing** means inbox and pipeline screens will stay in setup mode.
+- **WhatsApp not connected** means the dashboard can show setup steps, but live conversations will not appear until Meta webhooks are configured.
 
 ## Screens
 

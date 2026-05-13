@@ -41,11 +41,20 @@ import {
 } from "lucide-react";
 import "./styles.css";
 
+type ConnectionMode = "preview" | "live";
+
 type Session = {
   baseUrl: string;
   adminToken: string;
   publicApiKey?: string;
   demo?: boolean;
+  mode?: ConnectionMode;
+};
+
+type CloudHealth = {
+  status: "ok" | "degraded" | "error";
+  service: string;
+  time: string;
 };
 
 type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "docs" | "settings";
@@ -145,6 +154,7 @@ function App() {
 }
 
 function Login({ onLogin }: { onLogin: (session: Session) => void }) {
+  const [mode, setMode] = useState<ConnectionMode>("preview");
   const [baseUrl, setBaseUrl] = useState("http://localhost:3000/api/cloud/v1");
   const [adminToken, setAdminToken] = useState("");
   const [error, setError] = useState("");
@@ -152,11 +162,19 @@ function Login({ onLogin }: { onLogin: (session: Session) => void }) {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
+
+    if (mode === "preview") {
+      const next = { baseUrl: "demo", adminToken: "demo", demo: true, mode: "preview" as const };
+      localStorage.setItem(sessionKey, JSON.stringify(next));
+      onLogin(next);
+      return;
+    }
+
     const normalized = baseUrl.replace(/\/+$/, "");
     try {
       const response = await fetch(`${normalized}/health`);
       if (!response.ok) throw new Error("Cloud API health check failed.");
-      const next = { baseUrl: normalized, adminToken };
+      const next = { baseUrl: normalized, adminToken, mode: "live" as const };
       localStorage.setItem(sessionKey, JSON.stringify(next));
       onLogin(next);
     } catch (err) {
@@ -164,46 +182,59 @@ function Login({ onLogin }: { onLogin: (session: Session) => void }) {
     }
   }
 
-  function preview() {
-    const next = { baseUrl: "demo", adminToken: "demo", demo: true };
-    localStorage.setItem(sessionKey, JSON.stringify(next));
-    onLogin(next);
-  }
-
   return (
     <main className="login-shell">
       <section className="login-panel">
         <Logo />
-        <h1>ClientPad Cloud</h1>
-        <p>Sign in to manage projects, API keys, usage, billing, and developer docs.</p>
+        <div className="mode-switch">
+          {(["preview", "live"] as ConnectionMode[]).map((item) => (
+            <button key={item} type="button" className={mode === item ? "selected" : ""} onClick={() => setMode(item)}>
+              {item === "preview" ? "Preview" : "Live"}
+            </button>
+          ))}
+        </div>
+        <h1>{mode === "preview" ? "Preview workspace" : "ClientPad Cloud"}</h1>
+        <p>
+          {mode === "preview"
+            ? "Open a sample workspace to understand the dashboard layout before connecting a real Cloud API."
+            : "Connect the operator dashboard to a live Cloud API to manage projects, keys, usage, billing, and WhatsApp activity."}
+        </p>
         <form onSubmit={submit} className="login-form">
-          <label>
-            Cloud API URL
-            <input value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} />
-          </label>
-          <label>
-            Admin token
-            <input
-              value={adminToken}
-              type="password"
-              autoComplete="current-password"
-              onChange={(event) => setAdminToken(event.target.value)}
-              placeholder="CLIENTPAD_CLOUD_ADMIN_TOKEN"
-            />
-          </label>
+          {mode === "live" ? (
+            <>
+              <label>
+                Cloud API URL
+                <input value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} />
+              </label>
+              <label>
+                Operator token
+                <input
+                  value={adminToken}
+                  type="password"
+                  autoComplete="current-password"
+                  onChange={(event) => setAdminToken(event.target.value)}
+                  placeholder="CLIENTPAD_CLOUD_ADMIN_TOKEN"
+                />
+              </label>
+            </>
+          ) : (
+            <div className="preview-note">
+              Preview mode uses generated sample data, no Cloud API credentials, and no live WhatsApp traffic.
+            </div>
+          )}
           {error ? <div className="form-error">{error}</div> : null}
           <button className="button primary" type="submit">
             <ShieldCheck size={16} />
-            Open dashboard
-          </button>
-          <button className="button secondary" type="button" onClick={preview}>
-            <LayoutDashboard size={16} />
-            Preview dashboard
+            {mode === "preview" ? "Open preview dashboard" : "Open live dashboard"}
           </button>
         </form>
       </section>
       <aside className="login-aside">
         <div className="preview-card">
+          <div className="preview-card-head">
+            <span>{mode === "preview" ? "Sample data" : "Live operator view"}</span>
+            <strong>{mode === "preview" ? "Safe to explore" : "Connected to a real Cloud API"}</strong>
+          </div>
           <div className="mini-toolbar" />
           <div className="mini-chart" />
           <div className="mini-rows" />
@@ -215,6 +246,7 @@ function Login({ onLogin }: { onLogin: (session: Session) => void }) {
 
 function Dashboard({ session, onLogout }: { session: Session; onLogout: () => void }) {
   const api = useMemo(() => new CloudApi(session), [session]);
+  const mode = session.mode ?? (session.demo ? "preview" : "live");
   const [page, setPage] = useState<Page>("overview");
   const [plans, setPlans] = useState<Plan[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -230,20 +262,24 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
   const [createdKey, setCreatedKey] = useState<ApiKeyResult | null>(null);
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
+  const [health, setHealth] = useState<CloudHealth | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
   async function refresh(workspaceOverride?: string) {
     setLoading(true);
     try {
-      const [planData, projectData] = await Promise.all([api.plans(), api.projects()]);
+      const [planData, projectData, healthData] = await Promise.all([api.plans(), api.projects(), api.health()]);
       const workspace = workspaceOverride || selectedWorkspace || projectData[0]?.workspace_id || "";
       setPlans(planData);
       setProjects(projectData);
       setSelectedWorkspace(workspace);
+      setHealth(healthData);
       if (workspace) {
         const usageData = await api.usage(workspace);
         setUsage(usageData);
         setKeys(toKeyRecords(usageData, projectData));
       }
+      setLastSyncedAt(new Date().toISOString());
     } finally {
       setLoading(false);
     }
@@ -309,9 +345,21 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
           onWorkspaceChange={selectWorkspace}
           query={query}
           setQuery={setQuery}
+          mode={mode}
+          health={health}
+          lastSyncedAt={lastSyncedAt}
           onLogout={onLogout}
         />
         <section className="content">
+          <StatusBanner
+            mode={mode}
+            health={health}
+            hasPublicApiKey={Boolean(publicApiKey.trim())}
+            projectCount={projects.length}
+            onGoToConnect={() => setPage("connect")}
+            onGoToProjects={() => setPage("projects")}
+            onGoToKeys={() => setPage("keys")}
+          />
           <PageHeader
             title={titleForPage(page)}
             subtitle={subtitleForPage(page, selectedProject)}
@@ -323,10 +371,24 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
           {notice ? <Notice message={notice} onDismiss={() => setNotice("")} /> : null}
           {createdKey ? <NewKeyBanner apiKey={createdKey.key} onDismiss={() => setCreatedKey(null)} /> : null}
 
-          {page === "connect" && <ConnectWhatsApp onCopy={(text) => copyText(text, setNotice)} />}
-          {page === "pipeline" && <PipelineScreen clients={filterClients(demoClients, query)} />}
+          {page === "connect" && (
+            <ConnectWhatsApp
+              mode={mode}
+              hasPublicApiKey={Boolean(publicApiKey.trim())}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
+          {page === "pipeline" && <PipelineScreen clients={filterClients(demoClients, query)} mode={mode} />}
           {page === "clients" && <ClientSearch clients={filterClients(demoClients, query)} query={query} setQuery={setQuery} />}
-          {page === "inbox" && <TeamInbox session={session} publicApiKey={publicApiKey} />}
+          {page === "inbox" && (
+            <TeamInbox
+              session={session}
+              publicApiKey={publicApiKey}
+              mode={mode}
+              onGoToSettings={() => setPage("settings")}
+              onGoToKeys={() => setPage("keys")}
+            />
+          )}
           {page === "revenue" && <RevenueDashboard />}
 
           {page === "overview" && (
@@ -342,6 +404,9 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
               quickstartLanguage={quickstartLanguage}
               setQuickstartLanguage={setQuickstartLanguage}
               setPage={setPage}
+              mode={mode}
+              health={health}
+              hasPublicApiKey={Boolean(publicApiKey.trim())}
             />
           )}
           {page === "projects" && <Projects projects={filteredProjects} onCreate={createProject} setPage={setPage} />}
@@ -365,10 +430,17 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
               onCopy={(text) => copyText(text, setNotice)}
             />
           )}
-          {page === "settings" && <SettingsPage session={session} publicApiKey={publicApiKey} onSave={(url, key) => {
-            setNotice(`Saved settings.`);
-            updatePublicApiKey(key);
-          }} />}
+          {page === "settings" && (
+            <SettingsPage
+              session={session}
+              publicApiKey={publicApiKey}
+              mode={mode}
+              onSave={(url, key) => {
+                setNotice(`Saved settings.`);
+                updatePublicApiKey(key);
+              }}
+            />
+          )}
         </section>
       </main>
     </div>
@@ -432,6 +504,9 @@ function Topbar({
   onWorkspaceChange,
   query,
   setQuery,
+  mode,
+  health,
+  lastSyncedAt,
   onLogout,
 }: {
   projects: Project[];
@@ -439,6 +514,9 @@ function Topbar({
   onWorkspaceChange: (workspaceId: string) => void;
   query: string;
   setQuery: (query: string) => void;
+  mode: ConnectionMode;
+  health: CloudHealth | null;
+  lastSyncedAt: string | null;
   onLogout: () => void;
 }) {
   return (
@@ -448,6 +526,7 @@ function Topbar({
         <div>
           <Building2 size={16} />
           <select value={selectedWorkspace} onChange={(event) => onWorkspaceChange(event.target.value)}>
+            {!projects.length ? <option value="">No workspace yet</option> : null}
             {projects.map((project) => (
               <option key={project.id} value={project.workspace_id}>
                 {project.name}
@@ -463,6 +542,13 @@ function Topbar({
         <kbd>⌘ K</kbd>
       </label>
       <div className="top-actions">
+        <StatusChip tone={mode === "preview" ? "blue" : "green"} label={mode === "preview" ? "Preview mode" : "Live mode"} />
+        <StatusChip
+          tone={health?.status === "ok" ? "green" : health?.status === "degraded" ? "amber" : "gray"}
+          label={health?.status === "ok" ? "Cloud healthy" : health?.status === "degraded" ? "Cloud degraded" : "Cloud pending"}
+        />
+        <StatusChip tone={projects.length > 0 ? "green" : "amber"} label={projects.length > 0 ? `${projects.length} projects` : "No project selected"} />
+        <StatusChip tone={lastSyncedAt ? "green" : "gray"} label={lastSyncedAt ? `Synced ${timeAgo(lastSyncedAt)}` : "Waiting for sync"} />
         <button aria-label="Notifications">
           <Bell size={18} />
         </button>
@@ -532,6 +618,9 @@ function Overview({
   quickstartLanguage,
   setQuickstartLanguage,
   setPage,
+  mode,
+  health,
+  hasPublicApiKey,
 }: {
   loading: boolean;
   totalRequests: number;
@@ -544,12 +633,26 @@ function Overview({
   quickstartLanguage: QuickstartLanguage;
   setQuickstartLanguage: (language: QuickstartLanguage) => void;
   setPage: (page: Page) => void;
+  mode: ConnectionMode;
+  health: CloudHealth | null;
+  hasPublicApiKey: boolean;
 }) {
   const requestLimit = selectedPlan?.monthly_request_limit ?? 10_000_000;
   const usedPercent = Math.min((totalRequests / requestLimit) * 100, 100);
 
   return (
     <div className="overview-layout">
+      <ActivationPanel
+        mode={mode}
+        health={health}
+        projectCount={projects.length}
+        keyCount={keys.length}
+        hasPublicApiKey={hasPublicApiKey}
+        onGoToConnect={() => setPage("connect")}
+        onGoToProjects={() => setPage("projects")}
+        onGoToKeys={() => setPage("keys")}
+        onGoToDocs={() => setPage("docs")}
+      />
       <Panel className="api-requests">
         <div className="panel-head">
           <h2>
@@ -682,7 +785,14 @@ function Projects({ projects, onCreate, setPage }: { projects: Project[]; onCrea
           <h2>Hosted projects</h2>
           <button className="button outline" onClick={() => setPage("keys")}>Create key</button>
         </div>
-        <ProjectsTable projects={projects} usage={demoUsage} />
+        {projects.length > 0 ? (
+          <ProjectsTable projects={projects} usage={demoUsage} />
+        ) : (
+          <div className="empty-state-panel compact">
+            <h3>No projects yet</h3>
+            <p>Create your first workspace project to activate API keys, usage tracking, and live WhatsApp workflows.</p>
+          </div>
+        )}
       </Panel>
     </div>
   );
@@ -735,7 +845,7 @@ function Keys({
             <Clipboard size={15} /> Copy latest
           </button>
         </div>
-        <KeysTable keys={keys} />
+        {keys.length > 0 ? <KeysTable keys={keys} /> : <div className="empty-state-panel compact"><h3>No API keys yet</h3><p>Create a key to let the dashboard load live inbox, usage, and pipeline data.</p></div>}
       </Panel>
     </div>
   );
@@ -760,7 +870,7 @@ function Usage({ usage, keys, selectedProject }: { usage: UsageRow[]; keys: ApiK
           <h2>Usage activity</h2>
           <span>{usage.reduce((sum, row) => sum + row.rejected_count, 0)} rejected</span>
         </div>
-        <KeysTable keys={keys} showUsage />
+        {keys.length > 0 ? <KeysTable keys={keys} showUsage /> : <div className="empty-state-panel compact"><h3>No usage yet</h3><p>Issue API keys and send traffic through the public API to start collecting usage data.</p></div>}
       </Panel>
     </div>
   );
@@ -775,7 +885,7 @@ function Billing({ plans, selectedPlanCode, onSelectPlan }: { plans: Plan[]; sel
         <Quota label="Data Transfer" value={82.1} limit={500} suffix="GB" />
         <p className="helper-text">Uses the same quota model as Usage: request count, rejections, rate limits, and monthly included projects.</p>
       </Panel>
-      {plans.map((plan) => (
+      {plans.length > 0 ? plans.map((plan) => (
         <Panel key={plan.id} className={selectedPlanCode === plan.code ? "selected-plan" : ""}>
           <div className="panel-head">
             <h2>{plan.name}</h2>
@@ -792,7 +902,7 @@ function Billing({ plans, selectedPlanCode, onSelectPlan }: { plans: Plan[]; sel
             {selectedPlanCode === plan.code ? "Selected" : `Select ${plan.name}`}
           </button>
         </Panel>
-      ))}
+      )) : <Panel className="empty-state-panel compact"><h3>No plans loaded</h3><p>Connect the Cloud API to show available plans and current limits.</p></Panel>}
     </div>
   );
 }
@@ -824,7 +934,7 @@ function Docs({
   );
 }
 
-function SettingsPage({ session, publicApiKey: initialKey, onSave }: { session: Session; publicApiKey: string; onSave: (baseUrl: string, publicApiKey: string) => void }) {
+function SettingsPage({ session, publicApiKey: initialKey, mode, onSave }: { session: Session; publicApiKey: string; mode: ConnectionMode; onSave: (baseUrl: string, publicApiKey: string) => void }) {
   const [baseUrl, setBaseUrl] = useState(session.baseUrl);
   const [publicApiKey, setPublicApiKey] = useState(initialKey);
   const [tokenLabel, setTokenLabel] = useState(session.demo ? "Demo token" : "Configured admin token");
@@ -835,6 +945,10 @@ function SettingsPage({ session, publicApiKey: initialKey, onSave }: { session: 
         <h2>Cloud connection</h2>
         <FormField label="Cloud API URL" value={baseUrl} onChange={setBaseUrl} />
         <FormField label="Token label" value={tokenLabel} onChange={setTokenLabel} />
+        <div className="status-callout compact">
+          <strong>{mode === "preview" ? "Preview mode" : "Live mode"}</strong>
+          <p>{mode === "preview" ? "Preview mode uses generated sample data. No live backend access is required." : "Live mode points the dashboard at your Cloud API and uses an operator token for admin access."}</p>
+        </div>
         
         <h2 style={{ marginTop: "2rem" }}>Workspace Preview</h2>
         <FormField 
@@ -842,7 +956,7 @@ function SettingsPage({ session, publicApiKey: initialKey, onSave }: { session: 
           value={publicApiKey} 
           onChange={setPublicApiKey} 
         />
-        <p className="helper-text">Enter a `cp_live_...` key to enable live WhatsApp inbox and pipeline preview.</p>
+        <p className="helper-text">Enter a `cp_live_...` key to enable live WhatsApp inbox, usage, and pipeline data.</p>
         
         <button className="button primary blue" onClick={() => onSave(baseUrl, publicApiKey)}>
           <Check size={16} /> Save settings
@@ -854,7 +968,7 @@ function SettingsPage({ session, publicApiKey: initialKey, onSave }: { session: 
           <li>Mount `@clientpad/cloud` at `/api/cloud/v1`.</li>
           <li>Set `CLIENTPAD_CLOUD_ADMIN_TOKEN` for operator access.</li>
           <li>Deploy this dashboard as a static app.</li>
-          <li>Use hosted API keys for paid gateway access.</li>
+          <li>Use hosted API keys for live gateway access and WhatsApp inbox sync.</li>
         </ul>
       </Panel>
     </div>
@@ -1037,6 +1151,125 @@ function NewKeyBanner({ apiKey, onDismiss }: { apiKey: string; onDismiss: () => 
   );
 }
 
+function StatusChip({ tone, label }: { tone: "green" | "amber" | "blue" | "gray"; label: string }) {
+  return <span className={`status-chip ${tone}`}>{label}</span>;
+}
+
+function StatusBanner({
+  mode,
+  health,
+  hasPublicApiKey,
+  projectCount,
+  onGoToConnect,
+  onGoToProjects,
+  onGoToKeys,
+}: {
+  mode: ConnectionMode;
+  health: CloudHealth | null;
+  hasPublicApiKey: boolean;
+  projectCount: number;
+  onGoToConnect: () => void;
+  onGoToProjects: () => void;
+  onGoToKeys: () => void;
+}) {
+  const cloudLabel = mode === "preview" ? "Preview dataset" : health?.status === "ok" ? "Cloud connected" : "Cloud needs attention";
+  return (
+    <Panel className="status-banner">
+      <div className="status-banner-copy">
+        <div className="status-banner-head">
+          <StatusChip tone={mode === "preview" ? "blue" : "green"} label={mode === "preview" ? "Preview mode" : "Live mode"} />
+          <span className="status-muted">{mode === "preview" ? "sample data only" : "operator connected"}</span>
+        </div>
+        <h2>{mode === "preview" ? "Preview workspace is active" : "Live dashboard is connected"}</h2>
+        <p>
+          {mode === "preview"
+            ? "This workspace uses generated data so operators can learn the flow without risking production access."
+            : "This workspace is connected to a real ClientPad Cloud API. Use the health, WhatsApp, project, and key states below to confirm the system is ready."}
+        </p>
+      </div>
+      <div className="status-banner-metrics">
+        <div><strong>{cloudLabel}</strong><span>{health ? `Checked ${timeAgo(health.time)}` : "Health not checked yet"}</span></div>
+        <div><strong>{hasPublicApiKey ? "Public API key ready" : "Public API key missing"}</strong><span>{hasPublicApiKey ? "Live inbox enabled" : "Inbox stays in setup mode"}</span></div>
+        <div><strong>{projectCount > 0 ? `${projectCount} workspaces` : "No workspace yet"}</strong><span>{projectCount > 0 ? "Select a workspace to continue" : "Create a first project to activate live mode"}</span></div>
+      </div>
+      <div className="status-banner-actions">
+        <button className="button outline" onClick={onGoToConnect}>Connect WhatsApp</button>
+        <button className="button outline" onClick={onGoToProjects}>Projects</button>
+        <button className="button primary blue" onClick={onGoToKeys}>API keys</button>
+      </div>
+    </Panel>
+  );
+}
+
+function ActivationPanel({
+  mode,
+  health,
+  projectCount,
+  keyCount,
+  hasPublicApiKey,
+  onGoToConnect,
+  onGoToProjects,
+  onGoToKeys,
+  onGoToDocs,
+}: {
+  mode: ConnectionMode;
+  health: CloudHealth | null;
+  projectCount: number;
+  keyCount: number;
+  hasPublicApiKey: boolean;
+  onGoToConnect: () => void;
+  onGoToProjects: () => void;
+  onGoToKeys: () => void;
+  onGoToDocs: () => void;
+}) {
+  const items = [
+    { label: "Cloud connection", state: mode === "preview" ? "Preview" : health?.status === "ok" ? "Connected" : "Check", done: mode === "preview" || health?.status === "ok" },
+    { label: "Project selected", state: projectCount > 0 ? "Ready" : "Missing", done: projectCount > 0 },
+    { label: "API key", state: keyCount > 0 ? "Issued" : "Missing", done: keyCount > 0 },
+    { label: "WhatsApp", state: hasPublicApiKey ? "Ready" : "Missing", done: hasPublicApiKey },
+  ];
+
+  return (
+    <Panel className="activation-panel">
+      <div className="panel-head bordered">
+        <div>
+          <h2>First-run activation</h2>
+          <p className="helper-text">Complete these steps to move from a shell to a live operator workspace.</p>
+        </div>
+        <StatusChip tone={mode === "preview" ? "blue" : "green"} label={mode === "preview" ? "Preview" : "Live"} />
+      </div>
+      <div className="activation-grid">
+        {items.map((item) => (
+          <div key={item.label} className={`activation-item ${item.done ? "done" : ""}`}>
+            <span className={`dot ${item.done ? "good" : "warn"}`} />
+            <div>
+              <strong>{item.label}</strong>
+              <small>{item.state}</small>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="status-banner-actions">
+        <button className="button primary blue" onClick={onGoToProjects}>Create project</button>
+        <button className="button outline" onClick={onGoToKeys}>Create API key</button>
+        <button className="button outline" onClick={onGoToConnect}>Connect WhatsApp</button>
+        <button className="button outline" onClick={onGoToDocs}>Read setup docs</button>
+      </div>
+    </Panel>
+  );
+}
+
+function timeAgo(value: string) {
+  const diff = Date.now() - new Date(value).getTime();
+  const minutes = Math.max(Math.floor(diff / 60000), 0);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 function RowActions({ editable = false }: { editable?: boolean }) {
   return (
     <div className="row-actions">
@@ -1052,56 +1285,127 @@ function Badge({ children, tone }: { children: React.ReactNode; tone: "green" | 
 }
 
 
-function ConnectWhatsApp({ onCopy }: { onCopy: (text: string) => void }) {
+function ConnectWhatsApp({
+  mode,
+  hasPublicApiKey,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  hasPublicApiKey: boolean;
+  onCopy: (text: string) => void;
+}) {
   const [form, setForm] = useState({
     phoneNumberId: "123456789012345",
     wabaId: "987654321098765",
     verifyToken: "clientpad_verify_2026",
     accessToken: "EAAB...",
   });
+  const [validation, setValidation] = useState<"ready" | "incomplete" | "connected">("ready");
   const webhookUrl = `${window.location.origin}/api/whatsapp/webhook/${form.wabaId || "waba-id"}`;
-  const checklist = [
+  const webhookConfigured = Boolean(form.phoneNumberId.trim() && form.wabaId.trim() && form.verifyToken.trim() && form.accessToken.trim());
+  const connectionChecks = [
+    { label: "Phone Number ID", value: form.phoneNumberId, ok: Boolean(form.phoneNumberId.trim()) },
+    { label: "WABA ID", value: form.wabaId, ok: Boolean(form.wabaId.trim()) },
+    { label: "Verify token", value: form.verifyToken, ok: Boolean(form.verifyToken.trim()) },
+    { label: "Access token", value: form.accessToken, ok: Boolean(form.accessToken.trim()) },
+    { label: "Dashboard API key", value: hasPublicApiKey ? "Configured" : "Missing", ok: hasPublicApiKey },
+  ];
+  const setupChecklistItems = [
     `Webhook URL: ${webhookUrl}`,
     `Verify token: ${form.verifyToken}`,
     `Phone Number ID: ${form.phoneNumberId}`,
     `WABA ID: ${form.wabaId}`,
     "Subscribe messages, message_template_status_update, and account_update events.",
     "Send a test WhatsApp message, then confirm it appears in Team Inbox.",
-  ].join("\n");
+  ];
+
+  function runValidation() {
+    if (!webhookConfigured || !hasPublicApiKey) {
+      setValidation("incomplete");
+      return;
+    }
+    setValidation("connected");
+  }
 
   return (
     <div className="detail-layout connect-layout">
       <Panel>
-        <h2>WhatsApp Business credentials</h2>
+        <div className="panel-head bordered">
+          <h2>WhatsApp connection</h2>
+          <StatusChip tone={mode === "preview" ? "blue" : webhookConfigured ? "green" : "amber"} label={mode === "preview" ? "Preview mode" : webhookConfigured ? "Ready to test" : "Setup incomplete"} />
+        </div>
+        <p className="helper-text">
+          Connect Meta once, then use the live webhook URL and public API key to move messages into ClientPad.
+        </p>
         <FormField label="Phone Number ID" value={form.phoneNumberId} onChange={(value) => setForm({ ...form, phoneNumberId: value })} />
         <FormField label="WABA ID" value={form.wabaId} onChange={(value) => setForm({ ...form, wabaId: value })} />
         <FormField label="Verify token" value={form.verifyToken} onChange={(value) => setForm({ ...form, verifyToken: value })} />
         <FormField label="Access token" value={form.accessToken} onChange={(value) => setForm({ ...form, accessToken: value })} />
+        <div className="status-stack">
+          {connectionChecks.map((item) => (
+            <div key={item.label} className="status-item">
+              <span className={item.ok ? "dot good" : "dot warn"} />
+              <div>
+                <strong>{item.label}</strong>
+                <small>{item.value}</small>
+              </div>
+            </div>
+          ))}
+        </div>
       </Panel>
       <Panel className="wide-detail setup-card">
         <div className="panel-head">
           <h2>Copyable connection checklist</h2>
-          <button className="button outline" onClick={() => onCopy(checklist)}><Clipboard size={15} /> Copy checklist</button>
+          <button className="button outline" onClick={() => onCopy(setupChecklistItems.join("\n"))}><Clipboard size={15} /> Copy checklist</button>
         </div>
         <div className="webhook-box">
           <span>Generated webhook URL</span>
           <code>{webhookUrl}</code>
-          <button className="button primary blue" onClick={() => onCopy(webhookUrl)}>Copy URL</button>
+          <div className="inline-actions">
+            <button className="button primary blue" onClick={() => onCopy(webhookUrl)}>Copy URL</button>
+            <button className="button outline" onClick={runValidation}>Validate setup</button>
+          </div>
+        </div>
+        <div className="status-callout">
+          <strong>{validation === "connected" ? "Connection validated" : validation === "incomplete" ? "Setup still incomplete" : "Ready for first test"}</strong>
+          <p>
+            {validation === "connected"
+              ? "The dashboard can now receive and display live WhatsApp traffic once Meta sends a webhook."
+              : validation === "incomplete"
+                ? "Complete the missing credentials and add the public API key in Settings before testing live traffic."
+                : "Use the webhook URL, verify token, and access token to finish Meta setup."}
+          </p>
         </div>
         <div className="qr-card" aria-label="QR-style setup card">
           {Array.from({ length: 49 }).map((_, index) => <i key={index} className={(index + form.wabaId.length) % 3 === 0 ? "filled" : ""} />)}
         </div>
         <ol className="checklist">
-          {checklist.split("\n").map((item) => <li key={item}>{item}</li>)}
+          {setupChecklistItems.map((item) => <li key={item}>{item}</li>)}
         </ol>
       </Panel>
     </div>
   );
 }
 
-function PipelineScreen({ clients }: { clients: ClientRecord[] }) {
+function PipelineScreen({ clients, mode }: { clients: ClientRecord[]; mode: ConnectionMode }) {
+  const counts = Object.fromEntries(serviceStages.map((stage) => [stage, clients.filter((client) => client.status === stage).length]));
   return (
-    <div className="pipeline-board">
+    <div className="pipeline-stack">
+      <Panel className="pipeline-summary">
+        <div className="panel-head bordered">
+          <h2>Pipeline status</h2>
+          <StatusChip tone={mode === "preview" ? "blue" : "green"} label={mode === "preview" ? "Preview data" : "Live pipeline"} />
+        </div>
+        <div className="pipeline-metrics">
+          {serviceStages.map((stage) => (
+            <div key={stage} className="pipeline-metric">
+              <strong>{counts[stage] ?? 0}</strong>
+              <span>{stage}</span>
+            </div>
+          ))}
+        </div>
+      </Panel>
+      <div className="pipeline-board">
       {serviceStages.map((stage) => {
         const stageClients = clients.filter((client) => client.status === stage);
         return (
@@ -1118,11 +1422,12 @@ function PipelineScreen({ clients }: { clients: ClientRecord[] }) {
                   <b>${client.value.toLocaleString()}</b>
                 </article>
               ))}
-              {!stageClients.length ? <p className="empty-state">No clients in this stage.</p> : null}
+              {!stageClients.length ? <p className="empty-state">No clients here yet. Move a lead forward from the inbox or create a test lead to populate this stage.</p> : null}
             </div>
           </Panel>
         );
       })}
+      </div>
     </div>
   );
 }
@@ -1153,7 +1458,19 @@ function ClientSearch({ clients, query, setQuery }: { clients: ClientRecord[]; q
   );
 }
 
-function TeamInbox({ session, publicApiKey }: { session: Session; publicApiKey: string }) {
+function TeamInbox({
+  session,
+  publicApiKey,
+  mode,
+  onGoToSettings,
+  onGoToKeys,
+}: {
+  session: Session;
+  publicApiKey: string;
+  mode: ConnectionMode;
+  onGoToSettings: () => void;
+  onGoToKeys: () => void;
+}) {
   const [conversations, setConversations] = useState<WhatsAppConversation[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
@@ -1259,8 +1576,12 @@ function TeamInbox({ session, publicApiKey }: { session: Session; publicApiKey: 
     return (
       <div className="empty-state-panel">
         <AlertCircle size={48} />
-        <h2>Public API Key Required</h2>
-        <p>Please configure a workspace API key in Settings to view the live WhatsApp inbox.</p>
+        <h2>Live inbox is not connected yet</h2>
+        <p>Set a workspace API key in Settings to load live WhatsApp conversations, suggestions, and status updates.</p>
+        <div className="empty-actions">
+          <button className="button primary blue" onClick={onGoToSettings}>Open settings</button>
+          <button className="button outline" onClick={onGoToKeys}>Create API key</button>
+        </div>
       </div>
     );
   }
@@ -1270,7 +1591,7 @@ function TeamInbox({ session, publicApiKey }: { session: Session; publicApiKey: 
       <Panel className="conversation-list">
         <div className="panel-head">
           <h2>Conversations</h2>
-          <button className="button icon" onClick={() => {}}><Filter size={16} /></button>
+          <StatusChip tone={mode === "preview" ? "blue" : "green"} label={mode === "preview" ? "Preview inbox" : "Live inbox"} />
         </div>
         <div className="scroll-area">
           {loading ? <p className="loading">Loading...</p> : conversations.map((c) => (
@@ -1287,10 +1608,11 @@ function TeamInbox({ session, publicApiKey }: { session: Session; publicApiKey: 
               <div className="conv-badges">
                 {c.requires_owner_approval && <Badge tone="blue">Owner Approval</Badge>}
                 {c.ai_intent && <Badge tone="gray">{c.ai_intent}</Badge>}
+                {c.status ? <Badge tone={c.status === "open" ? "green" : "gray"}>{c.status}</Badge> : null}
               </div>
             </button>
           ))}
-          {!loading && conversations.length === 0 && <p className="empty">No conversations found.</p>}
+          {!loading && conversations.length === 0 && <p className="empty">No live conversations yet. Send a test WhatsApp message or connect the public API key to start seeing traffic.</p>}
         </div>
       </Panel>
 
@@ -1335,17 +1657,19 @@ function TeamInbox({ session, publicApiKey }: { session: Session; publicApiKey: 
                 disabled={sending || !replyText.trim()}
               >
                 <Send size={16} />
+                Send
               </button>
             </div>
           </>
         ) : (
-          <div className="empty-state">Select a conversation to start messaging</div>
+          <div className="empty-state">Select a conversation to review its timeline, send a reply, or promote it through the pipeline.</div>
         )}
       </Panel>
 
       <Panel className="quick-replies">
         <div className="panel-head">
           <h2>AI Drafts</h2>
+          <StatusChip tone="green" label={`${suggestions.length} drafts`} />
         </div>
         <div className="suggestions-list">
           {suggestions.length > 0 ? suggestions.map((s, i) => (
@@ -1373,7 +1697,7 @@ function TeamInbox({ session, publicApiKey }: { session: Session; publicApiKey: 
                 </button>
               </div>
             </div>
-          )) : <p className="empty">No AI suggestions available.</p>}
+          )) : <p className="empty">No AI suggestions yet. New messages will generate drafts here once the inbox receives live traffic.</p>}
         </div>
 
         {selectedConversation && (
@@ -1503,6 +1827,10 @@ class CloudApi {
     return body as T;
   }
 
+  async health() {
+    return this.request<CloudHealth>("/health");
+  }
+
   async plans() {
     const body = await this.request<{ data: Plan[] }>("/plans");
     return body.data;
@@ -1533,6 +1861,7 @@ class CloudApi {
 }
 
 function demoResponse(path: string, init: RequestInit) {
+  if (path === "/health") return { status: "ok", service: "@clientpad/cloud", time: new Date().toISOString() };
   if (path === "/plans") return { data: demoPlans };
   if (path === "/projects" && init.method === "POST") {
     const body = JSON.parse(String(init.body ?? "{}")) as ProjectFormState;
