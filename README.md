@@ -11,10 +11,10 @@ This repository ships installable packages instead of a hosted product with subs
 - `@clientpad/server`: fetch-standard public API handler for leads and clients.
 - `@clientpad/sdk`: TypeScript SDK for consuming ClientPad public APIs from apps, workers, and scripts.
 - `@clientpad/whatsapp`: WhatsApp automation, lead capture, booking flows, payments, and review prompts for service businesses.
-- `@clientpad/cloud`: hosted control plane for projects, plans, subscriptions, usage, and API keys.
-- `@clientpad/dashboard`: developer web dashboard for projects, API keys, usage, billing, and docs.
+- `@clientpad/cloud`: hosted control plane for projects, plans, subscriptions, usage, API keys, and operator auth/session management.
+- `@clientpad/dashboard`: developer web dashboard for projects, API keys, usage, billing, docs, preview/live operator access, and WhatsApp operations.
 
-The dashboard opens in **Preview** mode for sample data or **Live** mode when connected to a ClientPad Cloud API with an operator token. Live mode now validates both `/health` and `/readiness` before it claims the cloud is connected. Live mode also expects a workspace public API key before inbox and pipeline data become operational.
+The dashboard opens in **Preview** mode for sample data or **Live** mode after an operator signs in to ClientPad Cloud with email and password. Live mode validates both `/health` and `/readiness` before it claims the cloud is connected. Live mode also expects a workspace public API key before inbox and pipeline data become operational.
 
 ## Install
 
@@ -169,6 +169,13 @@ Revenue comes from an optional hosted ClientPad Cloud gateway:
 - per-minute rate limits
 - usage analytics and audit logs
 - backups, upgrades, and support
+
+Hosted dashboard access is separate from the public API key flow:
+
+- operators sign in to the Cloud dashboard with email and password
+- the Cloud API issues a cookie-backed operator session
+- the dashboard restores that session on refresh
+- the raw `CLIENTPAD_CLOUD_ADMIN_TOKEN` stays on the backend as an operator/control-plane secret, not a browser login credential
 
 Hosted keys use the same API key format and SDK. Usage can be inspected with:
 

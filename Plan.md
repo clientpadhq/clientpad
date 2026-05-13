@@ -30,6 +30,14 @@ ClientPad is being built as open-source infrastructure that businesses and devel
   - Workspace-scoped lead and client endpoints.
   - PostgreSQL-backed storage.
 
+- `@clientpad/cloud`
+  - Hosted control plane for projects, plans, subscriptions, usage, and API keys.
+  - Operator auth status, login, session, and readiness endpoints for the hosted dashboard.
+
+- `@clientpad/dashboard`
+  - Developer and operator dashboard for preview mode, live mode, readiness, WhatsApp diagnostics, inbox, pipeline, usage, projects, and keys.
+  - Cookie-backed operator session restore and logout.
+
 - `@clientpad/sdk`
   - `ClientPad` class.
   - `leads.list`, `leads.create`.
@@ -54,7 +62,7 @@ ClientPad is being built as open-source infrastructure that businesses and devel
 1. Add an OpenAPI document for `/api/public/v1`.
 2. Add generated examples for Express, Hono, Fastify, and route-handler runtimes.
 3. Add Docker Compose for local PostgreSQL development.
-4. Add auth/session packages for app-owned user login.
+4. Add auth/session packages for app-owned user login, separate from ClientPad operator auth.
 5. Expand public APIs to deals, invoices, jobs, tasks, and activities.
 6. Add CI for install, typecheck, tests, package dry-run, and dependency scan.
 7. Add release automation for npm publishing and GitHub release assets.

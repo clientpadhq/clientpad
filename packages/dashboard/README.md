@@ -5,7 +5,7 @@ Installable developer and operations web interface for ClientPad Cloud. The dash
 The dashboard has two entry modes:
 
 - **Preview mode** uses sample data so operators can explore the UI without connecting a live Cloud API.
-- **Live mode** connects to a real ClientPad Cloud endpoint with an operator token and a workspace public API key.
+- **Live mode** connects to a real ClientPad Cloud endpoint after an operator signs in with email and password. The session is cookie-backed and restored on refresh.
 
 On first run, the dashboard highlights the activation steps for:
 
@@ -36,15 +36,15 @@ http://localhost:3000/api/cloud/v1
 
 The dashboard expects the Cloud API health endpoint at `/health` and the operator readiness endpoint at `/readiness`. Both are used to validate live mode before the dashboard claims it is connected.
 
-Live mode uses `CLIENTPAD_CLOUD_ADMIN_TOKEN` as the operator login token. The dashboard does not treat an entered URL as "connected" until both the health check and readiness check pass.
+Live mode uses an operator account, not a raw token prompt. The dashboard does not treat an entered URL as "connected" until the operator signs in and both the health check and readiness check pass.
 
-Preview mode does not require the Cloud API URL or admin token. Live mode should only be used by operators who manage the ClientPad Cloud control plane.
+Preview mode does not require the Cloud API URL or operator credentials. Live mode should only be used by operators who manage the ClientPad Cloud control plane.
 
 ### Live bootstrap flow
 
 1. Enter the Cloud API base URL, for example `https://host.com/api/cloud/v1`.
-2. Enter the operator token.
-3. The dashboard checks `/health` and `/readiness`.
+2. Sign in with operator email and password, or create the first operator account if this Cloud deployment has none yet.
+3. The dashboard checks `/health`, `/readiness`, and `/auth/me`.
 4. If the connection is valid, the dashboard stores the validated session locally and shows readiness state for the selected workspace.
 5. Use the readiness panel to create or select a workspace, issue a public API key, and complete WhatsApp setup.
 
@@ -53,7 +53,7 @@ Preview mode does not require the Cloud API URL or admin token. Live mode should
 The live dashboard surfaces operator-safe state for:
 
 - cloud health
-- operator token acceptance
+- operator session acceptance
 - workspace selection
 - project count
 - public API key availability
@@ -79,16 +79,17 @@ pnpm --filter @clientpad/dashboard preview
 
 2. Serve `packages/dashboard/dist` from any static host, CDN, or container web server.
 3. Mount `@clientpad/cloud` behind HTTPS at `/api/cloud/v1` or another public URL.
-4. Set `CLIENTPAD_CLOUD_ADMIN_TOKEN` in the Cloud API environment and share it only with operators.
-5. Add a workspace public API key in the dashboard to unlock live inbox and pipeline data.
-6. Configure your reverse proxy for SPA fallback so unknown dashboard paths return `index.html`.
-7. Keep `/manifest.webmanifest`, `/sw.js`, and `/offline.html` cacheable so Android users can install the app and load the offline shell.
-8. For WhatsApp webhooks, point Meta to the generated dashboard webhook URL shown on **Connect WhatsApp** and use the same verify token in your backend webhook handler.
+4. Set `CLIENTPAD_CLOUD_ADMIN_TOKEN` in the Cloud API environment as a backend control-plane secret. Do not paste it into the dashboard login screen.
+5. Operators sign in with email/password and the Cloud API returns a cookie-backed session.
+6. Add a workspace public API key in the dashboard to unlock live inbox and pipeline data.
+7. Configure your reverse proxy for SPA fallback so unknown dashboard paths return `index.html`.
+8. Keep `/manifest.webmanifest`, `/sw.js`, and `/offline.html` cacheable so Android users can install the app and load the offline shell.
+9. For WhatsApp webhooks, point Meta to the generated dashboard webhook URL shown on **Connect WhatsApp** and use the same verify token in your backend webhook handler.
 
 ### Operational states
 
 - **Preview mode** means the dashboard is showing simulated data.
-- **Live mode** means the dashboard is connected to a real Cloud API.
+- **Live mode** means the dashboard is connected to a real Cloud API through an authenticated operator session.
 - **Public API key missing** means inbox and pipeline screens will stay in setup mode.
 - **WhatsApp not connected** means the dashboard can show setup steps, but live conversations will not appear until Meta webhooks are configured.
 - **Readiness degraded** means the Cloud API is reachable, but at least one live dependency still needs attention before the workspace is operational.

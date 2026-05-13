@@ -45,18 +45,63 @@ type ConnectionMode = "preview" | "live";
 
 type Session = {
   baseUrl: string;
-  adminToken: string;
   publicApiKey?: string;
   demo?: boolean;
   mode?: ConnectionMode;
   validatedAt?: string;
   readiness?: CloudReadiness;
+  user?: CloudAuthUser;
+  workspaces?: CloudWorkspace[];
+  selectedWorkspaceId?: string;
+  sessionExpiresAt?: string | null;
 };
 
 type CloudHealth = {
   status: "ok" | "degraded" | "error";
   service: string;
   time: string;
+};
+
+type CloudAuthUser = {
+  id: string;
+  email: string;
+  full_name: string | null;
+};
+
+type CloudWorkspace = {
+  id: string;
+  name: string;
+  role: string;
+  project_count: number;
+  key_count: number;
+  active_subscription_count: number;
+  whatsapp_account_count: number;
+  active_whatsapp_account_count: number;
+  payment_provider_count: number;
+  latest_whatsapp_activity_at: string | null;
+  latest_payment_event_at: string | null;
+  recent_webhook_count: number;
+  has_public_api_key: boolean;
+  has_whatsapp_configuration: boolean;
+  has_payment_provider_configuration: boolean;
+};
+
+type CloudAuthStatus = {
+  registration_open: boolean;
+  operator_count: number;
+  workspace_count: number;
+};
+
+type CloudAuthEnvelope = {
+  status: string;
+  service: string;
+  time: string;
+  auth: {
+    user: CloudAuthUser;
+    session_expires_at: string;
+    selected_workspace_id: string | null;
+    workspaces: CloudWorkspace[];
+  };
 };
 
 type CloudReadinessDiagnostic = {
@@ -103,7 +148,11 @@ type CloudReadiness = {
   status: "ok" | "degraded";
   service: string;
   time: string;
-  auth: { token: "accepted" };
+  auth: {
+    user: CloudAuthUser | null;
+    session_expires_at: string | null;
+    mode: "operator_session" | "admin";
+  };
   summary: CloudReadinessWorkspaceSummary;
   workspace: CloudReadinessWorkspace | null;
   diagnostics: CloudReadinessDiagnostic[];
@@ -188,66 +237,201 @@ const serviceStages = ["New Lead", "Quoted", "Booked", "In Progress", "Completed
 
 const sessionKey = "clientpad.cloud.session";
 
-function App() {
-  const [session, setSession] = useState<Session | null>(() => {
-    const saved = localStorage.getItem(sessionKey);
-    return saved ? (JSON.parse(saved) as Session) : null;
-  });
+function loadSession() {
+  const saved = localStorage.getItem(sessionKey);
+  if (!saved) return null;
+  try {
+    return JSON.parse(saved) as Session;
+  } catch {
+    localStorage.removeItem(sessionKey);
+    return null;
+  }
+}
 
-  if (!session) return <Login onLogin={setSession} />;
+function persistSession(session: Session) {
+  localStorage.setItem(sessionKey, JSON.stringify(session));
+}
+
+function mergeAuthSession(saved: Session, auth: CloudAuthEnvelope): Session {
+  return {
+    ...saved,
+    mode: "live",
+    demo: false,
+    user: auth.auth.user,
+    workspaces: auth.auth.workspaces,
+    selectedWorkspaceId: auth.auth.selected_workspace_id ?? auth.auth.workspaces[0]?.id ?? "",
+    sessionExpiresAt: auth.auth.session_expires_at,
+  };
+}
+
+function userInitials(user: CloudAuthUser) {
+  const source = user.full_name || user.email;
+  return source
+    .split(/[\s@._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("") || "OP";
+}
+
+function LoadingShell({ message }: { message: string }) {
+  return (
+    <main className="login-shell">
+      <section className="login-panel">
+        <Logo />
+        <h1>ClientPad Cloud</h1>
+        <p>{message}</p>
+      </section>
+    </main>
+  );
+}
+
+function App() {
+  const [session, setSession] = useState<Session | null>(() => loadSession());
+  const [bootstrapping, setBootstrapping] = useState<boolean>(() => Boolean(session && session.mode === "live" && !session.demo));
+  const [sessionNotice, setSessionNotice] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function restore() {
+      const saved = loadSession();
+      if (!saved || saved.demo || saved.mode === "preview") {
+        if (!cancelled) setBootstrapping(false);
+        return;
+      }
+
+      try {
+        const api = new CloudApi(saved.baseUrl, false);
+        const auth = await api.me();
+        const next = mergeAuthSession(saved, auth);
+        if (cancelled) return;
+        persistSession(next);
+        setSession(next);
+      } catch {
+        if (cancelled) return;
+        localStorage.removeItem(sessionKey);
+        setSession(null);
+        setSessionNotice("Live session expired. Sign in again.");
+      } finally {
+        if (!cancelled) setBootstrapping(false);
+      }
+    }
+
+    restore();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (bootstrapping) return <LoadingShell message="Restoring operator session..." />;
+
+  if (!session) return <Login onLogin={setSession} notice={sessionNotice} />;
 
   return (
     <Dashboard
       session={session}
-      onLogout={() => {
+      onLogout={async () => {
+        const saved = loadSession();
+        if (saved?.mode === "live" && !saved.demo) {
+          try {
+            const api = new CloudApi(saved.baseUrl, false);
+            await api.logout();
+          } catch {
+            // Ignore logout network failures; the local session is cleared below.
+          }
+        }
         localStorage.removeItem(sessionKey);
         setSession(null);
+      }}
+      onSessionChange={(next) => {
+        persistSession(next);
+        setSession(next);
       }}
     />
   );
 }
 
-function Login({ onLogin }: { onLogin: (session: Session) => void }) {
+function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notice?: string }) {
   const [mode, setMode] = useState<ConnectionMode>("preview");
   const [baseUrl, setBaseUrl] = useState("http://localhost:3000/api/cloud/v1");
-  const [adminToken, setAdminToken] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [workspaceName, setWorkspaceName] = useState("My Workspace");
+  const [authMode, setAuthMode] = useState<"signin" | "register">("signin");
+  const [authStatus, setAuthStatus] = useState<CloudAuthStatus | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAuthStatus() {
+      if (mode !== "live") return;
+      try {
+        const response = await fetch(`${baseUrl.replace(/\/+$/, "")}/auth/status`);
+        const body = await response.json().catch(() => null);
+        if (!cancelled && response.ok) setAuthStatus(body);
+      } catch {
+        if (!cancelled) setAuthStatus(null);
+      }
+    }
+
+    loadAuthStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [baseUrl, mode]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError("");
 
     if (mode === "preview") {
-      const next = { baseUrl: "demo", adminToken: "demo", demo: true, mode: "preview" as const };
-      localStorage.setItem(sessionKey, JSON.stringify(next));
+      const next: Session = { baseUrl: "demo", demo: true, mode: "preview" as const };
+      persistSession(next);
       onLogin(next);
       return;
     }
 
     const normalized = baseUrl.replace(/\/+$/, "");
+    setLoading(true);
     try {
-      const healthResponse = await fetch(`${normalized}/health`);
+      const healthResponse = await fetch(`${normalized}/health`, { credentials: "include" });
       if (!healthResponse.ok) throw new Error("Cloud API health check failed.");
 
-      const readinessResponse = await fetch(`${normalized}/readiness`, {
-        headers: { authorization: `Bearer ${adminToken}` },
+      const path = authMode === "register" ? "/auth/register" : "/auth/login";
+      const authResponse = await fetch(`${normalized}${path}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(
+          authMode === "register"
+            ? { email, password, full_name: fullName, workspace_name: workspaceName }
+            : { email, password }
+        ),
       });
-      const readinessBody = await readinessResponse.json().catch(() => null);
-      if (!readinessResponse.ok) {
-        throw new Error(readinessBody?.error?.message ?? "Cloud operator token was rejected.");
+      const authBody = await authResponse.json().catch(() => null);
+      if (!authResponse.ok) {
+        throw new Error(authBody?.error?.message ?? "Operator sign in failed.");
       }
 
-      const next = {
+      const next: Session = {
         baseUrl: normalized,
-        adminToken,
         mode: "live" as const,
         validatedAt: new Date().toISOString(),
-        readiness: readinessBody as CloudReadiness,
+        user: authBody.auth.user,
+        workspaces: authBody.auth.workspaces,
+        selectedWorkspaceId: authBody.auth.selected_workspace_id ?? authBody.auth.workspaces?.[0]?.id ?? "",
+        sessionExpiresAt: authBody.auth.session_expires_at,
       };
-      localStorage.setItem(sessionKey, JSON.stringify(next));
+      persistSession(next);
       onLogin(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not connect to ClientPad Cloud.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -262,11 +446,13 @@ function Login({ onLogin }: { onLogin: (session: Session) => void }) {
             </button>
           ))}
         </div>
-        <h1>{mode === "preview" ? "Preview workspace" : "ClientPad Cloud"}</h1>
+        <h1>{mode === "preview" ? "Preview workspace" : authMode === "register" ? "Create operator account" : "ClientPad Cloud"}</h1>
         <p>
           {mode === "preview"
             ? "Open a sample workspace to understand the dashboard layout before connecting a real Cloud API."
-            : "Connect the operator dashboard to a live Cloud API to manage projects, keys, usage, billing, and WhatsApp activity."}
+            : authMode === "register"
+              ? "Create the first operator account for this Cloud deployment, then sign in with email and password."
+              : "Sign in with an operator account to manage projects, keys, usage, billing, and WhatsApp activity."}
         </p>
         <form onSubmit={submit} className="login-form">
           {mode === "live" ? (
@@ -276,33 +462,76 @@ function Login({ onLogin }: { onLogin: (session: Session) => void }) {
                 <input value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} />
               </label>
               <label>
-                Operator token
+                Email
                 <input
-                  value={adminToken}
-                  type="password"
-                  autoComplete="current-password"
-                  onChange={(event) => setAdminToken(event.target.value)}
-                  placeholder="CLIENTPAD_CLOUD_ADMIN_TOKEN"
+                  value={email}
+                  type="email"
+                  autoComplete="email"
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="operator@clientpad.com"
                 />
               </label>
+              <label>
+                Password
+                <input
+                  value={password}
+                  type="password"
+                  autoComplete="current-password"
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="••••••••"
+                />
+              </label>
+              {authMode === "register" ? (
+                <>
+                  <label>
+                    Your name
+                    <input value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Operator name" />
+                  </label>
+                  <label>
+                    Workspace name
+                    <input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} placeholder="ClientPad Cloud" />
+                  </label>
+                </>
+              ) : null}
+              <div className="inline-actions auth-actions">
+                <button type="button" className={authMode === "signin" ? "button primary" : "button outline"} onClick={() => setAuthMode("signin")}>
+                  Sign in
+                </button>
+                <button
+                  type="button"
+                  className={authMode === "register" ? "button primary" : "button outline"}
+                  onClick={() => setAuthMode("register")}
+                  disabled={Boolean(authStatus && !authStatus.registration_open)}
+                >
+                  {authStatus?.registration_open ? "Create first operator" : "Create account"}
+                </button>
+              </div>
+              {authStatus ? (
+                <div className="preview-note">
+                  {authStatus.registration_open
+                    ? `Registration is open. ${authStatus.operator_count} operator account${authStatus.operator_count === 1 ? "" : "s"} exist.`
+                    : `Registration is closed. ${authStatus.operator_count} operator account${authStatus.operator_count === 1 ? "" : "s"} already exist.`}
+                </div>
+              ) : null}
             </>
           ) : (
             <div className="preview-note">
               Preview mode uses generated sample data, no Cloud API credentials, and no live WhatsApp traffic.
             </div>
           )}
+          {notice ? <div className="preview-note">{notice}</div> : null}
           {error ? <div className="form-error">{error}</div> : null}
           <button className="button primary" type="submit">
             <ShieldCheck size={16} />
-            {mode === "preview" ? "Open preview dashboard" : "Open live dashboard"}
+            {loading ? "Connecting..." : mode === "preview" ? "Open preview dashboard" : authMode === "register" ? "Create operator and open dashboard" : "Open live dashboard"}
           </button>
         </form>
       </section>
       <aside className="login-aside">
         <div className="preview-card">
           <div className="preview-card-head">
-            <span>{mode === "preview" ? "Sample data" : "Live operator view"}</span>
-            <strong>{mode === "preview" ? "Safe to explore" : "Connected to a real Cloud API"}</strong>
+            <span>{mode === "preview" ? "Sample data" : authMode === "register" ? "First operator setup" : "Live operator view"}</span>
+            <strong>{mode === "preview" ? "Safe to explore" : authMode === "register" ? "Claim this cloud deployment" : "Connected to a real Cloud API"}</strong>
           </div>
           <div className="mini-toolbar" />
           <div className="mini-chart" />
@@ -313,7 +542,15 @@ function Login({ onLogin }: { onLogin: (session: Session) => void }) {
   );
 }
 
-function Dashboard({ session, onLogout }: { session: Session; onLogout: () => void }) {
+function Dashboard({
+  session,
+  onLogout,
+  onSessionChange,
+}: {
+  session: Session;
+  onLogout: () => Promise<void> | void;
+  onSessionChange: (session: Session) => void;
+}) {
   const [currentSession, setCurrentSession] = useState(session);
   const sessionRef = useRef(currentSession);
   useEffect(() => {
@@ -323,14 +560,15 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
     sessionRef.current = currentSession;
   }, [currentSession]);
 
-  const api = useMemo(() => new CloudApi(currentSession), [currentSession]);
+  const api = useMemo(() => new CloudApi(currentSession.baseUrl, Boolean(currentSession.demo)), [currentSession.baseUrl, currentSession.demo]);
   const mode = currentSession.mode ?? (currentSession.demo ? "preview" : "live");
   const [page, setPage] = useState<Page>("overview");
   const [plans, setPlans] = useState<Plan[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [workspaces, setWorkspaces] = useState<CloudWorkspace[]>(currentSession.workspaces ?? []);
   const [usage, setUsage] = useState<UsageRow[]>([]);
   const [keys, setKeys] = useState<ApiKeyRecord[]>([]);
-  const [selectedWorkspace, setSelectedWorkspace] = useState("");
+  const [selectedWorkspace, setSelectedWorkspace] = useState(currentSession.selectedWorkspaceId ?? currentSession.workspaces?.[0]?.id ?? "");
   const [publicApiKey, setPublicApiKey] = useState(currentSession.publicApiKey || "");
   const [query, setQuery] = useState("");
   const [dateRange, setDateRange] = useState("May 12 - May 19, 2025");
@@ -348,25 +586,41 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
   async function refresh(workspaceOverride?: string, sessionOverride?: Session) {
     setLoading(true);
     try {
-      const activeApi = new CloudApi(sessionOverride ?? sessionRef.current);
-      const [planData, projectData, healthData] = await Promise.all([activeApi.plans(), activeApi.projects(), activeApi.health()]);
-      const workspace = workspaceOverride || selectedWorkspace || projectData[0]?.workspace_id || "";
+      const activeSession = sessionOverride ?? sessionRef.current;
+      const activeApi = new CloudApi(activeSession.baseUrl, Boolean(activeSession.demo));
+      const [authData, planData, projectData, healthData] = await Promise.all([
+        activeSession.demo ? Promise.resolve(null) : activeApi.me(),
+        activeApi.plans(),
+        activeApi.projects(workspaceOverride || selectedWorkspace || activeSession.selectedWorkspaceId || undefined),
+        activeApi.health(),
+      ]);
+      const mergedSession = authData && !activeSession.demo ? mergeAuthSession(activeSession, authData) : activeSession;
+      const workspaceCandidates = mergedSession.workspaces ?? workspaces;
+      const workspace =
+        workspaceOverride ||
+        mergedSession.selectedWorkspaceId ||
+        selectedWorkspace ||
+        workspaceCandidates[0]?.id ||
+        projectData[0]?.workspace_id ||
+        "";
       const readinessData = await activeApi.readiness(workspace || undefined);
       setPlans(planData);
       setProjects(projectData);
+      setWorkspaces(workspaceCandidates);
       setSelectedWorkspace(workspace);
       setHealth(healthData);
       setReadiness(readinessData);
       setConnectionState(mode === "preview" ? "preview" : readinessData.status === "ok" ? "connected" : "misconfigured");
       const snapshot: Session = {
-        ...currentSession,
+        ...mergedSession,
         publicApiKey,
         readiness: readinessData,
         validatedAt: readinessData.time,
         mode,
+        selectedWorkspaceId: workspace,
       };
       setCurrentSession(snapshot);
-      localStorage.setItem(sessionKey, JSON.stringify(snapshot));
+      onSessionChange(snapshot);
       if (workspace) {
         const usageData = await activeApi.usage(workspace);
         setUsage(usageData);
@@ -397,7 +651,7 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
       setNotice("Project name is required.");
       return;
     }
-    const project = await api.createProject(input);
+    const project = await api.createProject({ ...input, workspace_id: selectedWorkspace || undefined });
     setNotice(`Created project ${project.name}.`);
     await refresh(project.workspace_id);
     setPage("projects");
@@ -416,6 +670,8 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
 
   function selectWorkspace(workspaceId: string) {
     setSelectedWorkspace(workspaceId);
+    setCurrentSession((prev) => ({ ...prev, selectedWorkspaceId: workspaceId }));
+    onSessionChange({ ...sessionRef.current, selectedWorkspaceId: workspaceId });
     refresh(workspaceId).catch((error) => setNotice(error.message));
   }
 
@@ -427,8 +683,8 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
   function updatePublicApiKey(key: string) {
     setPublicApiKey(key);
     const next = { ...currentSession, publicApiKey: key };
-    localStorage.setItem(sessionKey, JSON.stringify(next));
     setCurrentSession(next);
+    onSessionChange(next);
   }
 
   const selectedProject = projects.find((project) => project.workspace_id === selectedWorkspace) ?? projects[0];
@@ -445,8 +701,10 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
       <main className="workspace">
         <Topbar
           projects={projects}
+          user={currentSession.user ?? null}
           selectedWorkspace={selectedWorkspace}
           onWorkspaceChange={selectWorkspace}
+          workspaces={workspaces}
           query={query}
           setQuery={setQuery}
           mode={mode}
@@ -550,12 +808,13 @@ function Dashboard({ session, onLogout }: { session: Session; onLogout: () => vo
               session={currentSession}
               publicApiKey={publicApiKey}
               mode={mode}
+              onLogout={onLogout}
               onSave={(url, key) => {
                 setNotice(`Saved settings.`);
-                const next = { ...currentSession, baseUrl: url.replace(/\/+$/, ""), publicApiKey: key };
-                localStorage.setItem(sessionKey, JSON.stringify(next));
+                const next = { ...sessionRef.current, baseUrl: url.replace(/\/+$/, ""), publicApiKey: key };
                 setCurrentSession(next);
                 setPublicApiKey(key);
+                onSessionChange(next);
                 refresh(selectedWorkspace, next).catch((error) => setNotice(error.message));
               }}
             />
@@ -619,8 +878,10 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
 
 function Topbar({
   projects,
+  user,
   selectedWorkspace,
   onWorkspaceChange,
+  workspaces,
   query,
   setQuery,
   mode,
@@ -631,8 +892,10 @@ function Topbar({
   onLogout,
 }: {
   projects: Project[];
+  user: CloudAuthUser | null;
   selectedWorkspace: string;
   onWorkspaceChange: (workspaceId: string) => void;
+  workspaces: CloudWorkspace[];
   query: string;
   setQuery: (query: string) => void;
   mode: ConnectionMode;
@@ -659,10 +922,10 @@ function Topbar({
         <div>
           <Building2 size={16} />
           <select value={selectedWorkspace} onChange={(event) => onWorkspaceChange(event.target.value)}>
-            {!projects.length ? <option value="">No workspace yet</option> : null}
-            {projects.map((project) => (
-              <option key={project.id} value={project.workspace_id}>
-                {project.name}
+            {!workspaces.length ? <option value="">No workspace yet</option> : null}
+            {workspaces.map((workspace) => (
+              <option key={workspace.id} value={workspace.id}>
+                {workspace.name}
               </option>
             ))}
           </select>
@@ -693,10 +956,10 @@ function Topbar({
           <CircleHelp size={18} />
         </button>
         <button className="avatar" onClick={onLogout} title="Sign out">
-          AD
+          {user ? userInitials(user) : "AD"}
         </button>
         <button className="developer-menu" onClick={onLogout}>
-          Alex Developer <ChevronDown size={15} />
+          {user?.full_name || user?.email || "Operator"} <ChevronDown size={15} />
         </button>
       </div>
     </header>
@@ -1074,30 +1337,59 @@ function Docs({
   );
 }
 
-function SettingsPage({ session, publicApiKey: initialKey, mode, onSave }: { session: Session; publicApiKey: string; mode: ConnectionMode; onSave: (baseUrl: string, publicApiKey: string) => void }) {
+function SettingsPage({
+  session,
+  publicApiKey: initialKey,
+  mode,
+  onSave,
+  onLogout,
+}: {
+  session: Session;
+  publicApiKey: string;
+  mode: ConnectionMode;
+  onSave: (baseUrl: string, publicApiKey: string) => void;
+  onLogout: () => void | Promise<void>;
+}) {
   const [baseUrl, setBaseUrl] = useState(session.baseUrl);
   const [publicApiKey, setPublicApiKey] = useState(initialKey);
-  const [tokenLabel, setTokenLabel] = useState(session.demo ? "Demo token" : "Configured admin token");
 
   return (
     <div className="detail-layout">
       <Panel>
-        <h2>Cloud connection</h2>
+        <h2>Account</h2>
+        <div className="status-callout compact">
+          <strong>{session.user?.email ?? "Preview account"}</strong>
+          <p>{mode === "preview" ? "Preview mode uses generated sample data. No live backend access is required." : `Signed in as ${session.user?.full_name || session.user?.email || "operator"}.`}</p>
+        </div>
+        {session.workspaces?.length ? (
+          <div className="status-stack" style={{ marginTop: "1rem" }}>
+            {session.workspaces.map((workspace) => (
+              <div key={workspace.id} className="status-item">
+                <span className={workspace.id === session.selectedWorkspaceId ? "dot good" : "dot warn"} />
+                <div>
+                  <strong>{workspace.name}</strong>
+                  <small>{workspace.role} · {workspace.project_count} projects · {workspace.key_count} keys</small>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <div className="split-actions" style={{ marginTop: "1rem" }}>
+          <button className="button outline" onClick={onLogout}>
+            <ShieldCheck size={16} /> Sign out
+          </button>
+        </div>
+        <h2 style={{ marginTop: "2rem" }}>Cloud connection</h2>
         <FormField label="Cloud API URL" value={baseUrl} onChange={setBaseUrl} />
-        <FormField label="Token label" value={tokenLabel} onChange={setTokenLabel} />
         <div className="status-callout compact">
           <strong>{mode === "preview" ? "Preview mode" : "Live mode"}</strong>
-          <p>{mode === "preview" ? "Preview mode uses generated sample data. No live backend access is required." : "Live mode points the dashboard at your Cloud API and uses an operator token for admin access."}</p>
+          <p>{mode === "preview" ? "Preview mode uses generated sample data. No live backend access is required." : "Live mode points the dashboard at your Cloud API and uses a cookie-backed operator session."}</p>
         </div>
-        
+
         <h2 style={{ marginTop: "2rem" }}>Workspace Preview</h2>
-        <FormField 
-          label="Workspace Public API Key" 
-          value={publicApiKey} 
-          onChange={setPublicApiKey} 
-        />
+        <FormField label="Workspace Public API Key" value={publicApiKey} onChange={setPublicApiKey} />
         <p className="helper-text">Enter a `cp_live_...` key to enable live WhatsApp inbox, usage, and pipeline data.</p>
-        
+
         <button className="button primary blue" onClick={() => onSave(baseUrl, publicApiKey)}>
           <Check size={16} /> Save settings
         </button>
@@ -1106,7 +1398,7 @@ function SettingsPage({ session, publicApiKey: initialKey, mode, onSave }: { ses
         <h2>Deployment checklist</h2>
         <ul className="plan-list">
           <li>Mount `@clientpad/cloud` at `/api/cloud/v1`.</li>
-          <li>Set `CLIENTPAD_CLOUD_ADMIN_TOKEN` for operator access.</li>
+          <li>Sign in with an operator account, or create the first operator from the cloud auth flow.</li>
           <li>Deploy this dashboard as a static app.</li>
           <li>Use hosted API keys for live gateway access and WhatsApp inbox sync.</li>
         </ul>
@@ -1337,8 +1629,8 @@ function StatusBanner({
           <span className="status-muted">
             {mode === "preview"
               ? "sample data only"
-              : readiness?.auth?.token === "accepted"
-                ? "operator token accepted"
+              : readiness?.auth?.user
+                ? `signed in as ${readiness.auth.user.email}`
                 : "waiting for live validation"}
           </span>
         </div>
@@ -1483,7 +1775,7 @@ function ConnectWhatsApp({
           : "Live needs attention"
         : "Checking live readiness";
   const checklistItems = [
-    readiness?.auth?.token === "accepted" ? "Operator token accepted" : "Operator token not validated yet",
+    readiness?.auth?.user ? `Signed in as ${readiness.auth.user.email}` : "Operator session not validated yet",
     workspace ? `Workspace selected: ${workspace.name}` : selectedWorkspace ? `Workspace selected: ${selectedWorkspace}` : "No workspace selected",
     summary?.has_public_api_key ? "Public API key is available" : "Create a workspace public API key",
     summary?.has_whatsapp_configuration ? "WhatsApp account is configured" : "Configure WhatsApp account credentials in the backend",
@@ -1519,7 +1811,7 @@ function ConnectWhatsApp({
         <div className="status-stack">
           {[
             { label: "Cloud API", value: readiness ? "Reachable" : "Not checked yet", ok: Boolean(readiness) },
-            { label: "Operator token", value: readiness?.auth?.token === "accepted" ? "Accepted" : "Pending", ok: readiness?.auth?.token === "accepted" },
+            { label: "Operator session", value: readiness?.auth?.user ? "Accepted" : "Pending", ok: Boolean(readiness?.auth?.user) },
             { label: "Workspace", value: workspace ? workspace.name : selectedWorkspace || "Missing", ok: Boolean(workspace || selectedWorkspace) },
             { label: "Public API key", value: summary?.has_public_api_key ? "Ready" : "Missing", ok: Boolean(summary?.has_public_api_key) },
             { label: "WhatsApp config", value: summary?.has_whatsapp_configuration ? "Configured" : "Missing", ok: Boolean(summary?.has_whatsapp_configuration) },
@@ -2011,22 +2303,48 @@ function CopyButton({ text }: { text: string }) {
 }
 
 class CloudApi {
-  constructor(private readonly session: Session) {}
+  constructor(private readonly baseUrl: string, private readonly demo = false) {}
 
   async request<T>(path: string, init: RequestInit = {}): Promise<T> {
-    if (this.session.demo) return demoResponse(path, init) as T;
+    if (this.demo) return demoResponse(path, init) as T;
 
-    const response = await fetch(`${this.session.baseUrl}${path}`, {
+    const response = await fetch(`${this.baseUrl}${path}`, {
       ...init,
+      credentials: "include",
       headers: {
         "content-type": "application/json",
-        authorization: `Bearer ${this.session.adminToken}`,
-        ...init.headers,
+        ...(init.headers ?? {}),
       },
     });
     const body = await response.json().catch(() => null);
     if (!response.ok) throw new Error(body?.error?.message ?? `Request failed with ${response.status}`);
     return body as T;
+  }
+
+  async authStatus() {
+    return this.request<CloudAuthStatus>("/auth/status");
+  }
+
+  async login(input: { email: string; password: string }) {
+    return this.request<CloudAuthEnvelope>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  async register(input: { email: string; password: string; full_name?: string; workspace_name?: string }) {
+    return this.request<CloudAuthEnvelope>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  async me() {
+    return this.request<CloudAuthEnvelope>("/auth/me");
+  }
+
+  async logout() {
+    return this.request<{ status: string }>("/auth/logout", { method: "POST" });
   }
 
   async health() {
@@ -2043,12 +2361,13 @@ class CloudApi {
     return body.data;
   }
 
-  async projects() {
-    const body = await this.request<{ data: Project[] }>("/projects");
+  async projects(workspaceId?: string) {
+    const query = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
+    const body = await this.request<{ data: Project[] }>(`/projects${query}`);
     return body.data;
   }
 
-  async createProject(input: ProjectFormState) {
+  async createProject(input: ProjectFormState & { workspace_id?: string }) {
     const body = await this.request<{ data: Project }>("/projects", { method: "POST", body: JSON.stringify(input) });
     return body.data;
   }
@@ -2092,7 +2411,7 @@ function demoResponse(path: string, init: RequestInit) {
       status: "ok",
       service: "@clientpad/cloud",
       time: new Date().toISOString(),
-      auth: { token: "accepted" },
+      auth: { user: { id: "user_1", email: "operator@clientpad.com", full_name: "Alex Developer" }, session_expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(), mode: "operator_session" },
       summary,
       workspace,
       diagnostics: [
