@@ -1,5 +1,5 @@
 [build]
-  command = "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd); cd \"$ROOT\" && corepack enable && pnpm install --frozen-lockfile && pnpm --filter @clientpad/core build && pnpm --filter @clientpad/sdk build && pnpm --filter @clientpad/dashboard build"
+  command = "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd); cd \"$ROOT\" && corepack enable && pnpm install --frozen-lockfile && pnpm --filter @clientpad/core build && pnpm --filter @clientpad/sdk build && pnpm --filter @clientpad/dashboard build && rm -rf dist && mkdir -p dist && cp -R packages/dashboard/dist/. dist/"
   publish = "dist"
 
 [[redirects]]
