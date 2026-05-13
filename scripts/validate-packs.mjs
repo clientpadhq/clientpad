@@ -20,7 +20,6 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const criticalOnly = process.argv.includes("--critical-only");
-const npmCli = path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
 
 const PACKAGES = [
   { dir: "clientpad-core", name: "@clientpad/core", critical: true },
@@ -72,8 +71,9 @@ async function runPackDryRun(packageName) {
   }
 
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [npmCli, "pack", "--dry-run"], {
+    const child = spawn("npm", ["pack", "--dry-run"], {
       cwd: pkgDir,
+      shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
     });
 
