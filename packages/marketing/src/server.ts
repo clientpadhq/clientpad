@@ -2,7 +2,6 @@ import { readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseAcceptHeader, mediaTypeMatches } from "@dualmark/core";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const PUBLIC_DIR = join(__dirname, "..", "public");
@@ -102,6 +101,22 @@ async function tryReadFile(filePath: string): Promise<string | null> {
 function estimateTokens(text: string): number {
   const words = text.split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.round(words * 1.3));
+}
+
+function parseAcceptHeader(value: string): { type: string; subtype: string }[] {
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const [typePart = "*/*"] = part.split(";", 1);
+      const [type = "*", subtype = "*"] = typePart.trim().split("/");
+      return { type: type || "*", subtype: subtype || "*" };
+    });
+}
+
+function mediaTypeMatches(mediaType: { type: string; subtype: string }, type: string, subtype: string) {
+  return (mediaType.type === "*" || mediaType.type === type) && (mediaType.subtype === "*" || mediaType.subtype === subtype);
 }
 
 function buildLlmsTxt(): string {

@@ -18,6 +18,8 @@ export const handler = createClientPadCloudHandler({
 
 The cloud handler is for your hosted ClientPad Cloud control plane. It is separate from the public API handler in `@clientpad/server`.
 
+This handler is an operator surface, not an end-user login flow. The dashboard should connect to it only in live/operator mode using a Cloud API URL and `CLIENTPAD_CLOUD_ADMIN_TOKEN`.
+
 ## Routes
 
 - `GET /health`
@@ -34,3 +36,5 @@ All routes except `/health`, `/openapi.json`, and `/plans` require:
 ```text
 Authorization: Bearer <CLIENTPAD_CLOUD_ADMIN_TOKEN>
 ```
+
+Use `/health` for dashboard connectivity checks and `/openapi.json` for operator or docs tooling. Public developers should work through the public API key gateway exposed by `@clientpad/server` and `@clientpad/sdk`.

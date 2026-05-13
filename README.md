@@ -14,6 +14,8 @@ This repository ships installable packages instead of a hosted product with subs
 - `@clientpad/cloud`: hosted control plane for projects, plans, subscriptions, usage, and API keys.
 - `@clientpad/dashboard`: developer web dashboard for projects, API keys, usage, billing, and docs.
 
+The dashboard opens in **Preview** mode for sample data or **Live** mode when connected to a ClientPad Cloud API with an operator token. Live mode also expects a workspace public API key before inbox and pipeline data become operational.
+
 ## Install
 
 ```bash

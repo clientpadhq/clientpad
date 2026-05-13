@@ -12,9 +12,7 @@
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "dependencies": {
-    "@dualmark/core": ">=0.5.2"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^22.13.11",
     "typescript": "^5.8.2"
