@@ -19,7 +19,8 @@ ClientPad Cloud is the managed gateway that monetizes hosted `CLIENTPAD_API_KEY`
 
 4. Developer Dashboard
    - Deploy `@clientpad/dashboard` as the web interface.
-   - Developers and operators use it to log in, create projects, create keys, inspect activity, view plans, and copy quickstart code.
+   - Operators use email/password sessions to log in, create projects, create keys, inspect activity, view plans, and copy quickstart code.
+   - Preview mode still exists for sample data and safe exploration.
 
 5. Billing
    - Billing provider events are stored in `cloud_billing_events`.
@@ -50,6 +51,10 @@ DATABASE_URL=postgresql://clientpad:clientpad@localhost:5432/clientpad
 API_KEY_PEPPER=replace-with-long-random-secret
 CLIENTPAD_CLOUD_ADMIN_TOKEN=replace-with-long-random-secret
 ```
+
+`CLIENTPAD_CLOUD_ADMIN_TOKEN` stays on the backend control plane. It is not the dashboard login credential. The hosted dashboard uses cookie-backed operator sessions issued from `@clientpad/cloud`.
+
+For first-time operator setup, expose the Cloud API and have the first operator register or sign in through the dashboard. The dashboard validates `/health`, `/auth/status`, `/auth/login`, `/auth/me`, and `/readiness` before it treats Live mode as connected.
 
 ## Initial Deploy Checklist
 
