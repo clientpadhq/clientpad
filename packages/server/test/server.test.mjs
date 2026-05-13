@@ -362,10 +362,19 @@ const inboxDb = {
           rowCount: 1,
         };
       }
+      if (values[0] !== "conv_1") {
+        return { rows: [], rowCount: 0 };
+      }
+      if (text.includes("select phone, lead_id, metadata from whatsapp_conversations")) {
+        return {
+          rows: [{ id: "conv_1", workspace_id: "workspace_1", phone: "+234123", metadata: { ai: { suggestedReplies: [{ body: "AI reply" }] } } }],
+          rowCount: 1,
+        };
+      }
       // This handles getting conversation details, including AI metadata
       if (text.includes("metadata->'ai'->'suggestedReplies'")) {
         return {
-          rows: [{ id: "conv_1", workspace_id: "workspace_1", phone: "+234123", metadata: { ai: { suggestedReplies: [{ body: "AI reply" }] } } }],
+          rows: [{ id: "conv_1", workspace_id: "workspace_1", phone: "+234123", suggestions: [{ body: "AI reply" }], safety: {} }],
           rowCount: 1,
         };
       }

@@ -34,9 +34,9 @@
     "typescript"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node test/whatsapp.test.mjs",
+    "build": "pnpm --filter @clientpad/core build && pnpm --filter @clientpad/sdk build && tsc -p tsconfig.json",
+    "typecheck": "pnpm --filter @clientpad/core build && pnpm --filter @clientpad/sdk build && tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node test/whatsapp.test.mjs",
     "prepack": "pnpm run build"
   },
   "dependencies": {
