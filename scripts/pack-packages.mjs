@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const distDir = path.join(root, "dist");
-const packages = ["@clientpad/core", "cli", "sdk", "server", "cloud", "whatsapp", "dashboard"];
+const packages = ["clientpad-core", "cli", "sdk", "server", "cloud", "whatsapp", "dashboard"];
+const npmCli = path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
 
 await mkdir(distDir, { recursive: true });
 
@@ -15,9 +16,8 @@ for (const packageName of packages) {
 
 function packPackage(packageName) {
   return new Promise((resolve, reject) => {
-    const child = spawn("pnpm", ["pack", "--pack-destination", distDir], {
+    const child = spawn(process.execPath, [npmCli, "pack", "--pack-destination", distDir], {
       cwd: path.join(root, "packages", packageName),
-      shell: true,
       stdio: "inherit",
     });
 

@@ -20,9 +20,17 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const criticalOnly = process.argv.includes("--critical-only");
+const npmCli = path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
 
-const RELEASE_CRITICAL = ["@clientpad/core", "cli", "sdk", "server"];
-const SECONDARY = criticalOnly ? [] : ["whatsapp", "cloud"];
+const PACKAGES = [
+  { dir: "clientpad-core", name: "@clientpad/core", critical: true },
+  { dir: "cli", name: "cli", critical: true },
+  { dir: "sdk", name: "sdk", critical: true },
+  { dir: "server", name: "server", critical: true },
+  { dir: "whatsapp", name: "whatsapp", critical: false },
+  { dir: "cloud", name: "cloud", critical: false },
+  { dir: "dashboard", name: "dashboard", critical: false },
+];
 
 // Files that must NEVER appear in a published tarball
 const FORBIDDEN_IN_TARBALL = [
@@ -45,6 +53,7 @@ const REQUIRED_IN_TARBALL = {
   server: ["dist/index.js", "dist/index.d.ts", "README.md"],
   whatsapp: ["dist/index.js", "dist/index.d.ts", "README.md"],
   cloud: ["dist/index.js", "dist/index.d.ts", "README.md"],
+  dashboard: ["dist/index.html", "README.md"],
 };
 
 let hasErrors = false;
@@ -63,9 +72,8 @@ async function runPackDryRun(packageName) {
   }
 
   return new Promise((resolve) => {
-    const child = spawn("npm", ["pack", "--dry-run"], {
+    const child = spawn(process.execPath, [npmCli, "pack", "--dry-run"], {
       cwd: pkgDir,
-      shell: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
 
@@ -141,14 +149,14 @@ async function runPackDryRun(packageName) {
 console.log("\n=== ClientPad Pack Dry-Run Validation ===\n");
 
 console.log("Release-critical packages:");
-for (const pkg of RELEASE_CRITICAL) {
-  await runPackDryRun(pkg);
+for (const pkg of PACKAGES.filter((entry) => entry.critical)) {
+  await runPackDryRun(pkg.dir);
 }
 
-if (SECONDARY.length > 0) {
+if (!criticalOnly) {
   console.log("\nSecondary packages:");
-  for (const pkg of SECONDARY) {
-    await runPackDryRun(pkg);
+  for (const pkg of PACKAGES.filter((entry) => !entry.critical)) {
+    await runPackDryRun(pkg.dir);
   }
 }
 

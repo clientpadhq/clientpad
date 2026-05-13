@@ -172,6 +172,7 @@ export class ClientPadServer {
       if (path === "/payments/flutterwave/webhook" && request.method === "POST") {
         return this.handlePaymentWebhook(request, "flutterwave");
       }
+      if (path === "/payments" && request.method === "GET") return this.listPayments(request, url);
 
       if (path === "/whatsapp/conversations" && request.method === "GET") return this.listWhatsAppConversations(request, url);
       if (path.startsWith("/whatsapp/conversations/") && request.method === "GET") {
@@ -1181,6 +1182,44 @@ export class ClientPadServer {
     const clientId = rows[0]?.id;
     await this.auditPublicApiEvent(context, request, "clients.create", { client_id: clientId });
     return Response.json({ data: { id: clientId } }, { status: 201 });
+  }
+  private async listPayments(request: Request, url: URL) {
+    const context = await this.requireApiKey(request, ["payments:read"]);
+    if (context instanceof Response) return context;
+
+    const limit = parseLimit(url.searchParams.get("limit"));
+    const offset = parseOffset(url.searchParams.get("offset"));
+    const status = url.searchParams.get("status");
+    const month = url.searchParams.get("month");
+
+    const values: QueryValue[] = [context.workspaceId, limit, offset];
+    let filters = "";
+
+    if (status && ["pending","paid","failed","cancelled"].includes(status)) {
+      values.push(status);
+      filters += ` and p.status = $${values.length}`;
+    }
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      values.push(month + "-01");
+      filters += ` and p.created_at >= $${values.length}::date`;
+    }
+
+    const { rows } = await this.db.query(
+      `select p.id, p.workspace_id, p.lead_id, p.provider, p.provider_reference,
+              p.provider_payment_id, p.status, p.amount, p.currency,
+              p.service_item_reference, p.customer_phone, p.customer_name,
+              p.paid_at, p.created_at, p.updated_at,
+              l.name as lead_name, l.phone as lead_phone
+       from payments p
+       left join leads l on p.lead_id = l.id
+       where p.workspace_id = $1${filters}
+       order by p.created_at desc
+       limit $2 offset $3`,
+      values
+    );
+
+    await this.auditPublicApiEvent(context, request, "payments.list", { limit, offset, status, month });
+    return Response.json({ data: rows, pagination: { limit, offset } });
   }
 
   private async getUsage(request: Request) {
