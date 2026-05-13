@@ -54,6 +54,39 @@ type SubscriptionRow = {
   plan_code: string;
 };
 
+type ReadinessSummary = {
+  workspace_count: number;
+  project_count: number;
+  key_count: number;
+  active_subscription_count: number;
+  whatsapp_account_count: number;
+  active_whatsapp_account_count: number;
+  payment_provider_count: number;
+  latest_whatsapp_activity_at: string | null;
+  latest_payment_event_at: string | null;
+  recent_webhook_count: number;
+  has_public_api_key: boolean;
+  has_whatsapp_configuration: boolean;
+  has_payment_provider_configuration: boolean;
+};
+
+type ReadinessWorkspace = {
+  id: string;
+  name: string;
+  project_count: number;
+  key_count: number;
+  active_subscription_count: number;
+  whatsapp_account_count: number;
+  active_whatsapp_account_count: number;
+  payment_provider_count: number;
+  latest_whatsapp_activity_at: string | null;
+  latest_payment_event_at: string | null;
+  recent_webhook_count: number;
+  has_public_api_key: boolean;
+  has_whatsapp_configuration: boolean;
+  has_payment_provider_configuration: boolean;
+};
+
 export function createClientPadCloudHandler(config: ClientPadCloudConfig): ClientPadCloudHandler {
   const cloud = new ClientPadCloud(config);
   return cloud.handle.bind(cloud);
@@ -91,6 +124,7 @@ export class ClientPadCloud {
       if (path === "/api-keys" && request.method === "POST") return this.createHostedApiKey(request);
       if (path === "/usage" && request.method === "GET") return this.getUsage(url);
       if (path === "/billing/events" && request.method === "POST") return this.recordBillingEvent(request);
+      if (path === "/readiness" && request.method === "GET") return this.getReadiness(url);
 
       return jsonError("Route not found.", 404);
     } catch (error) {
@@ -105,6 +139,26 @@ export class ClientPadCloud {
       status: "ok",
       service: "@clientpad/cloud",
       time: new Date().toISOString(),
+    });
+  }
+
+  private async getReadiness(url: URL) {
+    const workspaceId = optionalString(url.searchParams.get("workspace_id"));
+    const [summary, workspace] = await Promise.all([
+      this.getReadinessSummary(),
+      workspaceId ? this.getReadinessWorkspace(workspaceId) : Promise.resolve(null),
+    ]);
+
+    const status = this.readinessStatus(summary, workspace);
+
+    return Response.json({
+      status,
+      service: "@clientpad/cloud",
+      time: new Date().toISOString(),
+      auth: { token: "accepted" },
+      summary,
+      workspace,
+      diagnostics: this.buildDiagnostics(summary, workspace, Boolean(workspaceId)),
     });
   }
 
@@ -284,6 +338,212 @@ export class ClientPadCloud {
     return Response.json({ data: rows, month });
   }
 
+  private async getReadinessSummary(): Promise<ReadinessSummary> {
+    const [workspaceCount, projectCount, keyCount, subscriptionCount, whatsappStats, paymentStats] = await Promise.all([
+      this.db.query<{ workspace_count: number }>(`select count(*)::int as workspace_count from workspaces`),
+      this.db.query<{ project_count: number }>(`select count(*)::int as project_count from cloud_projects`),
+      this.db.query<{ key_count: number }>(`select count(*)::int as key_count from api_keys where revoked_at is null`),
+      this.db.query<{ active_subscription_count: number }>(
+        `select count(*)::int as active_subscription_count from cloud_subscriptions where status in ('trialing', 'active')`
+      ),
+      this.db.query<{
+        whatsapp_account_count: number;
+        active_whatsapp_account_count: number;
+        latest_whatsapp_activity_at: string | null;
+        recent_webhook_count: number;
+      }>(
+        `
+          select
+            count(*)::int as whatsapp_account_count,
+            count(*) filter (where status = 'active')::int as active_whatsapp_account_count,
+            max(greatest(
+              coalesce(last_message_at, timestamp 'epoch'),
+              coalesce(last_inbound_at, timestamp 'epoch'),
+              coalesce(last_outbound_at, timestamp 'epoch'),
+              coalesce(updated_at, timestamp 'epoch')
+            )) as latest_whatsapp_activity_at,
+            count(*) filter (where coalesce(last_inbound_at, last_message_at, updated_at) >= now() - interval '7 days')::int as recent_webhook_count
+          from whatsapp_conversations
+        `
+      ),
+      this.db.query<{
+        payment_provider_count: number;
+        latest_payment_event_at: string | null;
+      }>(
+        `
+          select
+            count(distinct provider)::int as payment_provider_count,
+            max(created_at) as latest_payment_event_at
+          from cloud_billing_events
+        `
+      ),
+    ]);
+
+    const whatsappRow = whatsappStats.rows[0] ?? {
+      whatsapp_account_count: 0,
+      active_whatsapp_account_count: 0,
+      latest_whatsapp_activity_at: null,
+      recent_webhook_count: 0,
+    };
+    const paymentRow = paymentStats.rows[0] ?? { payment_provider_count: 0, latest_payment_event_at: null };
+
+    return {
+      workspace_count: workspaceCount.rows[0]?.workspace_count ?? 0,
+      project_count: projectCount.rows[0]?.project_count ?? 0,
+      key_count: keyCount.rows[0]?.key_count ?? 0,
+      active_subscription_count: subscriptionCount.rows[0]?.active_subscription_count ?? 0,
+      whatsapp_account_count: whatsappRow.whatsapp_account_count ?? 0,
+      active_whatsapp_account_count: whatsappRow.active_whatsapp_account_count ?? 0,
+      payment_provider_count: paymentRow.payment_provider_count ?? 0,
+      latest_whatsapp_activity_at: normalizeTimestamp(whatsappRow.latest_whatsapp_activity_at),
+      latest_payment_event_at: normalizeTimestamp(paymentRow.latest_payment_event_at),
+      recent_webhook_count: whatsappRow.recent_webhook_count ?? 0,
+      has_public_api_key: (keyCount.rows[0]?.key_count ?? 0) > 0,
+      has_whatsapp_configuration: (whatsappRow.active_whatsapp_account_count ?? 0) > 0,
+      has_payment_provider_configuration: (paymentRow.payment_provider_count ?? 0) > 0,
+    };
+  }
+
+  private async getReadinessWorkspace(workspaceId: string): Promise<ReadinessWorkspace | null> {
+    const [workspace, projectCount, keyCount, subscriptionCount, whatsappStats, paymentStats] = await Promise.all([
+      this.db.query<{ id: string; name: string }>(`select id, name from workspaces where id = $1 limit 1`, [workspaceId]),
+      this.db.query<{ project_count: number }>(`select count(*)::int as project_count from cloud_projects where workspace_id = $1`, [workspaceId]),
+      this.db.query<{ key_count: number }>(`select count(*)::int as key_count from api_keys where workspace_id = $1 and revoked_at is null`, [workspaceId]),
+      this.db.query<{ active_subscription_count: number }>(
+        `select count(*)::int as active_subscription_count from cloud_subscriptions where workspace_id = $1 and status in ('trialing', 'active')`,
+        [workspaceId]
+      ),
+      this.db.query<{
+        whatsapp_account_count: number;
+        active_whatsapp_account_count: number;
+        latest_whatsapp_activity_at: string | null;
+        recent_webhook_count: number;
+      }>(
+        `
+          select
+            count(*)::int as whatsapp_account_count,
+            count(*) filter (where status = 'active')::int as active_whatsapp_account_count,
+            max(greatest(
+              coalesce(last_message_at, timestamp 'epoch'),
+              coalesce(last_inbound_at, timestamp 'epoch'),
+              coalesce(last_outbound_at, timestamp 'epoch'),
+              coalesce(updated_at, timestamp 'epoch')
+            )) as latest_whatsapp_activity_at,
+            count(*) filter (where coalesce(last_inbound_at, last_message_at, updated_at) >= now() - interval '7 days')::int as recent_webhook_count
+          from whatsapp_conversations
+          where workspace_id = $1
+        `,
+        [workspaceId]
+      ),
+      this.db.query<{
+        payment_provider_count: number;
+        latest_payment_event_at: string | null;
+      }>(
+        `
+          select
+            count(distinct provider)::int as payment_provider_count,
+            max(created_at) as latest_payment_event_at
+          from cloud_billing_events
+          where workspace_id = $1
+        `,
+        [workspaceId]
+      ),
+    ]);
+
+    if (!workspace.rows[0]) return null;
+
+    const whatsappRow = whatsappStats.rows[0] ?? {
+      whatsapp_account_count: 0,
+      active_whatsapp_account_count: 0,
+      latest_whatsapp_activity_at: null,
+      recent_webhook_count: 0,
+    };
+    const paymentRow = paymentStats.rows[0] ?? { payment_provider_count: 0, latest_payment_event_at: null };
+
+    return {
+      id: workspace.rows[0].id,
+      name: workspace.rows[0].name,
+      project_count: projectCount.rows[0]?.project_count ?? 0,
+      key_count: keyCount.rows[0]?.key_count ?? 0,
+      active_subscription_count: subscriptionCount.rows[0]?.active_subscription_count ?? 0,
+      whatsapp_account_count: whatsappRow.whatsapp_account_count ?? 0,
+      active_whatsapp_account_count: whatsappRow.active_whatsapp_account_count ?? 0,
+      payment_provider_count: paymentRow.payment_provider_count ?? 0,
+      latest_whatsapp_activity_at: normalizeTimestamp(whatsappRow.latest_whatsapp_activity_at),
+      latest_payment_event_at: normalizeTimestamp(paymentRow.latest_payment_event_at),
+      recent_webhook_count: whatsappRow.recent_webhook_count ?? 0,
+      has_public_api_key: (keyCount.rows[0]?.key_count ?? 0) > 0,
+      has_whatsapp_configuration: (whatsappRow.active_whatsapp_account_count ?? 0) > 0,
+      has_payment_provider_configuration: (paymentRow.payment_provider_count ?? 0) > 0,
+    };
+  }
+
+  private readinessStatus(summary: ReadinessSummary, workspace: ReadinessWorkspace | null) {
+    const hasWorkspace = workspace ? true : summary.workspace_count > 0;
+    const hasProject = workspace ? workspace.project_count > 0 : summary.project_count > 0;
+    const hasKey = workspace ? workspace.has_public_api_key : summary.has_public_api_key;
+    if (hasWorkspace && hasProject && hasKey) return "ok";
+    return "degraded";
+  }
+
+  private buildDiagnostics(summary: ReadinessSummary, workspace: ReadinessWorkspace | null, workspaceRequested: boolean) {
+    const projectCount = workspace ? workspace.project_count : summary.project_count;
+    const keyCount = workspace ? workspace.key_count : summary.key_count;
+    const whatsappAccountCount = workspace ? workspace.whatsapp_account_count : summary.whatsapp_account_count;
+    const activeWhatsAppCount = workspace ? workspace.active_whatsapp_account_count : summary.active_whatsapp_account_count;
+    const paymentProviderCount = workspace ? workspace.payment_provider_count : summary.payment_provider_count;
+    const recentWebhookCount = workspace ? workspace.recent_webhook_count : summary.recent_webhook_count;
+    const hasPublicApiKey = workspace ? workspace.has_public_api_key : summary.has_public_api_key;
+    const hasWhatsappConfiguration = workspace ? workspace.has_whatsapp_configuration : summary.has_whatsapp_configuration;
+    const hasPaymentProviderConfiguration = workspace ? workspace.has_payment_provider_configuration : summary.has_payment_provider_configuration;
+    return [
+      {
+        key: "workspace",
+        label: "Workspace",
+        status: workspace ? "ok" : workspaceRequested ? "missing" : summary.workspace_count > 0 ? "ok" : "missing",
+        detail: workspace
+          ? `${workspace.name} selected`
+          : workspaceRequested
+            ? "Requested workspace was not found"
+            : `${summary.workspace_count} workspaces available`,
+      },
+      {
+        key: "projects",
+        label: "Projects",
+        status: projectCount > 0 ? "ok" : "missing",
+        detail: projectCount > 0 ? `${projectCount} project${projectCount === 1 ? "" : "s"} found` : "Create a first project",
+      },
+      {
+        key: "keys",
+        label: "API keys",
+        status: keyCount > 0 || hasPublicApiKey ? "ok" : "missing",
+        detail: hasPublicApiKey ? "At least one public API key is active" : "Create a workspace public API key",
+      },
+      {
+        key: "whatsapp",
+        label: "WhatsApp",
+        status: hasWhatsappConfiguration ? "ok" : whatsappAccountCount > 0 ? "missing" : "missing",
+        detail: hasWhatsappConfiguration
+          ? `${activeWhatsAppCount} active WhatsApp account${activeWhatsAppCount === 1 ? "" : "s"}`
+          : "No active WhatsApp account is configured",
+      },
+      {
+        key: "payments",
+        label: "Payments",
+        status: hasPaymentProviderConfiguration ? "ok" : "missing",
+        detail: hasPaymentProviderConfiguration
+          ? `${paymentProviderCount} payment provider${paymentProviderCount === 1 ? "" : "s"} reporting activity`
+          : "No payment provider events received yet",
+      },
+      {
+        key: "webhooks",
+        label: "Recent webhooks",
+        status: recentWebhookCount > 0 ? "ok" : "missing",
+        detail: recentWebhookCount > 0 ? `${recentWebhookCount} recent webhook conversation${recentWebhookCount === 1 ? "" : "s"}` : "No recent webhook traffic recorded",
+      },
+    ];
+  }
+
   private async recordBillingEvent(request: Request) {
     const body = await readJsonObject(request);
     if (body instanceof Response) return body;
@@ -446,6 +706,12 @@ function getCurrentMonthStart() {
   return `${now.getUTCFullYear()}-${month}-01`;
 }
 
+function normalizeTimestamp(value: string | Date | null | undefined) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 const openApiDocument = {
   openapi: "3.1.0",
   info: {
@@ -455,6 +721,7 @@ const openApiDocument = {
   paths: {
     "/health": { get: { summary: "Health check" } },
     "/plans": { get: { summary: "List public plans" } },
+    "/readiness": { get: { summary: "Operator readiness summary" } },
     "/projects": {
       get: { summary: "List hosted projects" },
       post: { summary: "Create hosted project and workspace" },
