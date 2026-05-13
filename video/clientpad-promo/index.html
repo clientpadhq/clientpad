@@ -1,0 +1,1448 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ClientPad Promo</title>
+    <style>
+      :root {
+        --brand-green: #0b8d4d;
+        --brand-green-2: #20a35a;
+        --brand-green-light: #e8f5ee;
+        --cta-blue: #1463e9;
+        --cta-blue-2: #1f6feb;
+        --bg: #ffffff;
+        --bg-subtle: #f8fafb;
+        --surface: #ffffff;
+        --surface-hover: #f5f7f9;
+        --text-primary: #101820;
+        --text-secondary: #526071;
+        --text-muted: #8b9aab;
+        --border: #dbe2ea;
+        --border-strong: #cfd7e2;
+        --success: #07833f;
+        --success-bg: #e8f5ee;
+        --warning: #d97706;
+        --warning-bg: #fffbeb;
+        --danger: #e23f17;
+        --danger-bg: #fef2f2;
+        --code-bg: #111c28;
+        --code-text: #e2e8f0;
+        --chat-bubble-in: #dcf8c6;
+        --chat-bubble-out: #ffffff;
+        --chat-border: #e9edef;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg-subtle);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        color: var(--text-primary);
+      }
+
+      body {
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+        letter-spacing: 0;
+      }
+
+      .canvas {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        background:
+          linear-gradient(90deg, rgba(219, 226, 234, 0.35) 1px, transparent 1px) 0 0 / 64px 64px,
+          linear-gradient(rgba(219, 226, 234, 0.28) 1px, transparent 1px) 0 0 / 64px 64px,
+          linear-gradient(180deg, #ffffff 0%, #f7fafc 100%);
+        overflow: hidden;
+      }
+
+      .canvas::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(90deg, rgba(11, 141, 77, 0.06), transparent 28%),
+          linear-gradient(270deg, rgba(20, 99, 233, 0.06), transparent 32%);
+        pointer-events: none;
+      }
+
+      .canvas::after {
+        content: "ClientPad Cloud";
+        position: absolute;
+        left: 58px;
+        top: 34px;
+        font-size: 140px;
+        line-height: 1;
+        font-weight: 780;
+        letter-spacing: -0.05em;
+        color: rgba(16, 24, 32, 0.03);
+        pointer-events: none;
+        transform: translateY(0);
+      }
+
+      .brand-strip {
+        position: absolute;
+        left: 72px;
+        top: 52px;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        border: 1px solid rgba(219, 226, 234, 0.9);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.88);
+        color: var(--text-primary);
+        font-size: 14px;
+        font-weight: 760;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+
+      .brand-mark {
+        width: 22px;
+        height: 22px;
+        border-radius: 7px;
+        border: 2px solid var(--brand-green);
+        position: relative;
+      }
+
+      .brand-mark::after {
+        content: "";
+        position: absolute;
+        right: -4px;
+        bottom: -4px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--brand-green);
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        padding: 132px 92px 76px;
+        display: grid;
+        opacity: 0;
+        transform: translateY(18px) scale(0.985);
+      }
+
+      .scene.is-active {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+
+      .scene-grid {
+        width: 100%;
+        height: 100%;
+        display: grid;
+        gap: 28px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.92);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 610;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--brand-green);
+        box-shadow: 0 0 0 6px rgba(11, 141, 77, 0.08);
+      }
+
+      .dot.blue {
+        background: var(--cta-blue);
+        box-shadow: 0 0 0 6px rgba(20, 99, 233, 0.08);
+      }
+
+      .title {
+        margin: 0;
+        font-size: 84px;
+        line-height: 0.96;
+        letter-spacing: -0.055em;
+        font-weight: 780;
+        color: var(--text-primary);
+      }
+
+      .title span {
+        color: var(--brand-green);
+      }
+
+      .subtitle {
+        margin: 0;
+        max-width: 760px;
+        color: var(--text-secondary);
+        font-size: 25px;
+        line-height: 1.45;
+      }
+
+      .subtle {
+        color: var(--text-muted);
+      }
+
+      .metrics {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 34px;
+        padding: 0 14px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.92);
+        color: var(--text-primary);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .chip.success {
+        background: var(--success-bg);
+        color: var(--success);
+        border-color: rgba(7, 131, 63, 0.18);
+      }
+
+      .chip.blue {
+        background: rgba(20, 99, 233, 0.08);
+        color: var(--cta-blue);
+        border-color: rgba(20, 99, 233, 0.14);
+      }
+
+      .chip.warning {
+        background: var(--warning-bg);
+        color: var(--warning);
+        border-color: rgba(217, 119, 6, 0.18);
+      }
+
+      .chip code,
+      .code-inline {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .panel {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 14px 18px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .panel-head h3,
+      .panel-head h4 {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.2;
+        font-weight: 760;
+      }
+
+      .panel-head p {
+        margin: 2px 0 0;
+        color: var(--text-muted);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .panel-body {
+        padding: 18px;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(560px, 0.9fr);
+        gap: 30px;
+        align-items: center;
+      }
+
+      .hero-copy {
+        display: grid;
+        gap: 22px;
+      }
+
+      .hero-panel {
+        padding: 22px;
+        min-height: 640px;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+      }
+
+      .dashboard-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+
+      .mini-workspace {
+        display: grid;
+        gap: 8px;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        min-width: 190px;
+      }
+
+      .mini-workspace strong,
+      .mini-workspace span {
+        line-height: 1.1;
+      }
+
+      .mini-workspace strong {
+        font-size: 14px;
+      }
+
+      .mini-workspace span {
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .searchbar {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        padding: 11px 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text-muted);
+        background: #fff;
+      }
+
+      .searchbar .fake-input {
+        flex: 1;
+        color: var(--text-secondary);
+        font-size: 13px;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .stat {
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: linear-gradient(180deg, #fff 0%, #fbfcfd 100%);
+      }
+
+      .stat span {
+        display: block;
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 610;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 25px;
+        line-height: 1;
+        font-weight: 760;
+      }
+
+      .stat small {
+        display: block;
+        margin-top: 10px;
+        color: var(--text-secondary);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 14px;
+        margin-top: 16px;
+        min-height: 0;
+      }
+
+      .stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .list-card {
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #fff;
+      }
+
+      .list-card .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid #eef2f5;
+        font-size: 13px;
+      }
+
+      .list-card .row:last-child {
+        border-bottom: 0;
+      }
+
+      .name {
+        font-weight: 650;
+        color: var(--text-primary);
+      }
+
+      .meta {
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      .table {
+        display: grid;
+        gap: 8px;
+      }
+
+      .table .head,
+      .table .item {
+        display: grid;
+        grid-template-columns: 1.1fr 0.8fr 0.6fr 0.6fr;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .table .head {
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 610;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .table .item {
+        padding: 12px 0;
+        border-bottom: 1px solid #eef2f5;
+        font-size: 13px;
+      }
+
+      .table .item:last-child {
+        border-bottom: 0;
+      }
+
+      .mode-grid {
+        display: grid;
+        grid-template-columns: 1fr 86px 1fr;
+        align-items: stretch;
+        gap: 18px;
+        height: 100%;
+      }
+
+      .mode-card {
+        display: grid;
+        gap: 16px;
+        padding: 18px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: #fff;
+        min-height: 0;
+      }
+
+      .mode-card.preview {
+        box-shadow: inset 0 0 0 1px rgba(20, 99, 233, 0.06);
+      }
+
+      .mode-card.live {
+        box-shadow: inset 0 0 0 1px rgba(11, 141, 77, 0.08);
+      }
+
+      .mode-label {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .mode-label strong {
+        font-size: 20px;
+        line-height: 1;
+        font-weight: 760;
+      }
+
+      .mode-label .badge {
+        min-width: 90px;
+        justify-content: center;
+      }
+
+      .mode-preview {
+        display: grid;
+        gap: 12px;
+      }
+
+      .sample-card {
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: linear-gradient(180deg, #fff 0%, #fafcfe 100%);
+      }
+
+      .sample-card .line {
+        height: 10px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(20, 99, 233, 0.12), rgba(20, 99, 233, 0.03));
+        margin-top: 10px;
+      }
+
+      .sample-card .line.short {
+        width: 64%;
+      }
+
+      .sample-card .line.mid {
+        width: 82%;
+      }
+
+      .sample-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .callout {
+        padding: 14px 16px;
+        border-radius: 10px;
+        border: 1px solid rgba(20, 99, 233, 0.14);
+        background: rgba(20, 99, 233, 0.06);
+        color: var(--cta-blue);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .auth-layout,
+      .wa-layout,
+      .close-layout {
+        grid-template-columns: 1fr 0.95fr;
+        align-items: center;
+      }
+
+      .form-card {
+        padding: 22px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #fff;
+        display: grid;
+        gap: 14px;
+      }
+
+      .form-row {
+        display: grid;
+        gap: 7px;
+      }
+
+      .form-row label {
+        font-size: 12px;
+        font-weight: 610;
+        color: var(--text-secondary);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .fake-field {
+        height: 48px;
+        display: flex;
+        align-items: center;
+        padding: 0 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #fff;
+        color: var(--text-primary);
+        font-size: 14px;
+        font-weight: 610;
+      }
+
+      .button-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .button {
+        height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 0 18px;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        font-size: 13px;
+        font-weight: 650;
+        letter-spacing: 0;
+      }
+
+      .button.primary {
+        background: var(--cta-blue);
+        color: #fff;
+      }
+
+      .button.secondary {
+        background: #fff;
+        border-color: var(--border);
+        color: var(--text-primary);
+      }
+
+      .checklist {
+        display: grid;
+        gap: 10px;
+      }
+
+      .check {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #fff;
+      }
+
+      .check .status {
+        width: 12px;
+        height: 12px;
+        margin-top: 4px;
+        border-radius: 50%;
+        background: var(--brand-green);
+      }
+
+      .check.warn .status {
+        background: var(--warning);
+      }
+
+      .check.bad .status {
+        background: var(--danger);
+      }
+
+      .check strong {
+        display: block;
+        font-size: 14px;
+        line-height: 1.3;
+      }
+
+      .check p {
+        margin: 3px 0 0;
+        color: var(--text-secondary);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .code-card {
+        display: grid;
+        gap: 14px;
+        padding: 18px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--code-bg);
+        color: var(--code-text);
+      }
+
+      .code-tabs {
+        display: flex;
+        gap: 18px;
+        border-bottom: 1px solid rgba(219, 226, 234, 0.18);
+      }
+
+      .code-tab {
+        padding-bottom: 11px;
+        color: rgba(226, 232, 240, 0.62);
+        font-size: 12px;
+        font-weight: 610;
+      }
+
+      .code-tab.active {
+        color: #fff;
+        border-bottom: 2px solid var(--cta-blue);
+      }
+
+      .code-body {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 15px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+      }
+
+      .ops-layout {
+        grid-template-columns: 0.9fr 1.2fr 0.9fr;
+        gap: 16px;
+      }
+
+      .ticket-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .ticket {
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #fff;
+        display: grid;
+        gap: 8px;
+      }
+
+      .ticket .top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .ticket strong {
+        font-size: 14px;
+      }
+
+      .ticket p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .conversation {
+        display: grid;
+        gap: 12px;
+        min-height: 420px;
+      }
+
+      .chat {
+        display: grid;
+        gap: 12px;
+      }
+
+      .bubble {
+        max-width: 74%;
+        padding: 12px 14px;
+        border-radius: 10px;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .bubble.in {
+        background: var(--chat-bubble-in);
+        border: 1px solid rgba(11, 141, 77, 0.12);
+        border-radius: 8px 8px 8px 0;
+      }
+
+      .bubble.out {
+        background: var(--chat-bubble-out);
+        border: 1px solid var(--chat-border);
+        border-radius: 8px 8px 0 8px;
+        margin-left: auto;
+      }
+
+      .bubble small {
+        display: block;
+        margin-top: 6px;
+        color: var(--text-muted);
+        font-size: 11px;
+      }
+
+      .pipeline {
+        display: grid;
+        gap: 10px;
+      }
+
+      .stage {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #fff;
+      }
+
+      .stage strong {
+        font-size: 13px;
+      }
+
+      .stage .count {
+        min-width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: var(--bg-subtle);
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .final {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 30px;
+        align-items: center;
+      }
+
+      .final-card {
+        display: grid;
+        gap: 16px;
+        padding: 24px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #fff;
+      }
+
+      .final-cta {
+        display: grid;
+        gap: 12px;
+      }
+
+      .url {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #fff;
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 15px;
+      }
+
+      .footer-note {
+        color: var(--text-muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .ghost {
+        position: absolute;
+        right: 56px;
+        bottom: 42px;
+        color: rgba(16, 24, 32, 0.04);
+        font-size: 138px;
+        line-height: 1;
+        font-weight: 780;
+        letter-spacing: -0.06em;
+        pointer-events: none;
+      }
+
+      .corner {
+        position: absolute;
+        right: 42px;
+        top: 38px;
+        display: flex;
+        gap: 8px;
+        opacity: 0.7;
+      }
+
+      .corner span {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--text-muted);
+      }
+
+      .corner span:nth-child(2) {
+        background: var(--cta-blue);
+      }
+
+      .corner span:nth-child(3) {
+        background: var(--brand-green);
+      }
+
+      .muted {
+        color: var(--text-muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div data-composition-id="clientpad-promo" data-width="1920" data-height="1080" data-start="0" data-duration="46" data-track-index="0" class="canvas">
+      <div class="brand-strip">
+        <span class="brand-mark"></span>
+        ClientPad Cloud
+      </div>
+
+      <div class="corner" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+
+      <!-- Scene 1 -->
+      <section class="scene scene-intro is-active" data-scene="intro">
+        <div class="scene-grid hero-grid">
+          <div class="hero-copy">
+            <div class="eyebrow"><span class="dot"></span> Open-source infrastructure</div>
+            <h1 class="title">Build client operations on <span>ClientPad</span>.</h1>
+            <p class="subtitle">
+              Lead capture, WhatsApp workflows, developer dashboards, API keys, and live
+              operational truth - packaged as infrastructure any business can run, inspect,
+              fork, and embed.
+            </p>
+            <div class="metrics">
+              <div class="chip success"><span class="dot"></span> WhatsApp-first workflows</div>
+              <div class="chip blue"><span class="dot blue"></span> Live operator sessions</div>
+              <div class="chip"><span class="code-inline">pnpm add @clientpad/sdk</span></div>
+              <div class="chip"><span class="code-inline">clientpad init</span></div>
+            </div>
+            <div class="panel" style="max-width: 730px;">
+              <div class="panel-head">
+                <div>
+                  <h3>What ships</h3>
+                  <p>SDK, server handler, cloud control plane, dashboard, WhatsApp layer.</p>
+                </div>
+                <div class="chip success">Open source</div>
+              </div>
+              <div class="panel-body">
+                <div class="table">
+                  <div class="item" style="border-bottom:0; padding-top:0;">
+                    <div><strong>@clientpad/sdk</strong><div class="meta">Use the public API from any app.</div></div>
+                    <div class="muted">Native fetch</div>
+                    <div class="muted">Typed errors</div>
+                    <div class="chip blue">Ready</div>
+                  </div>
+                  <div class="item" style="border-bottom:0;">
+                    <div><strong>@clientpad/cloud</strong><div class="meta">Operator control plane with readiness telemetry.</div></div>
+                    <div class="muted">Auth + sessions</div>
+                    <div class="muted">Health checks</div>
+                    <div class="chip success">Live</div>
+                  </div>
+                  <div class="item" style="border-bottom:0;">
+                    <div><strong>@clientpad/dashboard</strong><div class="meta">Preview mode, live mode, inbox, pipeline, settings.</div></div>
+                    <div class="muted">PWA</div>
+                    <div class="muted">WhatsApp</div>
+                    <div class="chip warning">Operational</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel hero-panel">
+            <div class="dashboard-head">
+              <div class="mini-workspace">
+                <strong>ClientPad Cloud</strong>
+                <span>Workspace: Lagos Salon Group</span>
+              </div>
+              <div class="searchbar">
+                <span class="muted">Search clients, projects, keys</span>
+                <span class="fake-input">Ada Customer / WhatsApp / API key</span>
+              </div>
+            </div>
+            <div class="stats">
+              <div class="stat">
+                <span>Preview / Live</span>
+                <strong>2 modes</strong>
+                <small>Sample data or connected operator session.</small>
+              </div>
+              <div class="stat">
+                <span>Readiness</span>
+                <strong>5 signals</strong>
+                <small>Cloud health, auth, workspace, keys, WhatsApp.</small>
+              </div>
+              <div class="stat">
+                <span>Inbox</span>
+                <strong>18 new</strong>
+                <small>WhatsApp conversations and assignment cues.</small>
+              </div>
+              <div class="stat">
+                <span>Usage</span>
+                <strong>Live</strong>
+                <small>Requests, limits, and activity freshness.</small>
+              </div>
+            </div>
+            <div class="dashboard-grid">
+              <div class="stack">
+                <div class="list-card">
+                  <div class="row">
+                    <div>
+                      <div class="name">Cloud health</div>
+                      <div class="meta">Validated against /health and /readiness</div>
+                    </div>
+                    <span class="chip success">OK</span>
+                  </div>
+                  <div class="row">
+                    <div>
+                      <div class="name">Workspace access</div>
+                      <div class="meta">Operator session restored on refresh</div>
+                    </div>
+                    <span class="chip blue">Signed in</span>
+                  </div>
+                  <div class="row">
+                    <div>
+                      <div class="name">Public API key</div>
+                      <div class="meta">Available for inbox and pipeline usage</div>
+                    </div>
+                    <span class="chip success">Ready</span>
+                  </div>
+                </div>
+                <div class="list-card">
+                  <div class="row">
+                    <div>
+                      <div class="name">Connect WhatsApp</div>
+                      <div class="meta">Webhook URL, phone number ID, app secret, verify token</div>
+                    </div>
+                    <span class="chip warning">Needs review</span>
+                  </div>
+                  <div class="row">
+                    <div>
+                      <div class="name">Recent webhook traffic</div>
+                      <div class="meta">Tracked for operator truth</div>
+                    </div>
+                    <span class="chip success">Seen</span>
+                  </div>
+                </div>
+              </div>
+              <div class="stack">
+                <div class="panel" style="height: 100%;">
+                  <div class="panel-head">
+                    <div>
+                      <h4>Live pipeline</h4>
+                      <p>New Lead to Paid, with status that actually changes.</p>
+                    </div>
+                    <span class="chip blue">Operational</span>
+                  </div>
+                  <div class="panel-body">
+                    <div class="table">
+                      <div class="head">
+                        <div>Stage</div><div>Owner</div><div>Age</div><div>Next</div>
+                      </div>
+                      <div class="item">
+                        <div class="name">New Lead</div><div>Ada</div><div>3m</div><div class="chip success">Reply</div>
+                      </div>
+                      <div class="item">
+                        <div class="name">Booked</div><div>Team 1</div><div>18m</div><div class="chip blue">Confirm</div>
+                      </div>
+                      <div class="item">
+                        <div class="name">Paid</div><div>Office</div><div>1h</div><div class="chip success">Close</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 2 -->
+      <section class="scene scene-mode" data-scene="mode">
+        <div class="scene-grid">
+          <div class="hero-copy" style="max-width: 980px;">
+            <div class="eyebrow"><span class="dot blue"></span> Preview vs Live</div>
+            <h2 class="title" style="font-size: 72px;">You always know whether you are in sample data or live data.</h2>
+            <p class="subtitle">
+              Preview mode is safe exploration. Live mode is a validated operator session that
+              checks cloud health, auth access, and readiness before it says connected.
+            </p>
+          </div>
+          <div class="mode-grid">
+            <div class="mode-card preview">
+              <div class="mode-label">
+                <strong>Preview mode</strong>
+                <span class="chip blue">Sample data</span>
+              </div>
+              <div class="mode-preview">
+                <div class="sample-grid">
+                  <div class="sample-card">
+                    <div class="name">Overview</div>
+                    <div class="meta">Simulated totals and empty-state guidance.</div>
+                    <div class="line mid"></div>
+                    <div class="line short"></div>
+                  </div>
+                  <div class="sample-card">
+                    <div class="name">Inbox</div>
+                    <div class="meta">Demo conversations only.</div>
+                    <div class="line short"></div>
+                    <div class="line mid"></div>
+                  </div>
+                </div>
+                <div class="callout">
+                  Safe by default. No live backend required. Explore the UI, docs, and flows.
+                </div>
+              </div>
+            </div>
+            <div style="display:grid;place-items:center;">
+              <div class="chip warning" style="transform: rotate(-90deg); min-width: 180px;">Switch to Live</div>
+            </div>
+            <div class="mode-card live">
+              <div class="mode-label">
+                <strong>Live mode</strong>
+                <span class="chip success">Validated</span>
+              </div>
+              <div class="mode-preview">
+                <div class="sample-grid">
+                  <div class="sample-card">
+                    <div class="name">Cloud API</div>
+                    <div class="meta">/health and /readiness both pass.</div>
+                    <div class="line mid" style="background: linear-gradient(90deg, rgba(11,141,77,0.16), rgba(11,141,77,0.03));"></div>
+                    <div class="line short" style="background: linear-gradient(90deg, rgba(11,141,77,0.16), rgba(11,141,77,0.03));"></div>
+                  </div>
+                  <div class="sample-card">
+                    <div class="name">Operator session</div>
+                    <div class="meta">Email/password login restored on refresh.</div>
+                    <div class="line short" style="background: linear-gradient(90deg, rgba(20,99,233,0.14), rgba(20,99,233,0.03));"></div>
+                    <div class="line mid" style="background: linear-gradient(90deg, rgba(20,99,233,0.14), rgba(20,99,233,0.03));"></div>
+                  </div>
+                </div>
+                <div class="callout">
+                  If a workspace or public API key is missing, the dashboard says so explicitly.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 3 -->
+      <section class="scene scene-auth" data-scene="auth">
+        <div class="scene-grid auth-layout">
+          <div class="hero-copy">
+            <div class="eyebrow"><span class="dot"></span> Operator auth</div>
+            <h2 class="title" style="font-size: 70px;">Login feels like a product, not a secret token form.</h2>
+            <p class="subtitle">
+              The hosted dashboard uses authenticated operator sessions, persists them safely,
+              and restores access cleanly on revisit. Preview mode stays available for exploration.
+            </p>
+            <div class="metrics">
+              <div class="chip success"><span class="dot"></span> Session restored</div>
+              <div class="chip blue"><span class="dot blue"></span> Authenticated live access</div>
+              <div class="chip">Logout available</div>
+            </div>
+          </div>
+          <div class="form-card">
+            <div class="panel-head" style="padding:0 0 14px; border-bottom: 1px solid var(--border);">
+              <div>
+                <h3>Sign in to live mode</h3>
+                <p>Use your operator email and password to open the control plane.</p>
+              </div>
+              <span class="chip blue">Live</span>
+            </div>
+            <div class="form-row">
+              <label>Email</label>
+              <div class="fake-field">ops@clientpad.cloud</div>
+            </div>
+            <div class="form-row">
+              <label>Password</label>
+              <div class="fake-field">••••••••••••</div>
+            </div>
+            <div class="button-row">
+              <div class="button primary">Sign in</div>
+              <div class="button secondary">Create operator account</div>
+            </div>
+            <div class="panel" style="margin-top: 8px;">
+              <div class="panel-body">
+                <div class="checklist">
+                  <div class="check">
+                    <span class="status"></span>
+                    <div><strong>Cloud API reachable</strong><p>Validated before the dashboard says live.</p></div>
+                  </div>
+                  <div class="check">
+                    <span class="status"></span>
+                    <div><strong>Operator session issued</strong><p>Persisted as a secure live session.</p></div>
+                  </div>
+                  <div class="check warn">
+                    <span class="status"></span>
+                    <div><strong>Workspace selection</strong><p>Choose or create a workspace before switching to operational views.</p></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 4 -->
+      <section class="scene scene-whatsapp" data-scene="whatsapp">
+        <div class="scene-grid wa-layout">
+          <div class="hero-copy">
+            <div class="eyebrow"><span class="dot blue"></span> WhatsApp diagnostics</div>
+            <h2 class="title" style="font-size: 70px;">Connect WhatsApp with real setup truth.</h2>
+            <p class="subtitle">
+              The dashboard shows what is present, what is missing, and what to fix next:
+              phone number ID, verify token, app secret, webhook URL, and recent activity.
+            </p>
+          </div>
+          <div class="stack">
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h3>Connect WhatsApp</h3>
+                  <p>Webhook URL, app credentials, and live traffic are visible here.</p>
+                </div>
+                <span class="chip warning">Needs review</span>
+              </div>
+              <div class="panel-body">
+                <div class="table">
+                  <div class="item">
+                    <div><strong>Webhook URL</strong><div class="meta">https://clientpad.netlify.app/api/whatsapp/webhook</div></div>
+                    <div class="chip blue">Copy</div>
+                    <div class="chip success">Ready</div>
+                    <div class="muted">Meta</div>
+                  </div>
+                  <div class="item">
+                    <div><strong>Phone number ID</strong><div class="meta">Configured for the active workspace</div></div>
+                    <div class="chip success">Present</div>
+                    <div class="chip">Validate</div>
+                    <div class="muted">Workspace</div>
+                  </div>
+                  <div class="item">
+                    <div><strong>Verify token</strong><div class="meta">Hidden from operators after save</div></div>
+                    <div class="chip success">Present</div>
+                    <div class="chip">Hidden</div>
+                    <div class="muted">Secure</div>
+                  </div>
+                  <div class="item">
+                    <div><strong>Recent webhook activity</strong><div class="meta">Last inbound message 6 minutes ago</div></div>
+                    <div class="chip success">Seen</div>
+                    <div class="chip blue">Live</div>
+                    <div class="muted">Fresh</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="callout">
+              No fake success states. If a field is missing, the dashboard says exactly which one.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 5 -->
+      <section class="scene scene-ops" data-scene="ops">
+        <div class="scene-grid ops-layout">
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>Team inbox</h3>
+                <p>Unread, open, assigned, and pending conversations.</p>
+              </div>
+              <span class="chip success">18 unread</span>
+            </div>
+            <div class="panel-body">
+              <div class="ticket-list">
+                <div class="ticket">
+                  <div class="top">
+                    <strong>Ada Customer</strong>
+                    <span class="chip blue">New</span>
+                  </div>
+                  <p>Hi, I need a haircut and beard trim for Saturday morning.</p>
+                </div>
+                <div class="ticket">
+                  <div class="top">
+                    <strong>Musa Repair</strong>
+                    <span class="chip success">Assigned</span>
+                  </div>
+                  <p>Can you send the quote again? We want to pay today.</p>
+                </div>
+                <div class="ticket">
+                  <div class="top">
+                    <strong>Joy Studio</strong>
+                    <span class="chip warning">Waiting</span>
+                  </div>
+                  <p>Need the booking link and deposit details.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="panel conversation">
+            <div class="panel-head">
+              <div>
+                <h3>Conversation context</h3>
+                <p>Operator sees the exact message thread and next action.</p>
+              </div>
+              <span class="chip blue">Ready to reply</span>
+            </div>
+            <div class="panel-body chat">
+              <div class="bubble in">
+                I want to book a haircut for tomorrow evening.
+                <small>Customer message</small>
+              </div>
+              <div class="bubble out">
+                We have 6:30 PM available. Want me to reserve it and send the deposit link?
+                <small>ClientPad reply</small>
+              </div>
+              <div class="bubble in">
+                Yes, please send it.
+                <small>Customer message</small>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>Pipeline</h3>
+                <p>Move leads from New Lead to Paid without guesswork.</p>
+              </div>
+              <span class="chip blue">Live</span>
+            </div>
+            <div class="panel-body">
+              <div class="pipeline">
+                <div class="stage"><strong>New Lead</strong><span class="count">4</span></div>
+                <div class="stage"><strong>Quoted</strong><span class="count">6</span></div>
+                <div class="stage"><strong>Booked</strong><span class="count">3</span></div>
+                <div class="stage"><strong>Paid</strong><span class="count">5</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 6 -->
+      <section class="scene scene-close" data-scene="close">
+        <div class="scene-grid close-layout">
+          <div class="hero-copy">
+            <div class="eyebrow"><span class="dot"></span> Open source infrastructure</div>
+            <h2 class="title" style="font-size: 74px;">Download it. Self-host it. Build on top of it.</h2>
+            <p class="subtitle">
+              ClientPad ships as installable packages, not a closed subscription product. Use the
+              SDK, the server handler, the WhatsApp layer, and the live Cloud dashboard to build
+              a real business system.
+            </p>
+            <div class="metrics">
+              <div class="chip"><span class="code-inline">@clientpad/core</span></div>
+              <div class="chip"><span class="code-inline">@clientpad/cli</span></div>
+              <div class="chip"><span class="code-inline">@clientpad/server</span></div>
+              <div class="chip"><span class="code-inline">@clientpad/sdk</span></div>
+            </div>
+          </div>
+          <div class="final-card">
+            <div class="panel-head" style="padding:0 0 14px; border-bottom:1px solid var(--border);">
+              <div>
+                <h3>Start here</h3>
+                <p>Install, inspect, and connect a real workspace.</p>
+              </div>
+              <span class="chip success">GitHub + npm</span>
+            </div>
+            <div class="final-cta">
+              <div class="url">pnpm add @clientpad/sdk</div>
+              <div class="url">clientpad init</div>
+              <div class="url">clientpad.netlify.app</div>
+            </div>
+            <div class="code-card" style="margin-top: 6px;">
+              <div class="code-tabs">
+                <div class="code-tab active">Node</div>
+                <div class="code-tab">Next.js</div>
+                <div class="code-tab">Express</div>
+              </div>
+              <div class="code-body">import { ClientPad } from "@clientpad/sdk";
+
+const clientpad = new ClientPad({
+  baseUrl: "https://host.com/api/public/v1",
+  apiKey: process.env.CLIENTPAD_API_KEY!,
+});</div>
+            </div>
+            <div class="footer-note">
+              Preview mode for exploration. Live mode for real operators. ClientPad keeps the
+              infrastructure open and the usage truthful.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="ghost">ClientPad</div>
+
+      <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+      <script>
+        window.__timelines = window.__timelines || {};
+        const tl = gsap.timeline({ paused: true });
+        const scenes = {
+          intro: document.querySelector('[data-scene="intro"]'),
+          mode: document.querySelector('[data-scene="mode"]'),
+          auth: document.querySelector('[data-scene="auth"]'),
+          whatsapp: document.querySelector('[data-scene="whatsapp"]'),
+          ops: document.querySelector('[data-scene="ops"]'),
+          close: document.querySelector('[data-scene="close"]'),
+        };
+
+        function activate(scene) {
+          gsap.set(Object.values(scenes), { opacity: 0, y: 18, scale: 0.985 });
+          gsap.set(scene, { opacity: 1, y: 0, scale: 1 });
+        }
+
+        activate(scenes.intro);
+
+        tl.to(scenes.intro, { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: "power3.out" }, 0);
+        tl.from(".scene-intro .eyebrow", { opacity: 0, y: 14, duration: 0.45, ease: "power2.out" }, 0.15);
+        tl.from(".scene-intro .title", { opacity: 0, y: 30, duration: 0.65, ease: "power3.out" }, 0.2);
+        tl.from(".scene-intro .subtitle", { opacity: 0, y: 20, duration: 0.55, ease: "power2.out" }, 0.34);
+        tl.from(".scene-intro .metrics", { opacity: 0, y: 18, duration: 0.5, ease: "power2.out" }, 0.5);
+        tl.from(".scene-intro .hero-panel", { opacity: 0, x: 42, scale: 0.97, duration: 0.8, ease: "power3.out" }, 0.2);
+        tl.to(scenes.intro, { opacity: 0, y: -18, scale: 0.985, duration: 0.55, ease: "power2.in" }, 5.1);
+
+        tl.to(scenes.mode, { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: "power3.out" }, 5.5);
+        tl.from(".scene-mode .eyebrow, .scene-mode .title, .scene-mode .subtitle", { opacity: 0, y: 16, duration: 0.55, stagger: 0.1, ease: "power2.out" }, 5.65);
+        tl.from(".scene-mode .mode-card", { opacity: 0, y: 28, scale: 0.98, duration: 0.75, stagger: 0.18, ease: "power3.out" }, 5.9);
+        tl.from(".scene-mode .chip.warning", { opacity: 0, scale: 0.9, duration: 0.4, ease: "power2.out" }, 6.6);
+        tl.to(scenes.mode, { opacity: 0, y: -18, scale: 0.985, duration: 0.55, ease: "power2.in" }, 12.7);
+
+        tl.to(scenes.auth, { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: "power3.out" }, 13.1);
+        tl.from(".scene-auth .eyebrow, .scene-auth .title, .scene-auth .subtitle", { opacity: 0, y: 16, duration: 0.55, stagger: 0.1, ease: "power2.out" }, 13.28);
+        tl.from(".scene-auth .chip", { opacity: 0, y: 14, duration: 0.45, stagger: 0.08, ease: "power2.out" }, 13.62);
+        tl.from(".scene-auth .form-card", { opacity: 0, x: 36, scale: 0.98, duration: 0.78, ease: "power3.out" }, 13.35);
+        tl.from(".scene-auth .check", { opacity: 0, x: 20, duration: 0.45, stagger: 0.12, ease: "power2.out" }, 14.22);
+        tl.to(scenes.auth, { opacity: 0, y: -18, scale: 0.985, duration: 0.55, ease: "power2.in" }, 20.9);
+
+        tl.to(scenes.whatsapp, { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: "power3.out" }, 21.3);
+        tl.from(".scene-whatsapp .eyebrow, .scene-whatsapp .title, .scene-whatsapp .subtitle", { opacity: 0, y: 16, duration: 0.55, stagger: 0.1, ease: "power2.out" }, 21.46);
+        tl.from(".scene-whatsapp .panel, .scene-whatsapp .callout", { opacity: 0, y: 26, duration: 0.7, stagger: 0.12, ease: "power3.out" }, 21.8);
+        tl.from(".scene-whatsapp .chip", { opacity: 0, y: 12, duration: 0.4, stagger: 0.08, ease: "power2.out" }, 22.35);
+        tl.to(scenes.whatsapp, { opacity: 0, y: -18, scale: 0.985, duration: 0.55, ease: "power2.in" }, 28.8);
+
+        tl.to(scenes.ops, { opacity: 1, y: 0, scale: 1, duration: 0.8, ease: "power3.out" }, 29.2);
+        tl.from(".scene-ops .panel", { opacity: 0, y: 24, scale: 0.98, duration: 0.65, stagger: 0.13, ease: "power3.out" }, 29.38);
+        tl.from(".scene-ops .bubble", { opacity: 0, x: 26, duration: 0.42, stagger: 0.14, ease: "power2.out" }, 30.18);
+        tl.from(".scene-ops .stage", { opacity: 0, x: 20, duration: 0.38, stagger: 0.08, ease: "power2.out" }, 30.65);
+        tl.to(scenes.ops, { opacity: 0, y: -16, scale: 0.985, duration: 0.55, ease: "power2.in" }, 37.6);
+
+        tl.to(scenes.close, { opacity: 1, y: 0, scale: 1, duration: 0.85, ease: "power3.out" }, 38.0);
+        tl.from(".scene-close .eyebrow, .scene-close .title, .scene-close .subtitle", { opacity: 0, y: 16, duration: 0.55, stagger: 0.1, ease: "power2.out" }, 38.16);
+        tl.from(".scene-close .chip, .scene-close .url, .scene-close .code-card", { opacity: 0, y: 20, duration: 0.55, stagger: 0.08, ease: "power3.out" }, 38.58);
+        tl.from(".scene-close .final-card", { opacity: 0, x: 34, scale: 0.98, duration: 0.8, ease: "power3.out" }, 38.38);
+        tl.to(scenes.close, { opacity: 1, y: 0, scale: 1, duration: 1.1, ease: "power2.out" }, 43.5);
+
+        window.__timelines["clientpad-promo"] = tl;
+      </script>
+    </div>
+  </body>
+</html>
