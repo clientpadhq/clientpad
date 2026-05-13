@@ -34,9 +34,32 @@ Open the Vite URL, usually `http://localhost:5173`. Use **Preview dashboard** fo
 http://localhost:3000/api/cloud/v1
 ```
 
-The dashboard expects the Cloud API health endpoint at `/health` and uses `CLIENTPAD_CLOUD_ADMIN_TOKEN` as the operator login token.
+The dashboard expects the Cloud API health endpoint at `/health` and the operator readiness endpoint at `/readiness`. Both are used to validate live mode before the dashboard claims it is connected.
+
+Live mode uses `CLIENTPAD_CLOUD_ADMIN_TOKEN` as the operator login token. The dashboard does not treat an entered URL as "connected" until both the health check and readiness check pass.
 
 Preview mode does not require the Cloud API URL or admin token. Live mode should only be used by operators who manage the ClientPad Cloud control plane.
+
+### Live bootstrap flow
+
+1. Enter the Cloud API base URL, for example `https://host.com/api/cloud/v1`.
+2. Enter the operator token.
+3. The dashboard checks `/health` and `/readiness`.
+4. If the connection is valid, the dashboard stores the validated session locally and shows readiness state for the selected workspace.
+5. Use the readiness panel to create or select a workspace, issue a public API key, and complete WhatsApp setup.
+
+### Readiness signals
+
+The live dashboard surfaces operator-safe state for:
+
+- cloud health
+- operator token acceptance
+- workspace selection
+- project count
+- public API key availability
+- WhatsApp configuration
+- recent webhook traffic
+- payment provider activity
 
 Useful checks:
 
@@ -68,6 +91,7 @@ pnpm --filter @clientpad/dashboard preview
 - **Live mode** means the dashboard is connected to a real Cloud API.
 - **Public API key missing** means inbox and pipeline screens will stay in setup mode.
 - **WhatsApp not connected** means the dashboard can show setup steps, but live conversations will not appear until Meta webhooks are configured.
+- **Readiness degraded** means the Cloud API is reachable, but at least one live dependency still needs attention before the workspace is operational.
 
 ## Screens
 

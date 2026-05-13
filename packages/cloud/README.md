@@ -31,10 +31,20 @@ This handler is an operator surface, not an end-user login flow. The dashboard s
 - `GET /usage`
 - `POST /billing/events`
 
-All routes except `/health`, `/openapi.json`, and `/plans` require:
+All routes except `/health`, `/openapi.json`, `/plans`, and `/readiness` require:
 
 ```text
 Authorization: Bearer <CLIENTPAD_CLOUD_ADMIN_TOKEN>
 ```
 
 Use `/health` for dashboard connectivity checks and `/openapi.json` for operator or docs tooling. Public developers should work through the public API key gateway exposed by `@clientpad/server` and `@clientpad/sdk`.
+
+Use `/readiness` from the dashboard live bootstrap flow to inspect operator-safe cloud state. It returns:
+
+- workspace and project counts
+- public API key availability
+- WhatsApp configuration status
+- recent webhook activity
+- payment provider activity
+
+`/readiness` requires the same operator token as other control-plane routes. It does not expose secrets or raw configuration values.

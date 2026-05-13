@@ -50,6 +50,90 @@ const db = {
       };
     }
 
+    if (text.includes("select count(*)::int as workspace_count from workspaces")) {
+      return { rows: [{ workspace_count: 1 }], rowCount: 1 };
+    }
+
+    if (text.includes("select count(*)::int as project_count from cloud_projects") && !text.includes("where workspace_id = $1")) {
+      return { rows: [{ project_count: 1 }], rowCount: 1 };
+    }
+
+    if (text.includes("select count(*)::int as project_count from cloud_projects where workspace_id = $1")) {
+      return { rows: [{ project_count: 1 }], rowCount: 1 };
+    }
+
+    if (text.includes("select count(*)::int as key_count from api_keys where revoked_at is null") && !text.includes("workspace_id = $1")) {
+      return { rows: [{ key_count: 1 }], rowCount: 1 };
+    }
+
+    if (text.includes("select count(*)::int as key_count from api_keys where workspace_id = $1 and revoked_at is null")) {
+      return { rows: [{ key_count: 1 }], rowCount: 1 };
+    }
+
+    if (text.includes("select count(*)::int as active_subscription_count from cloud_subscriptions where status in ('trialing', 'active')")) {
+      return { rows: [{ active_subscription_count: 1 }], rowCount: 1 };
+    }
+
+    if (text.includes("select count(*)::int as active_subscription_count from cloud_subscriptions where workspace_id = $1 and status in ('trialing', 'active')")) {
+      return { rows: [{ active_subscription_count: 1 }], rowCount: 1 };
+    }
+
+    if (text.includes("from whatsapp_conversations") && !text.includes("where workspace_id = $1")) {
+      return {
+        rows: [
+          {
+            whatsapp_account_count: 1,
+            active_whatsapp_account_count: 1,
+            latest_whatsapp_activity_at: "2026-05-12T11:00:00Z",
+            recent_webhook_count: 1,
+          },
+        ],
+        rowCount: 1,
+      };
+    }
+
+    if (text.includes("from whatsapp_conversations") && text.includes("where workspace_id = $1")) {
+      return {
+        rows: [
+          {
+            whatsapp_account_count: 1,
+            active_whatsapp_account_count: 1,
+            latest_whatsapp_activity_at: "2026-05-12T11:00:00Z",
+            recent_webhook_count: 1,
+          },
+        ],
+        rowCount: 1,
+      };
+    }
+
+    if (text.includes("from cloud_billing_events") && !text.includes("where workspace_id = $1")) {
+      return {
+        rows: [
+          {
+            payment_provider_count: 1,
+            latest_payment_event_at: "2026-05-12T10:30:00Z",
+          },
+        ],
+        rowCount: 1,
+      };
+    }
+
+    if (text.includes("from cloud_billing_events") && text.includes("where workspace_id = $1")) {
+      return {
+        rows: [
+          {
+            payment_provider_count: 1,
+            latest_payment_event_at: "2026-05-12T10:30:00Z",
+          },
+        ],
+        rowCount: 1,
+      };
+    }
+
+    if (text.includes("from workspaces where id = $1 limit 1")) {
+      return { rows: [{ id: "workspace_1", name: "Acme Cloud" }], rowCount: 1 };
+    }
+
     if (text.includes("insert into workspaces")) {
       return { rows: [{ id: "workspace_1" }], rowCount: 1 };
     }
@@ -161,3 +245,16 @@ const usage = await handler(
 );
 assert.equal(usage.status, 200);
 assert.equal((await usage.json()).data[0].request_count, 12);
+
+const readiness = await handler(
+  new Request("https://cloud.example.com/api/cloud/v1/readiness?workspace_id=workspace_1", {
+    headers: { authorization: `Bearer ${adminToken}` },
+  })
+);
+assert.equal(readiness.status, 200);
+const readinessBody = await readiness.json();
+assert.equal(readinessBody.status, "ok");
+assert.equal(readinessBody.summary.has_public_api_key, true);
+assert.equal(readinessBody.workspace.name, "Acme Cloud");
+assert.equal(readinessBody.workspace.has_whatsapp_configuration, true);
+assert.equal(readinessBody.workspace.has_payment_provider_configuration, true);
