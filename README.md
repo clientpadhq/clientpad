@@ -169,7 +169,7 @@ Revenue comes from an optional hosted ClientPad Cloud gateway:
 - per-minute rate limits
 - usage analytics and audit logs
 - backups, upgrades, and support
-- Stripe Checkout and billing portal for hosted subscriptions
+- Lemon Squeezy Checkout and customer portal for hosted subscriptions
 
 Hosted dashboard access is separate from the public API key flow:
 
@@ -187,7 +187,7 @@ const usage = await clientpad.usage.retrieve();
 
 Cloud usage summaries also surface month-to-date request totals, rejections, active API keys, and remaining quota so billing can be built on top of actual usage instead of guesswork.
 
-Hosted billing uses Stripe Checkout for subscriptions when `@clientpad/cloud` is configured with a Stripe secret, webhook secret, and plan price IDs.
+Hosted billing uses Lemon Squeezy checkout for subscriptions when `@clientpad/cloud` is configured with a Lemon Squeezy API key, store ID, webhook secret, and plan variant IDs.
 
 Self-hosted deployments can leave `monthly_request_limit` and `rate_limit_per_minute` empty for unlimited local usage.
 

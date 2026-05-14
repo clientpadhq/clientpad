@@ -5,16 +5,17 @@ import { createClientPadCloudHandler } from "../dist/index.js";
 const queries = [];
 const adminToken = "admin_secret";
 const pepper = "pepper";
-const stripeSecretKey = "sk_test_123";
-const stripeWebhookSecret = "whsec_test_123";
-const stripePriceIds = { developer: "price_developer" };
+const lemonSqueezyApiKey = "ls_test_123";
+const lemonSqueezyWebhookSecret = "ls_whsec_test_123";
+const lemonSqueezyStoreId = "store_123";
+const lemonSqueezyVariantIds = { developer: "variant_developer" };
 
 let operatorUser = null;
 let workspaceRecord = null;
 let currentSession = null;
 let revokedSession = false;
 let currentSubscription = null;
-const stripeFetchCalls = [];
+const lemonSqueezyFetchCalls = [];
 
 const db = {
   async query(text, values = []) {
@@ -312,24 +313,24 @@ const db = {
     }
 
     if (text.includes("insert into cloud_subscriptions")) {
-      if (values.length === 7) {
+      if (values.length === 8) {
         currentSubscription = {
           workspace_id: values[0],
           plan_id: values[1],
           status: "active",
-          provider: "stripe",
-          provider_customer_id: values[2],
-          provider_subscription_id: values[3],
-          current_period_start: values[4],
-          current_period_end: values[5],
-          metadata: values[6],
+          provider: "lemonsqueezy",
+          provider_customer_id: values[3],
+          provider_subscription_id: values[4],
+          current_period_start: values[5],
+          current_period_end: values[6],
+          metadata: values[7],
         };
       } else {
         currentSubscription = {
           workspace_id: values[0],
           plan_id: values[1],
           status: values[2],
-          provider: "stripe",
+          provider: "lemonsqueezy",
           provider_customer_id: values[3],
           provider_subscription_id: values[4],
           current_period_start: values[5],
@@ -444,46 +445,52 @@ const handler = createClientPadCloudHandler({
   db,
   adminToken,
   apiKeyPepper: pepper,
-  stripeSecretKey,
-  stripeWebhookSecret,
-  stripePriceIds,
+  lemonSqueezyApiKey,
+  lemonSqueezyWebhookSecret,
+  lemonSqueezyStoreId,
+  lemonSqueezyVariantIds,
   fetch: async (input, init) => {
     const url = typeof input === "string" ? input : input.url;
-    stripeFetchCalls.push({
+    lemonSqueezyFetchCalls.push({
       url,
       method: init?.method ?? "GET",
       headers: init?.headers,
       body: init?.body ?? null,
     });
 
-    if (url.includes("/checkout/sessions")) {
+    if (url.includes("/v1/checkouts")) {
       return new Response(
         JSON.stringify({
-          id: "cs_test_123",
-          url: "https://checkout.stripe.com/pay/cs_test_123",
-          customer: "cus_test_123",
-          subscription: "sub_test_123",
-          metadata: { workspace_id: "workspace_1", plan_code: "developer" },
-          current_period_start: 1715000000,
-          current_period_end: 1717600000,
+          data: {
+            id: "chk_123",
+            attributes: {
+              url: "https://store.lemonsqueezy.com/checkout/chk_123",
+            },
+          },
         }),
-        { status: 200, headers: { "content-type": "application/json" } }
+        { status: 201, headers: { "content-type": "application/vnd.api+json" } }
       );
     }
 
-    if (url.includes("/billing_portal/sessions")) {
+    if (url.includes("/v1/customers/")) {
       return new Response(
         JSON.stringify({
-          id: "bps_test_123",
-          url: "https://billing.stripe.com/session/bps_test_123",
+          data: {
+            id: "cust_123",
+            attributes: {
+              urls: {
+                customer_portal: "https://store.lemonsqueezy.com/billing?signature=signed",
+              },
+            },
+          },
         }),
-        { status: 200, headers: { "content-type": "application/json" } }
+        { status: 200, headers: { "content-type": "application/vnd.api+json" } }
       );
     }
 
-    return new Response(JSON.stringify({ error: { message: "unexpected stripe call" } }), {
+    return new Response(JSON.stringify({ error: { message: "unexpected lemonsqueezy call" } }), {
       status: 500,
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/vnd.api+json" },
     });
   },
 });
@@ -647,10 +654,10 @@ const checkout = await handler(
 assert.equal(checkout.status, 201);
 const checkoutBody = await checkout.json();
 assert.equal(checkoutBody.data.plan_code, "developer");
-assert.equal(checkoutBody.data.price_id, "price_developer");
+assert.equal(checkoutBody.data.variant_id, "variant_developer");
 assert.equal(
-  stripeFetchCalls.some(
-    (call) => call.url.includes("/checkout/sessions") && String(call.body).includes("line_items%5B0%5D%5Bprice%5D=price_developer")
+  lemonSqueezyFetchCalls.some(
+    (call) => call.url.includes("/v1/checkouts") && String(call.body).includes("\"variant_developer\"")
   ),
   true
 );
@@ -669,37 +676,38 @@ const checkoutFree = await handler(
 );
 assert.equal(checkoutFree.status, 400);
 
-const stripeCheckoutPayload = JSON.stringify({
-  id: "evt_checkout_1",
-  type: "checkout.session.completed",
+const lemonSqueezyWebhookPayload = JSON.stringify({
+  meta: {
+    event_name: "subscription_created",
+    custom_data: { workspace_id: "workspace_1", plan_code: "developer" },
+  },
   data: {
-    object: {
-      id: "cs_test_123",
-      customer: "cus_test_123",
-      subscription: "sub_test_123",
-      client_reference_id: "workspace_1",
-      metadata: { workspace_id: "workspace_1", plan_code: "developer" },
-      current_period_start: 1715000000,
-      current_period_end: 1717600000,
+    type: "subscriptions",
+    id: "sub_test_123",
+    attributes: {
+      customer_id: 123,
+      status: "active",
+      created_at: "2026-05-12T11:00:00Z",
+      renews_at: "2026-06-12T11:00:00Z",
     },
   },
 });
-const checkoutTimestamp = String(Math.floor(Date.now() / 1000));
-const checkoutSignature = createHmac("sha256", stripeWebhookSecret).update(`${checkoutTimestamp}.${stripeCheckoutPayload}`).digest("hex");
+const checkoutSignature = createHmac("sha256", lemonSqueezyWebhookSecret).update(lemonSqueezyWebhookPayload).digest("hex");
 const webhook = await handler(
-  new Request("https://cloud.example.com/api/cloud/v1/billing/stripe/webhook", {
+  new Request("https://cloud.example.com/api/cloud/v1/billing/lemonsqueezy/webhook", {
     method: "POST",
     headers: {
-      "stripe-signature": `t=${checkoutTimestamp},v1=${checkoutSignature}`,
+      "x-signature": checkoutSignature,
+      "x-event-name": "subscription_created",
       "content-type": "application/json",
     },
-    body: stripeCheckoutPayload,
+    body: lemonSqueezyWebhookPayload,
   })
 );
 assert.equal(webhook.status, 200);
 assert.equal((await webhook.json()).received, true);
 assert.equal(currentSubscription?.provider_subscription_id, "sub_test_123");
-assert.equal(currentSubscription?.provider_customer_id, "cus_test_123");
+assert.equal(currentSubscription?.provider_customer_id, "123");
 assert.equal(queries.some((query) => String(query.text).includes("insert into cloud_billing_events")), true);
 
 const portal = await handler(
@@ -714,7 +722,7 @@ const portal = await handler(
 );
 assert.equal(portal.status, 201);
 const portalBody = await portal.json();
-assert.equal(portalBody.data.url, "https://billing.stripe.com/session/bps_test_123");
+assert.equal(portalBody.data.url, "https://store.lemonsqueezy.com/billing?signature=signed");
 
 const logout = await handler(
   new Request("https://cloud.example.com/api/cloud/v1/auth/logout", {

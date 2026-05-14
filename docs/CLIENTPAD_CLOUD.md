@@ -30,7 +30,7 @@ New operator signups can bootstrap a workspace, first project, and starter API k
    - Plan limits live in `cloud_plans`.
    - Active subscription state lives in `cloud_subscriptions`.
    - API keys inherit quota from the plan at creation time.
-   - Stripe Checkout can create hosted subscription sessions when `STRIPE_SECRET_KEY` and `STRIPE_PRICE_IDS_JSON` are configured.
+   - Lemon Squeezy checkout can create hosted subscription sessions when `LEMON_SQUEEZY_API_KEY`, `LEMON_SQUEEZY_STORE_ID`, and `LEMON_SQUEEZY_VARIANT_IDS_JSON` are configured.
 
 ## Money Flow
 
@@ -54,9 +54,10 @@ Hosted developers:
 DATABASE_URL=postgresql://clientpad:clientpad@localhost:5432/clientpad
 API_KEY_PEPPER=replace-with-long-random-secret
 CLIENTPAD_CLOUD_ADMIN_TOKEN=replace-with-long-random-secret
-STRIPE_SECRET_KEY=sk_live_or_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PRICE_IDS_JSON={"developer":"price_123","business":"price_456"}
+LEMON_SQUEEZY_API_KEY=ls_test_...
+LEMON_SQUEEZY_WEBHOOK_SECRET=whsec_...
+LEMON_SQUEEZY_STORE_ID=123456
+LEMON_SQUEEZY_VARIANT_IDS_JSON={"developer":"variant_123","business":"variant_456"}
 ```
 
 `CLIENTPAD_CLOUD_ADMIN_TOKEN` stays on the backend control plane. It is not the dashboard login credential. The hosted dashboard uses cookie-backed operator sessions issued from `@clientpad/cloud`.
@@ -67,9 +68,9 @@ Useful bootstrap and billing-aware routes:
 
 - `/workspaces/bootstrap` creates a workspace, starter project, and starter API key in one request
 - `/usage/summary` returns month-to-date requests, rejections, active keys, remaining quota, and plan metadata
-- `/billing/checkout-session` creates a Stripe Checkout session for the selected workspace and plan
-- `/billing/portal-session` opens the Stripe billing portal for an existing Stripe customer
-- `/billing/stripe/webhook` syncs completed checkout and subscription events back into the cloud tables
+- `/billing/checkout-session` creates a Lemon Squeezy checkout session for the selected workspace and plan
+- `/billing/portal-session` opens the Lemon Squeezy customer portal for an existing customer
+- `/billing/lemonsqueezy/webhook` syncs completed checkout and subscription events back into the cloud tables
 
 ## Initial Deploy Checklist
 

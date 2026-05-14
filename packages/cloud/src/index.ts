@@ -17,9 +17,11 @@ export type ClientPadCloudConfig = {
   databaseUrl?: string;
   apiKeyPepper: string;
   adminToken: string;
-  stripeSecretKey?: string;
-  stripeWebhookSecret?: string;
-  stripePriceIds?: Record<string, string>;
+  lemonSqueezyApiKey?: string;
+  lemonSqueezyWebhookSecret?: string;
+  lemonSqueezyStoreId?: string;
+  lemonSqueezyVariantIds?: Record<string, string>;
+  lemonSqueezyBillingUrl?: string;
   db?: Queryable;
   fetch?: typeof fetch;
 };
@@ -177,9 +179,11 @@ export class ClientPadCloud {
   private readonly db: Queryable;
   private readonly apiKeyPepper: string;
   private readonly adminToken: string;
-  private readonly stripeSecretKey: string | null;
-  private readonly stripeWebhookSecret: string | null;
-  private readonly stripePriceIds: Record<string, string>;
+  private readonly lemonSqueezyApiKey: string | null;
+  private readonly lemonSqueezyWebhookSecret: string | null;
+  private readonly lemonSqueezyStoreId: string | null;
+  private readonly lemonSqueezyVariantIds: Record<string, string>;
+  private readonly lemonSqueezyBillingUrl: string | null;
   private readonly fetchImpl: typeof fetch;
   private readonly sessionCookieName = "clientpad_operator_session";
   private readonly sessionDays = 30;
@@ -192,9 +196,11 @@ export class ClientPadCloud {
     this.db = config.db ?? new Pool({ connectionString: config.databaseUrl });
     this.apiKeyPepper = config.apiKeyPepper;
     this.adminToken = config.adminToken;
-    this.stripeSecretKey = optionalString(config.stripeSecretKey) ?? null;
-    this.stripeWebhookSecret = optionalString(config.stripeWebhookSecret) ?? null;
-    this.stripePriceIds = config.stripePriceIds ?? {};
+    this.lemonSqueezyApiKey = optionalString(config.lemonSqueezyApiKey) ?? null;
+    this.lemonSqueezyWebhookSecret = optionalString(config.lemonSqueezyWebhookSecret) ?? null;
+    this.lemonSqueezyStoreId = optionalString(config.lemonSqueezyStoreId) ?? null;
+    this.lemonSqueezyVariantIds = config.lemonSqueezyVariantIds ?? {};
+    this.lemonSqueezyBillingUrl = optionalString(config.lemonSqueezyBillingUrl) ?? null;
     this.fetchImpl = config.fetch ?? fetch;
   }
 
@@ -219,7 +225,7 @@ export class ClientPadCloud {
       if (path === "/billing/events" && request.method === "POST") return this.withCors(await this.recordBillingEvent(request), request);
       if (path === "/billing/checkout-session" && request.method === "POST") return this.withCors(await this.createCheckoutSession(request), request);
       if (path === "/billing/portal-session" && request.method === "POST") return this.withCors(await this.createPortalSession(request), request);
-      if (path === "/billing/stripe/webhook" && request.method === "POST") return this.withCors(await this.handleStripeWebhook(request), request);
+      if ((path === "/billing/lemonsqueezy/webhook" || path === "/billing/stripe/webhook") && request.method === "POST") return this.withCors(await this.handleLemonSqueezyWebhook(request), request);
 
       const operator = await this.requireOperator(request);
       if (operator instanceof Response) return this.withCors(operator, request);
@@ -1171,38 +1177,61 @@ export class ClientPadCloud {
     if (operator.kind === "session" && !operator.workspaces.some((workspace) => workspace.id === workspaceId.value)) {
       return jsonError("You do not have access to that workspace.", 403);
     }
-    if (!this.stripeSecretKey) return jsonError("Stripe secret key is not configured.", 503);
+    if (!this.lemonSqueezyApiKey || !this.lemonSqueezyStoreId) return jsonError("Lemon Squeezy billing is not configured.", 503);
 
     const plan = await this.getPlanByCode(planCode.value);
     if (!plan) return jsonError(`Unknown plan: ${planCode.value}`, 400);
 
-    const priceId = this.getStripePriceId(plan);
-    if (!priceId) {
-      return jsonError(`No Stripe price ID configured for the ${plan.code} plan.`, 400);
+    const variantId = this.getLemonSqueezyVariantId(plan);
+    if (!variantId) {
+      return jsonError(`No Lemon Squeezy variant ID configured for the ${plan.code} plan.`, 400);
     }
 
-    const params = new URLSearchParams();
-    params.set("mode", "subscription");
-    params.set("success_url", successUrl.value);
-    params.set("cancel_url", cancelUrl.value);
-    params.set("line_items[0][price]", priceId);
-    params.set("line_items[0][quantity]", "1");
-    params.set("client_reference_id", workspaceId.value);
-    params.set("metadata[workspace_id]", workspaceId.value);
-    params.set("metadata[plan_code]", plan.code);
-    params.set("subscription_data[metadata][workspace_id]", workspaceId.value);
-    params.set("subscription_data[metadata][plan_code]", plan.code);
-
     const email = operator.kind === "session" ? operator.user.email : optionalString(body.customer_email);
-    if (email) params.set("customer_email", email);
+    const name = operator.kind === "session" ? operator.user.full_name ?? operator.user.email : optionalString(body.customer_name);
+    const checkoutPayload = {
+      data: {
+        type: "checkouts",
+        attributes: {
+          checkout_data: {
+            email,
+            name,
+            custom: {
+              workspace_id: workspaceId.value,
+              plan_code: plan.code,
+              cancel_url: cancelUrl.value,
+            },
+          },
+          product_options: {
+            redirect_url: successUrl.value,
+            enabled_variants: [variantId],
+          },
+        },
+        relationships: {
+          store: {
+            data: {
+              type: "stores",
+              id: this.lemonSqueezyStoreId,
+            },
+          },
+          variant: {
+            data: {
+              type: "variants",
+              id: variantId,
+            },
+          },
+        },
+      },
+    };
 
-    const response = await this.fetchImpl("https://api.stripe.com/v1/checkout/sessions", {
+    const response = await this.fetchImpl("https://api.lemonsqueezy.com/v1/checkouts", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this.stripeSecretKey}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Bearer ${this.lemonSqueezyApiKey}`,
+        Accept: "application/vnd.api+json",
+        "Content-Type": "application/vnd.api+json",
       },
-      body: params.toString(),
+      body: JSON.stringify(checkoutPayload),
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok) {
@@ -1211,20 +1240,20 @@ export class ClientPadCloud {
 
     await this.recordBillingEventFromPayload({
       workspaceId: workspaceId.value,
-      provider: "stripe",
-      providerEventId: payload.id ?? `checkout_session_${Date.now()}`,
-      eventType: "checkout.session.created",
+      provider: "lemonsqueezy",
+      providerEventId: optionalString(payload?.data?.id) ?? `checkout_session_${Date.now()}`,
+      eventType: "checkout.created",
       payload,
     });
 
     return Response.json(
       {
         data: {
-          id: payload.id,
-          url: payload.url,
+          id: optionalString(payload?.data?.id) ?? "",
+          url: optionalString(payload?.data?.attributes?.url) ?? "",
           workspace_id: workspaceId.value,
           plan_code: plan.code,
-          price_id: priceId,
+          variant_id: variantId,
         },
       },
       { status: 201 }
@@ -1245,7 +1274,7 @@ export class ClientPadCloud {
     if (operator.kind === "session" && !operator.workspaces.some((workspace) => workspace.id === workspaceId.value)) {
       return jsonError("You do not have access to that workspace.", 403);
     }
-    if (!this.stripeSecretKey) return jsonError("Stripe secret key is not configured.", 503);
+    if (!this.lemonSqueezyApiKey) return jsonError("Lemon Squeezy billing is not configured.", 503);
 
     const { rows } = await this.db.query<{ provider_customer_id: string | null }>(
       `
@@ -1260,74 +1289,72 @@ export class ClientPadCloud {
       [workspaceId.value]
     );
     const customerId = rows[0]?.provider_customer_id;
-    if (!customerId) return jsonError("No Stripe customer is connected for that workspace yet.", 400);
+    if (!customerId) return jsonError("No Lemon Squeezy customer is connected for that workspace yet.", 400);
 
-    const params = new URLSearchParams();
-    params.set("customer", customerId);
-    params.set("return_url", returnUrl.value);
-
-    const response = await this.fetchImpl("https://api.stripe.com/v1/billing_portal/sessions", {
-      method: "POST",
+    const response = await this.fetchImpl(`https://api.lemonsqueezy.com/v1/customers/${customerId}`, {
+      method: "GET",
       headers: {
-        Authorization: `Bearer ${this.stripeSecretKey}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Bearer ${this.lemonSqueezyApiKey}`,
+        Accept: "application/vnd.api+json",
+        "Content-Type": "application/vnd.api+json",
       },
-      body: params.toString(),
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok) {
-      return jsonError(payload?.error?.message ?? "Could not create billing portal session.", response.status || 502);
+      return jsonError(payload?.error?.message ?? "Could not load billing portal.", response.status || 502);
     }
+
+    const signedPortalUrl = optionalString(payload?.data?.attributes?.urls?.customer_portal);
+    const portalUrl = signedPortalUrl ?? this.lemonSqueezyBillingUrl ?? null;
+    if (!portalUrl) return jsonError("No Lemon Squeezy customer portal URL is configured.", 400);
 
     await this.recordBillingEventFromPayload({
       workspaceId: workspaceId.value,
-      provider: "stripe",
-      providerEventId: payload.id ?? `portal_session_${Date.now()}`,
+      provider: "lemonsqueezy",
+      providerEventId: optionalString(payload?.data?.id) ?? `portal_session_${Date.now()}`,
       eventType: "billing_portal.session.created",
       payload,
     });
 
-    return Response.json({ data: { id: payload.id, url: payload.url, workspace_id: workspaceId.value } }, { status: 201 });
+    return Response.json({ data: { id: optionalString(payload?.data?.id) ?? "", url: portalUrl, workspace_id: workspaceId.value } }, { status: 201 });
   }
 
-  private async handleStripeWebhook(request: Request) {
-    if (!this.stripeWebhookSecret) return jsonError("Stripe webhook secret is not configured.", 503);
+  private async handleLemonSqueezyWebhook(request: Request) {
+    if (!this.lemonSqueezyWebhookSecret) return jsonError("Lemon Squeezy webhook secret is not configured.", 503);
 
-    const signature = request.headers.get("stripe-signature");
+    const signature = request.headers.get("x-signature");
     const body = await request.text();
-    const verified = verifyStripeWebhookSignature(body, signature, this.stripeWebhookSecret);
+    const verified = verifyLemonSqueezyWebhookSignature(body, signature, this.lemonSqueezyWebhookSecret);
     if (!verified.ok) return jsonError(verified.error, 401);
 
-    const event = JSON.parse(body) as { id?: string; type?: string; data?: { object?: Record<string, unknown> } };
-    const eventType = optionalString(event.type) ?? "unknown";
-    const object = event.data?.object ?? {};
-    const metadata = isRecord(object.metadata) ? object.metadata : null;
-    const workspaceId = optionalString(metadata?.workspace_id) ?? optionalString(object.client_reference_id) ?? optionalString(object.workspace_id) ?? null;
+    const event = JSON.parse(body) as {
+      meta?: Record<string, unknown>;
+      data?: { id?: string | number; type?: string; attributes?: Record<string, unknown> };
+    };
+    const eventType = optionalString(request.headers.get("x-event-name")) ?? optionalString(event.meta?.event_name) ?? "unknown";
+    const customData = isRecord(event.meta?.custom_data) ? event.meta.custom_data : isRecord(event.data?.attributes?.custom_data) ? event.data?.attributes?.custom_data : null;
+    const workspaceId = optionalString(customData?.workspace_id) ?? optionalString(customData?.workspaceId) ?? null;
 
     await this.recordBillingEventFromPayload({
       workspaceId,
-      provider: "stripe",
-      providerEventId: optionalString(event.id) ?? `stripe_${Date.now()}`,
+      provider: "lemonsqueezy",
+      providerEventId: optionalString(event.data?.id) ?? `lemonsqueezy_${Date.now()}`,
       eventType,
       payload: event,
     });
 
-    if (eventType === "checkout.session.completed") {
-      await this.syncStripeCheckoutSession(object);
-    }
-    if (eventType.startsWith("customer.subscription.")) {
-      await this.syncStripeSubscription(object);
+    if (eventType.startsWith("subscription_") || eventType === "order_created") {
+      await this.syncLemonSqueezySubscription(event.data ?? {}, customData);
     }
 
     return Response.json({ received: true });
   }
 
-  private async syncStripeCheckoutSession(object: Record<string, unknown>) {
-    const metadata = isRecord(object.metadata) ? object.metadata : null;
-    const workspaceId = optionalString(metadata?.workspace_id) ?? optionalString(object.client_reference_id);
-    const planCode = optionalString(metadata?.plan_code) ?? "free";
-    const customerId = optionalString(object.customer);
-    const subscriptionId = optionalString(object.subscription);
+  private async syncLemonSqueezySubscription(data: { id?: string | number; attributes?: Record<string, unknown> }, customData: Record<string, unknown> | null) {
+    const attributes = isRecord(data.attributes) ? data.attributes : {};
+    const workspaceId = optionalString(customData?.workspace_id) ?? optionalString(customData?.workspaceId);
+    const planCode = optionalString(customData?.plan_code) ?? optionalString(customData?.planCode) ?? "free";
+    const subscriptionId = optionalString(data.id);
     if (!workspaceId || !subscriptionId) return;
 
     const plan = await this.getPlanByCode(planCode);
@@ -1346,7 +1373,7 @@ export class ClientPadCloud {
           current_period_end,
           metadata
         )
-        values ($1, $2, 'active', 'stripe', $3, $4, $5, $6, $7::jsonb)
+        values ($1, $2, $3, 'lemonsqueezy', $4, $5, $6, $7, $8::jsonb)
         on conflict (provider_subscription_id) do update set
           plan_id = excluded.plan_id,
           status = excluded.status,
@@ -1360,64 +1387,28 @@ export class ClientPadCloud {
       [
         workspaceId,
         plan.id,
-        customerId,
+        normalizeLemonSqueezySubscriptionStatus(optionalString(attributes.status) ?? "active"),
+        optionalIdString(attributes.customer_id),
         subscriptionId,
-        stripeUnixToDate(object.current_period_start),
-        stripeUnixToDate(object.current_period_end),
-        JSON.stringify({ checkout_session_id: object.id, plan_code: plan.code }),
+        lemonSqueezyDate(attributes.created_at),
+        lemonSqueezyDate(attributes.renews_at) ?? lemonSqueezyDate(attributes.ends_at),
+        JSON.stringify({
+          subscription_id: subscriptionId,
+          plan_code: plan.code,
+          event_name: optionalString(attributes.status_formatted) ?? null,
+        }),
       ]
     );
   }
 
-  private async syncStripeSubscription(object: Record<string, unknown>) {
-    const metadata = isRecord(object.metadata) ? object.metadata : null;
-    const workspaceId = optionalString(metadata?.workspace_id);
-    const planCode = optionalString(metadata?.plan_code) ?? "free";
-    const subscriptionId = optionalString(object.id);
-    if (!workspaceId || !subscriptionId) return;
-
-    const plan = await this.getPlanByCode(planCode);
-    if (!plan) return;
-
-    await this.db.query(
-      `
-        insert into cloud_subscriptions (
-          workspace_id,
-          plan_id,
-          status,
-          provider,
-          provider_customer_id,
-          provider_subscription_id,
-          current_period_start,
-          current_period_end,
-          metadata
-        )
-        values ($1, $2, $3, 'stripe', $4, $5, $6, $7, $8::jsonb)
-        on conflict (provider_subscription_id) do update set
-          plan_id = excluded.plan_id,
-          status = excluded.status,
-          provider = excluded.provider,
-          provider_customer_id = excluded.provider_customer_id,
-          current_period_start = excluded.current_period_start,
-          current_period_end = excluded.current_period_end,
-          metadata = excluded.metadata,
-          updated_at = now()
-      `,
-      [
-        workspaceId,
-        plan.id,
-        optionalString(object.status) ?? "active",
-        optionalString(object.customer),
-        subscriptionId,
-        stripeUnixToDate(object.current_period_start),
-        stripeUnixToDate(object.current_period_end),
-        JSON.stringify({ subscription_id: subscriptionId, plan_code: plan.code }),
-      ]
+  private getLemonSqueezyVariantId(plan: PlanRow) {
+    return (
+      this.lemonSqueezyVariantIds[plan.code] ??
+      optionalString(
+        (plan.features as { lemon_squeezy_variant_id?: string; lemonsqueezy_variant_id?: string } | null | undefined)?.lemon_squeezy_variant_id ??
+          (plan.features as { lemon_squeezy_variant_id?: string; lemonsqueezy_variant_id?: string } | null | undefined)?.lemonsqueezy_variant_id
+      )
     );
-  }
-
-  private getStripePriceId(plan: PlanRow) {
-    return this.stripePriceIds[plan.code] ?? optionalString((plan.features as { stripe_price_id?: string } | null | undefined)?.stripe_price_id);
   }
 
   private async recordBillingEventFromPayload(input: {
@@ -1860,6 +1851,11 @@ function safeEqualText(left: string, right: string) {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
+function optionalIdString(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return optionalString(value);
+}
+
 function hashPassword(password: string, pepper: string) {
   const salt = randomBytes(16).toString("hex");
   const digest = scryptSync(`${pepper}:${password}`, salt, 64).toString("hex");
@@ -1892,33 +1888,16 @@ function getCurrentMonthStart() {
   return `${now.getUTCFullYear()}-${month}-01`;
 }
 
-function stripeUnixToDate(value: unknown) {
-  const parsed = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) return null;
-  return new Date(parsed * 1000);
+function lemonSqueezyDate(value: unknown) {
+  if (!value) return null;
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function verifyStripeWebhookSignature(body: string, signatureHeader: string | null, secret: string) {
-  if (!signatureHeader) return { ok: false as const, error: "Missing Stripe signature." };
-
-  const parts = signatureHeader
-    .split(",")
-    .map((entry) => entry.trim().split("=", 2))
-    .reduce<Record<string, string[]>>((acc, [key, value]) => {
-      if (key && value) (acc[key] ??= []).push(value);
-      return acc;
-    }, {});
-
-  const timestamp = Number(parts.t?.[0]);
-  if (!Number.isFinite(timestamp) || timestamp <= 0) return { ok: false as const, error: "Invalid Stripe signature timestamp." };
-
-  const signedPayload = `${timestamp}.${body}`;
-  const expected = createHmac("sha256", secret).update(signedPayload, "utf8").digest("hex");
-  const matches = (parts.v1 ?? []).some((candidate) => safeEqualText(candidate, expected));
-  if (!matches) return { ok: false as const, error: "Invalid Stripe signature." };
-
-  const ageSeconds = Math.abs(Date.now() / 1000 - timestamp);
-  if (ageSeconds > 300) return { ok: false as const, error: "Stripe signature has expired." };
+function verifyLemonSqueezyWebhookSignature(body: string, signatureHeader: string | null, secret: string) {
+  if (!signatureHeader) return { ok: false as const, error: "Missing Lemon Squeezy signature." };
+  const expected = createHmac("sha256", secret).update(body, "utf8").digest("hex");
+  if (!safeEqualText(signatureHeader.trim(), expected)) return { ok: false as const, error: "Invalid Lemon Squeezy signature." };
   return { ok: true as const };
 }
 
@@ -1926,6 +1905,15 @@ function normalizeTimestamp(value: string | Date | null | undefined) {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function normalizeLemonSqueezySubscriptionStatus(value: string) {
+  if (value === "on_trial") return "trialing";
+  if (value === "active") return "active";
+  if (value === "cancelled" || value === "canceled") return "cancelled";
+  if (value === "expired") return "expired";
+  if (value === "paused" || value === "unpaused") return value;
+  return "active";
 }
 
 const openApiDocument = {

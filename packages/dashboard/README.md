@@ -95,7 +95,7 @@ pnpm --filter @clientpad/dashboard preview
 - **WhatsApp not connected** means the dashboard can show setup steps, but live conversations will not appear until Meta webhooks are configured.
 - **Readiness degraded** means the Cloud API is reachable, but at least one live dependency still needs attention before the workspace is operational.
 - **Usage summary** means the dashboard can already surface billing-ready request totals and quota headroom.
-- **Upgrade plan** launches Stripe Checkout when the Cloud API has Stripe price IDs configured.
+- **Upgrade plan** launches Lemon Squeezy checkout when the Cloud API has Lemon Squeezy variant IDs configured.
 
 ## Screens
 
