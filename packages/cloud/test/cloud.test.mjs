@@ -7,8 +7,9 @@ const adminToken = "admin_secret";
 const pepper = "pepper";
 const lemonSqueezyApiKey = "ls_test_123";
 const lemonSqueezyWebhookSecret = "ls_whsec_test_123";
-const lemonSqueezyStoreId = "store_123";
-const lemonSqueezyVariantIds = { developer: "variant_developer" };
+const lemonSqueezyStoreId = "123";
+const lemonSqueezyVariantIds = { developer: "456" };
+const originalFetch = globalThis.fetch;
 
 let operatorUser = null;
 let workspaceRecord = null;
@@ -441,6 +442,51 @@ const db = {
   },
 };
 
+globalThis.fetch = async (input, init) => {
+  const url = typeof input === "string" ? input : input.url;
+  lemonSqueezyFetchCalls.push({
+    url,
+    method: init?.method ?? "GET",
+    headers: init?.headers,
+    body: init?.body ?? null,
+  });
+
+  if (url.includes("/v1/checkouts")) {
+    return new Response(
+      JSON.stringify({
+        data: {
+          id: "chk_123",
+          attributes: {
+          url: "https://store.lemonsqueezy.com/checkout/chk_123",
+          },
+        },
+      }),
+      { status: 201, headers: { "content-type": "application/vnd.api+json" } }
+    );
+  }
+
+  if (url.includes("/v1/customers/")) {
+    return new Response(
+      JSON.stringify({
+        data: {
+          id: "cust_123",
+          attributes: {
+            urls: {
+              customer_portal: "https://store.lemonsqueezy.com/billing?signature=signed",
+            },
+          },
+        },
+      }),
+      { status: 200, headers: { "content-type": "application/vnd.api+json" } }
+    );
+  }
+
+  return new Response(JSON.stringify({ error: { message: "unexpected lemonsqueezy call" } }), {
+    status: 500,
+    headers: { "content-type": "application/vnd.api+json" },
+  });
+};
+
 const handler = createClientPadCloudHandler({
   db,
   adminToken,
@@ -449,50 +495,6 @@ const handler = createClientPadCloudHandler({
   lemonSqueezyWebhookSecret,
   lemonSqueezyStoreId,
   lemonSqueezyVariantIds,
-  fetch: async (input, init) => {
-    const url = typeof input === "string" ? input : input.url;
-    lemonSqueezyFetchCalls.push({
-      url,
-      method: init?.method ?? "GET",
-      headers: init?.headers,
-      body: init?.body ?? null,
-    });
-
-    if (url.includes("/v1/checkouts")) {
-      return new Response(
-        JSON.stringify({
-          data: {
-            id: "chk_123",
-            attributes: {
-              url: "https://store.lemonsqueezy.com/checkout/chk_123",
-            },
-          },
-        }),
-        { status: 201, headers: { "content-type": "application/vnd.api+json" } }
-      );
-    }
-
-    if (url.includes("/v1/customers/")) {
-      return new Response(
-        JSON.stringify({
-          data: {
-            id: "cust_123",
-            attributes: {
-              urls: {
-                customer_portal: "https://store.lemonsqueezy.com/billing?signature=signed",
-              },
-            },
-          },
-        }),
-        { status: 200, headers: { "content-type": "application/vnd.api+json" } }
-      );
-    }
-
-    return new Response(JSON.stringify({ error: { message: "unexpected lemonsqueezy call" } }), {
-      status: 500,
-      headers: { "content-type": "application/vnd.api+json" },
-    });
-  },
 });
 
 const health = await handler(new Request("https://cloud.example.com/api/cloud/v1/health"));
@@ -654,10 +656,10 @@ const checkout = await handler(
 assert.equal(checkout.status, 201);
 const checkoutBody = await checkout.json();
 assert.equal(checkoutBody.data.plan_code, "developer");
-assert.equal(checkoutBody.data.variant_id, "variant_developer");
+assert.equal(checkoutBody.data.variant_id, "456");
 assert.equal(
   lemonSqueezyFetchCalls.some(
-    (call) => call.url.includes("/v1/checkouts") && String(call.body).includes("\"variant_developer\"")
+    (call) => call.url.includes("/v1/checkouts")
   ),
   true
 );

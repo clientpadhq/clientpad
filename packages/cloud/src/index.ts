@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { Pool } from "pg";
 import { API_SCOPES, type ApiScope, type ApiKeyBillingMode } from "@clientpad/core";
+import { createCheckout, getCustomer, lemonSqueezySetup } from "@lemonsqueezy/lemonsqueezy.js";
 
 export type QueryValue = string | number | boolean | Date | null | string[] | Record<string, unknown>;
 
@@ -23,7 +24,6 @@ export type ClientPadCloudConfig = {
   lemonSqueezyVariantIds?: Record<string, string>;
   lemonSqueezyBillingUrl?: string;
   db?: Queryable;
-  fetch?: typeof fetch;
 };
 
 export type ClientPadCloudHandler = (request: Request) => Promise<Response>;
@@ -184,7 +184,6 @@ export class ClientPadCloud {
   private readonly lemonSqueezyStoreId: string | null;
   private readonly lemonSqueezyVariantIds: Record<string, string>;
   private readonly lemonSqueezyBillingUrl: string | null;
-  private readonly fetchImpl: typeof fetch;
   private readonly sessionCookieName = "clientpad_operator_session";
   private readonly sessionDays = 30;
 
@@ -201,7 +200,11 @@ export class ClientPadCloud {
     this.lemonSqueezyStoreId = optionalString(config.lemonSqueezyStoreId) ?? null;
     this.lemonSqueezyVariantIds = config.lemonSqueezyVariantIds ?? {};
     this.lemonSqueezyBillingUrl = optionalString(config.lemonSqueezyBillingUrl) ?? null;
-    this.fetchImpl = config.fetch ?? fetch;
+    if (this.lemonSqueezyApiKey) {
+      lemonSqueezySetup({
+        apiKey: this.lemonSqueezyApiKey,
+      });
+    }
   }
 
   async handle(request: Request): Promise<Response> {
@@ -1189,68 +1192,45 @@ export class ClientPadCloud {
 
     const email = operator.kind === "session" ? operator.user.email : optionalString(body.customer_email);
     const name = operator.kind === "session" ? operator.user.full_name ?? operator.user.email : optionalString(body.customer_name);
-    const checkoutPayload = {
-      data: {
-        type: "checkouts",
-        attributes: {
-          checkout_data: {
-            email,
-            name,
-            custom: {
-              workspace_id: workspaceId.value,
-              plan_code: plan.code,
-              cancel_url: cancelUrl.value,
-            },
-          },
-          product_options: {
-            redirect_url: successUrl.value,
-            enabled_variants: [variantId],
-          },
-        },
-        relationships: {
-          store: {
-            data: {
-              type: "stores",
-              id: this.lemonSqueezyStoreId,
-            },
-          },
-          variant: {
-            data: {
-              type: "variants",
-              id: variantId,
-            },
-          },
-        },
-      },
-    };
-
-    const response = await this.fetchImpl("https://api.lemonsqueezy.com/v1/checkouts", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.lemonSqueezyApiKey}`,
-        Accept: "application/vnd.api+json",
-        "Content-Type": "application/vnd.api+json",
-      },
-      body: JSON.stringify(checkoutPayload),
-    });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok) {
-      return jsonError(payload?.error?.message ?? "Could not create checkout session.", response.status || 502);
+    const storeId = Number(this.lemonSqueezyStoreId);
+    const numericVariantId = Number(variantId);
+    if (!Number.isFinite(storeId) || !Number.isFinite(numericVariantId)) {
+      return jsonError("Lemon Squeezy store or variant ID is invalid.", 400);
     }
+
+    const checkout = await createCheckout(storeId, numericVariantId, {
+      checkoutData: {
+        email: email ?? undefined,
+        name: name ?? undefined,
+        custom: {
+          workspace_id: workspaceId.value,
+          plan_code: plan.code,
+          success_url: successUrl.value,
+          cancel_url: cancelUrl.value,
+        },
+      },
+    });
+    if (checkout.error || !checkout.data) {
+      return jsonError(checkout.error?.message ?? "Could not create checkout session.", checkout.statusCode || 502);
+    }
+    const checkoutUrl =
+      optionalString((checkout.data as { attributes?: { url?: unknown } } | null)?.attributes?.url) ??
+      optionalString((checkout.data as { data?: { attributes?: { url?: unknown } } } | null)?.data?.attributes?.url);
+    if (!checkoutUrl) return jsonError("Could not create checkout session.", 502);
 
     await this.recordBillingEventFromPayload({
       workspaceId: workspaceId.value,
       provider: "lemonsqueezy",
-      providerEventId: optionalString(payload?.data?.id) ?? `checkout_session_${Date.now()}`,
+      providerEventId: optionalString((checkout.data as { id?: unknown } | null)?.id) ?? optionalString((checkout.data as { data?: { id?: unknown } } | null)?.data?.id) ?? `checkout_session_${Date.now()}`,
       eventType: "checkout.created",
-      payload,
+      payload: checkout.data,
     });
 
     return Response.json(
       {
         data: {
-          id: optionalString(payload?.data?.id) ?? "",
-          url: optionalString(payload?.data?.attributes?.url) ?? "",
+          id: optionalString((checkout.data as { id?: unknown } | null)?.id) ?? optionalString((checkout.data as { data?: { id?: unknown } } | null)?.data?.id) ?? "",
+          url: checkoutUrl,
           workspace_id: workspaceId.value,
           plan_code: plan.code,
           variant_id: variantId,
@@ -1291,32 +1271,32 @@ export class ClientPadCloud {
     const customerId = rows[0]?.provider_customer_id;
     if (!customerId) return jsonError("No Lemon Squeezy customer is connected for that workspace yet.", 400);
 
-    const response = await this.fetchImpl(`https://api.lemonsqueezy.com/v1/customers/${customerId}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${this.lemonSqueezyApiKey}`,
-        Accept: "application/vnd.api+json",
-        "Content-Type": "application/vnd.api+json",
-      },
-    });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok) {
-      return jsonError(payload?.error?.message ?? "Could not load billing portal.", response.status || 502);
+    const customer = await getCustomer(customerId);
+    if (customer.error || !customer.data) {
+      return jsonError(customer.error?.message ?? "Could not load billing portal.", customer.statusCode || 502);
     }
 
-    const signedPortalUrl = optionalString(payload?.data?.attributes?.urls?.customer_portal);
+    const signedPortalUrl =
+      optionalString((customer.data as { attributes?: { urls?: { customer_portal?: unknown } } } | null)?.attributes?.urls?.customer_portal) ??
+      optionalString((customer.data as { data?: { attributes?: { urls?: { customer_portal?: unknown } } } } | null)?.data?.attributes?.urls?.customer_portal);
     const portalUrl = signedPortalUrl ?? this.lemonSqueezyBillingUrl ?? null;
     if (!portalUrl) return jsonError("No Lemon Squeezy customer portal URL is configured.", 400);
 
     await this.recordBillingEventFromPayload({
       workspaceId: workspaceId.value,
       provider: "lemonsqueezy",
-      providerEventId: optionalString(payload?.data?.id) ?? `portal_session_${Date.now()}`,
+      providerEventId: optionalString((customer.data as { id?: unknown } | null)?.id) ?? optionalString((customer.data as { data?: { id?: unknown } } | null)?.data?.id) ?? `portal_session_${Date.now()}`,
       eventType: "billing_portal.session.created",
-      payload,
+      payload: customer.data,
     });
 
-    return Response.json({ data: { id: optionalString(payload?.data?.id) ?? "", url: portalUrl, workspace_id: workspaceId.value } }, { status: 201 });
+    return Response.json({
+      data: {
+        id: optionalString((customer.data as { id?: unknown } | null)?.id) ?? optionalString((customer.data as { data?: { id?: unknown } } | null)?.data?.id) ?? "",
+        url: portalUrl,
+        workspace_id: workspaceId.value,
+      },
+    }, { status: 201 });
   }
 
   private async handleLemonSqueezyWebhook(request: Request) {
