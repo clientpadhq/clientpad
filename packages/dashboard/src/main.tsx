@@ -54,6 +54,7 @@ type Session = {
   workspaces?: CloudWorkspace[];
   selectedWorkspaceId?: string;
   sessionExpiresAt?: string | null;
+  usageSummary?: UsageSummary;
 };
 
 type CloudHealth = {
@@ -86,8 +87,25 @@ type CloudWorkspace = {
   has_payment_provider_configuration: boolean;
 };
 
+type UsageSummary = {
+  workspace_id: string;
+  workspace_name: string;
+  plan_code: string | null;
+  plan_name: string | null;
+  month: string;
+  request_count: number;
+  rejected_count: number;
+  active_api_key_count: number;
+  monthly_request_limit: number | null;
+  rate_limit_per_minute: number | null;
+  remaining_requests: number | null;
+  last_used_at: string | null;
+  billing_mode: string | null;
+};
+
 type CloudAuthStatus = {
   registration_open: boolean;
+  first_operator_setup_required?: boolean;
   operator_count: number;
   workspace_count: number;
 };
@@ -102,6 +120,14 @@ type CloudAuthEnvelope = {
     selected_workspace_id: string | null;
     workspaces: CloudWorkspace[];
   };
+  bootstrap?: CloudBootstrapBundle;
+};
+
+type CloudBootstrapBundle = {
+  workspace: CloudWorkspace;
+  project: Project;
+  api_key: ApiKeyResult;
+  usage: UsageSummary;
 };
 
 type CloudReadinessDiagnostic = {
@@ -261,6 +287,7 @@ function mergeAuthSession(saved: Session, auth: CloudAuthEnvelope): Session {
     workspaces: auth.auth.workspaces,
     selectedWorkspaceId: auth.auth.selected_workspace_id ?? auth.auth.workspaces[0]?.id ?? "",
     sessionExpiresAt: auth.auth.session_expires_at,
+    usageSummary: saved.usageSummary,
   };
 }
 
@@ -425,6 +452,8 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
         workspaces: authBody.auth.workspaces,
         selectedWorkspaceId: authBody.auth.selected_workspace_id ?? authBody.auth.workspaces?.[0]?.id ?? "",
         sessionExpiresAt: authBody.auth.session_expires_at,
+        publicApiKey: authBody.bootstrap?.api_key.key ?? "",
+        usageSummary: authBody.bootstrap?.usage,
       };
       persistSession(next);
       onLogin(next);
@@ -450,8 +479,8 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
         <p>
           {mode === "preview"
             ? "Open a sample workspace to understand the dashboard layout before connecting a real Cloud API."
-            : authMode === "register"
-              ? "Create the first operator account for this Cloud deployment, then sign in with email and password."
+          : authMode === "register"
+              ? "Create your operator account, workspace, first project, and starter API key in one step."
               : "Sign in with an operator account to manage projects, keys, usage, billing, and WhatsApp activity."}
         </p>
         <form onSubmit={submit} className="login-form">
@@ -501,15 +530,17 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
                   type="button"
                   className={authMode === "register" ? "button primary" : "button outline"}
                   onClick={() => setAuthMode("register")}
-                  disabled={Boolean(authStatus && !authStatus.registration_open)}
+                  disabled={false}
                 >
-                  {authStatus?.registration_open ? "Create first operator" : "Create account"}
+                  {authStatus?.first_operator_setup_required ? "Create first operator" : "Create account"}
                 </button>
               </div>
               {authStatus ? (
                 <div className="preview-note">
                   {authStatus.registration_open
-                    ? `Registration is open. ${authStatus.operator_count} operator account${authStatus.operator_count === 1 ? "" : "s"} exist.`
+                    ? authStatus.first_operator_setup_required
+                      ? "Registration is open. No operator accounts exist yet, so this deployment can be claimed now."
+                      : `Registration is open. ${authStatus.operator_count} operator account${authStatus.operator_count === 1 ? "" : "s"} exist.`
                     : `Registration is closed. ${authStatus.operator_count} operator account${authStatus.operator_count === 1 ? "" : "s"} already exist.`}
                 </div>
               ) : null}
@@ -570,12 +601,17 @@ function Dashboard({
   const [keys, setKeys] = useState<ApiKeyRecord[]>([]);
   const [selectedWorkspace, setSelectedWorkspace] = useState(currentSession.selectedWorkspaceId ?? currentSession.workspaces?.[0]?.id ?? "");
   const [publicApiKey, setPublicApiKey] = useState(currentSession.publicApiKey || "");
+  const [usageSummary, setUsageSummary] = useState<UsageSummary | null>(currentSession.usageSummary ?? null);
   const [query, setQuery] = useState("");
   const [dateRange, setDateRange] = useState("May 12 - May 19, 2025");
   const [showFilters, setShowFilters] = useState(false);
   const [quickstartLanguage, setQuickstartLanguage] = useState<QuickstartLanguage>("curl");
   const [selectedPlanCode, setSelectedPlanCode] = useState("pro");
   const [createdKey, setCreatedKey] = useState<ApiKeyResult | null>(null);
+  const [bootstrapWorkspaceName, setBootstrapWorkspaceName] = useState(currentSession.workspaces?.[0]?.name || "ClientPad Workspace");
+  const [bootstrapProjectName, setBootstrapProjectName] = useState("ClientPad API");
+  const [bootstrapKeyName, setBootstrapKeyName] = useState("Starter API key");
+  const [bootstrapping, setBootstrapping] = useState(false);
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [health, setHealth] = useState<CloudHealth | null>(null);
@@ -611,6 +647,7 @@ function Dashboard({
       setHealth(healthData);
       setReadiness(readinessData);
       setConnectionState(mode === "preview" ? "preview" : readinessData.status === "ok" ? "connected" : "misconfigured");
+      const usageSummaryData = workspace ? await activeApi.usageSummary(workspace) : null;
       const snapshot: Session = {
         ...mergedSession,
         publicApiKey,
@@ -618,6 +655,7 @@ function Dashboard({
         validatedAt: readinessData.time,
         mode,
         selectedWorkspaceId: workspace,
+        usageSummary: usageSummaryData ?? mergedSession.usageSummary,
       };
       setCurrentSession(snapshot);
       onSessionChange(snapshot);
@@ -625,6 +663,7 @@ function Dashboard({
         const usageData = await activeApi.usage(workspace);
         setUsage(usageData);
         setKeys(toKeyRecords(usageData, projectData));
+        setUsageSummary(usageSummaryData);
       }
       setLastSyncedAt(new Date().toISOString());
     } catch (error) {
@@ -666,6 +705,53 @@ function Dashboard({
     setCreatedKey(key);
     setNotice("API key created. Copy it now; it will not be shown again.");
     await refresh(input.workspace_id);
+  }
+
+  async function bootstrapWorkspace() {
+    const workspaceName = bootstrapWorkspaceName.trim();
+    const projectName = bootstrapProjectName.trim();
+    const keyName = bootstrapKeyName.trim();
+    if (!workspaceName || !projectName || !keyName) {
+      setNotice("Workspace, project, and API key names are required.");
+      return;
+    }
+
+    setBootstrapping(true);
+    try {
+      const result = await api.bootstrapWorkspace({
+        workspace_name: workspaceName,
+        project_name: projectName,
+        api_key_name: keyName,
+        owner_email: currentSession.user?.email ?? undefined,
+        plan_code: usageSummary?.plan_code ?? "free",
+        environment: "production",
+        workspace_id: selectedWorkspace || currentSession.selectedWorkspaceId || undefined,
+      });
+
+      const nextWorkspaceId = result.workspace.id;
+      const nextSession: Session = {
+        ...sessionRef.current,
+        selectedWorkspaceId: nextWorkspaceId,
+        workspaces: [
+          ...(sessionRef.current.workspaces?.filter((workspace) => workspace.id !== nextWorkspaceId) ?? []),
+          result.workspace,
+        ],
+        publicApiKey: result.api_key.key,
+        usageSummary: result.usage,
+      };
+      setCreatedKey(result.api_key);
+      setPublicApiKey(result.api_key.key);
+      setUsageSummary(result.usage);
+      setNotice(`Created ${result.workspace.name}, ${result.project.name}, and the starter API key.`);
+      setCurrentSession(nextSession);
+      onSessionChange(nextSession);
+      await refresh(nextWorkspaceId, nextSession);
+      setPage("overview");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not bootstrap workspace.");
+    } finally {
+      setBootstrapping(false);
+    }
   }
 
   function selectWorkspace(workspaceId: string) {
@@ -771,6 +857,7 @@ function Dashboard({
               projects={filteredProjects}
               keys={filteredKeys}
               usage={usage}
+              usageSummary={usageSummary}
               selectedPlan={selectedPlan}
               selectedProject={selectedProject}
               quickstartLanguage={quickstartLanguage}
@@ -780,6 +867,14 @@ function Dashboard({
               health={health}
               readiness={readiness}
               hasPublicApiKey={Boolean(publicApiKey.trim())}
+              bootstrapWorkspaceName={bootstrapWorkspaceName}
+              setBootstrapWorkspaceName={setBootstrapWorkspaceName}
+              bootstrapProjectName={bootstrapProjectName}
+              setBootstrapProjectName={setBootstrapProjectName}
+              bootstrapKeyName={bootstrapKeyName}
+              setBootstrapKeyName={setBootstrapKeyName}
+              onBootstrap={bootstrapWorkspace}
+              bootstrapping={bootstrapping}
             />
           )}
           {page === "projects" && <Projects projects={filteredProjects} onCreate={createProject} setPage={setPage} />}
@@ -791,9 +886,9 @@ function Dashboard({
               onCopy={(text) => copyText(text, setNotice)}
             />
           )}
-          {page === "usage" && <Usage usage={usage} keys={filteredKeys} selectedProject={selectedProject} />}
+          {page === "usage" && <Usage usage={usage} keys={filteredKeys} selectedProject={selectedProject} usageSummary={usageSummary} />}
           {page === "billing" && (
-            <Billing plans={plans} selectedPlanCode={selectedPlanCode} onSelectPlan={selectPlan} />
+            <Billing plans={plans} selectedPlanCode={selectedPlanCode} onSelectPlan={selectPlan} usageSummary={usageSummary} />
           )}
           {page === "docs" && (
             <Docs
@@ -1013,6 +1108,7 @@ function Overview({
   projects,
   keys,
   usage,
+  usageSummary,
   selectedPlan,
   selectedProject,
   quickstartLanguage,
@@ -1022,6 +1118,14 @@ function Overview({
   health,
   readiness,
   hasPublicApiKey,
+  bootstrapWorkspaceName,
+  setBootstrapWorkspaceName,
+  bootstrapProjectName,
+  setBootstrapProjectName,
+  bootstrapKeyName,
+  setBootstrapKeyName,
+  onBootstrap,
+  bootstrapping,
 }: {
   loading: boolean;
   totalRequests: number;
@@ -1029,6 +1133,7 @@ function Overview({
   projects: Project[];
   keys: ApiKeyRecord[];
   usage: UsageRow[];
+  usageSummary: UsageSummary | null;
   selectedPlan?: Plan;
   selectedProject?: Project;
   quickstartLanguage: QuickstartLanguage;
@@ -1038,9 +1143,19 @@ function Overview({
   health: CloudHealth | null;
   readiness: CloudReadiness | null;
   hasPublicApiKey: boolean;
+  bootstrapWorkspaceName: string;
+  setBootstrapWorkspaceName: (value: string) => void;
+  bootstrapProjectName: string;
+  setBootstrapProjectName: (value: string) => void;
+  bootstrapKeyName: string;
+  setBootstrapKeyName: (value: string) => void;
+  onBootstrap: () => Promise<void> | void;
+  bootstrapping: boolean;
 }) {
   const requestLimit = selectedPlan?.monthly_request_limit ?? 10_000_000;
-  const usedPercent = Math.min((totalRequests / requestLimit) * 100, 100);
+  const requestTotal = usageSummary?.request_count ?? totalRequests;
+  const rejectedTotal = usageSummary?.rejected_count ?? rejectedRequests;
+  const usedPercent = Math.min((requestTotal / requestLimit) * 100, 100);
 
   return (
     <div className="overview-layout">
@@ -1051,6 +1166,14 @@ function Overview({
         projectCount={projects.length}
         keyCount={keys.length}
         hasPublicApiKey={hasPublicApiKey}
+        bootstrapWorkspaceName={bootstrapWorkspaceName}
+        setBootstrapWorkspaceName={setBootstrapWorkspaceName}
+        bootstrapProjectName={bootstrapProjectName}
+        setBootstrapProjectName={setBootstrapProjectName}
+        bootstrapKeyName={bootstrapKeyName}
+        setBootstrapKeyName={setBootstrapKeyName}
+        onBootstrap={onBootstrap}
+        bootstrapping={bootstrapping}
         onGoToConnect={() => setPage("connect")}
         onGoToProjects={() => setPage("projects")}
         onGoToKeys={() => setPage("keys")}
@@ -1082,7 +1205,8 @@ function Overview({
 
       <Panel className="quota-panel">
         <h2>Quota & Usage</h2>
-        <Quota label="Requests" value={totalRequests || 2_560_812} limit={requestLimit} suffix="" />
+        <Quota label="Requests" value={requestTotal || 2_560_812} limit={requestLimit} suffix="" />
+        <Quota label="Rejected" value={rejectedTotal || 73} limit={Math.max(rejectedTotal || 73, 100)} suffix="" />
         <Quota label="Data Transfer" value={82.1} limit={500} suffix="GB" />
         <button className="link-button" onClick={() => setPage("usage")}>
           View full usage <ChevronRight size={15} />
@@ -1108,13 +1232,13 @@ function Overview({
         </div>
         <strong className="plan-title">{selectedPlan?.name ?? "Pro Plan"}</strong>
         <ul className="plan-list">
-          <li>10M API requests / month</li>
-          <li>500 GB data transfer / month</li>
-          <li>99.9% uptime SLA</li>
-          <li>Priority support</li>
+          <li>{usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M"} API requests / month</li>
+          <li>{usageSummary?.rate_limit_per_minute ?? 500} requests / minute</li>
+          <li>{usageSummary?.active_api_key_count ?? keys.length} active API keys</li>
+          <li>{usageSummary?.remaining_requests?.toLocaleString() ?? "Unlimited"} remaining</li>
         </ul>
         <div className="period-row">
-          <span>Current period: May 12 - Jun 12, 2025 (31 days left)</span>
+          <span>Current month: {usageSummary?.month ?? "May 2026"}</span>
           <div><i style={{ width: `${Math.max(usedPercent, 8)}%` }} /></div>
         </div>
         <div className="split-actions">
@@ -1254,17 +1378,22 @@ function Keys({
   );
 }
 
-function Usage({ usage, keys, selectedProject }: { usage: UsageRow[]; keys: ApiKeyRecord[]; selectedProject?: Project }) {
+function Usage({ usage, keys, selectedProject, usageSummary }: { usage: UsageRow[]; keys: ApiKeyRecord[]; selectedProject?: Project; usageSummary: UsageSummary | null }) {
   return (
     <div className="detail-layout single">
       <Panel className="api-requests wide-detail">
         <div className="panel-head">
           <h2>{selectedProject?.name ?? "Workspace"} usage</h2>
-          <div className="range-tabs">
-            <button>1D</button>
-            <button className="selected">7D</button>
-            <button>30D</button>
+          <div className="inline-actions">
+            <StatusChip tone="green" label={usageSummary?.plan_name ? `${usageSummary.plan_name} plan` : "Billing ready"} />
+            <StatusChip tone="blue" label={usageSummary?.month ?? "Current month"} />
           </div>
+        </div>
+        <div className="usage-summary-grid">
+          <div className="usage-summary-item"><span>Requests</span><strong>{formatNumber(usageSummary?.request_count ?? usage.reduce((sum, row) => sum + row.request_count, 0))}</strong></div>
+          <div className="usage-summary-item"><span>Rejected</span><strong>{formatNumber(usageSummary?.rejected_count ?? usage.reduce((sum, row) => sum + row.rejected_count, 0))}</strong></div>
+          <div className="usage-summary-item"><span>API keys</span><strong>{formatNumber(usageSummary?.active_api_key_count ?? keys.length)}</strong></div>
+          <div className="usage-summary-item"><span>Remaining</span><strong>{usageSummary?.remaining_requests?.toLocaleString() ?? "Unlimited"}</strong></div>
         </div>
         <LineChart />
       </Panel>
@@ -1279,14 +1408,24 @@ function Usage({ usage, keys, selectedProject }: { usage: UsageRow[]; keys: ApiK
   );
 }
 
-function Billing({ plans, selectedPlanCode, onSelectPlan }: { plans: Plan[]; selectedPlanCode: string; onSelectPlan: (code: string) => void }) {
+function Billing({
+  plans,
+  selectedPlanCode,
+  onSelectPlan,
+  usageSummary,
+}: {
+  plans: Plan[];
+  selectedPlanCode: string;
+  onSelectPlan: (code: string) => void;
+  usageSummary: UsageSummary | null;
+}) {
   return (
     <div className="billing-grid">
       <Panel className="billing-summary">
-        <div className="panel-head"><h2>Current cloud usage</h2><Badge tone="green">Synced</Badge></div>
-        <Quota label="Requests" value={2_391_873} limit={10_000_000} suffix="" />
-        <Quota label="Data Transfer" value={82.1} limit={500} suffix="GB" />
-        <p className="helper-text">Uses the same quota model as Usage: request count, rejections, rate limits, and monthly included projects.</p>
+        <div className="panel-head"><h2>Current cloud usage</h2><Badge tone="green">{usageSummary ? "Synced" : "Pending"}</Badge></div>
+        <Quota label="Requests" value={usageSummary?.request_count ?? 2_391_873} limit={usageSummary?.monthly_request_limit ?? 10_000_000} suffix="" />
+        <Quota label="Rejected" value={usageSummary?.rejected_count ?? 73} limit={Math.max(usageSummary?.rejected_count ?? 73, 100)} suffix="" />
+        <p className="helper-text">Uses the same quota model as Usage: request count, rejections, rate limits, active API keys, and remaining monthly capacity.</p>
       </Panel>
       {plans.length > 0 ? plans.map((plan) => (
         <Panel key={plan.id} className={selectedPlanCode === plan.code ? "selected-plan" : ""}>
@@ -1665,6 +1804,14 @@ function ActivationPanel({
   projectCount,
   keyCount,
   hasPublicApiKey,
+  bootstrapWorkspaceName,
+  setBootstrapWorkspaceName,
+  bootstrapProjectName,
+  setBootstrapProjectName,
+  bootstrapKeyName,
+  setBootstrapKeyName,
+  onBootstrap,
+  bootstrapping,
   onGoToConnect,
   onGoToProjects,
   onGoToKeys,
@@ -1676,6 +1823,14 @@ function ActivationPanel({
   projectCount: number;
   keyCount: number;
   hasPublicApiKey: boolean;
+  bootstrapWorkspaceName: string;
+  setBootstrapWorkspaceName: (value: string) => void;
+  bootstrapProjectName: string;
+  setBootstrapProjectName: (value: string) => void;
+  bootstrapKeyName: string;
+  setBootstrapKeyName: (value: string) => void;
+  onBootstrap: () => Promise<void> | void;
+  bootstrapping: boolean;
   onGoToConnect: () => void;
   onGoToProjects: () => void;
   onGoToKeys: () => void;
@@ -1715,6 +1870,25 @@ function ActivationPanel({
         <button className="button outline" onClick={onGoToKeys}>Create API key</button>
         <button className="button outline" onClick={onGoToConnect}>Connect WhatsApp</button>
         <button className="button outline" onClick={onGoToDocs}>Read setup docs</button>
+      </div>
+      <div className="bootstrap-panel">
+        <div className="panel-head bordered compact-head">
+          <div>
+            <h3>Bootstrap a live workspace</h3>
+            <p className="helper-text">Create the workspace, first project, and starter API key in one pass.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={bootstrapping ? "Creating..." : "Ready"} />
+        </div>
+        <div className="bootstrap-grid">
+          <FormField label="Workspace name" value={bootstrapWorkspaceName} onChange={setBootstrapWorkspaceName} />
+          <FormField label="Project name" value={bootstrapProjectName} onChange={setBootstrapProjectName} />
+          <FormField label="API key name" value={bootstrapKeyName} onChange={setBootstrapKeyName} />
+        </div>
+        <div className="status-banner-actions">
+          <button className="button primary blue" onClick={onBootstrap} disabled={bootstrapping || mode === "preview"}>
+            <Plus size={15} /> {bootstrapping ? "Bootstrapping..." : "Create workspace bundle"}
+          </button>
+        </div>
       </div>
     </Panel>
   );
@@ -2347,6 +2521,24 @@ class CloudApi {
     return this.request<{ status: string }>("/auth/logout", { method: "POST" });
   }
 
+  async bootstrapWorkspace(input: {
+    workspace_name: string;
+    project_name: string;
+    api_key_name: string;
+    owner_email?: string;
+    plan_code?: string;
+    environment?: string;
+    workspace_id?: string;
+  }) {
+    return this.request<{ data: { workspace: CloudWorkspace; project: Project; api_key: ApiKeyResult; usage: UsageSummary } }>(
+      "/workspaces/bootstrap",
+      {
+        method: "POST",
+        body: JSON.stringify(input),
+      }
+    ).then((body) => body.data);
+  }
+
   async health() {
     return this.request<CloudHealth>("/health");
   }
@@ -2382,6 +2574,11 @@ class CloudApi {
 
   async usage(workspaceId: string) {
     const body = await this.request<{ data: UsageRow[] }>(`/usage?workspace_id=${encodeURIComponent(workspaceId)}`);
+    return body.data;
+  }
+
+  async usageSummary(workspaceId: string) {
+    const body = await this.request<{ data: UsageSummary }>(`/usage/summary?workspace_id=${encodeURIComponent(workspaceId)}`);
     return body.data;
   }
 }
@@ -2425,6 +2622,70 @@ function demoResponse(path: string, init: RequestInit) {
     };
   }
   if (path === "/plans") return { data: demoPlans };
+  if (path === "/workspaces/bootstrap") {
+    const body = JSON.parse(String(init.body ?? "{}")) as Partial<{
+      workspace_name: string;
+      project_name: string;
+      api_key_name: string;
+      owner_email: string;
+      name: string;
+    }>;
+    const workspaceId = `workspace_${Date.now()}`;
+    const project = {
+      id: `project_${Date.now()}`,
+      workspace_id: workspaceId,
+      name: body.name || body.project_name || "ClientPad API",
+      slug: slugify(body.name || body.project_name || "clientpad-api"),
+      environment: "production",
+      owner_email: body.owner_email || "founder@example.com",
+      created_at: new Date().toISOString(),
+    } as Project;
+    return {
+      data: {
+        workspace: {
+          id: workspaceId,
+          name: body.workspace_name || "ClientPad Workspace",
+          role: "owner",
+          project_count: 1,
+          key_count: 1,
+          active_subscription_count: 1,
+          whatsapp_account_count: 0,
+          active_whatsapp_account_count: 0,
+          payment_provider_count: 0,
+          latest_whatsapp_activity_at: null,
+          latest_payment_event_at: null,
+          recent_webhook_count: 0,
+          has_public_api_key: true,
+          has_whatsapp_configuration: false,
+          has_payment_provider_configuration: false,
+        },
+        project,
+        api_key: {
+          id: `api_key_${Date.now()}`,
+          key: "cp_live_demo123_generated_secret_444f",
+          scopes: ["leads:read", "leads:write", "clients:read", "clients:write", "usage:read", "whatsapp:read", "whatsapp:write"],
+          billing_mode: "cloud_free",
+          monthly_request_limit: 1000,
+          rate_limit_per_minute: 60,
+        },
+        usage: {
+          workspace_id: workspaceId,
+          workspace_name: body.workspace_name || "ClientPad Workspace",
+          plan_code: "free",
+          plan_name: "Free",
+          month: new Date().toISOString().slice(0, 7) + "-01",
+          request_count: 0,
+          rejected_count: 0,
+          active_api_key_count: 1,
+          monthly_request_limit: 1000,
+          rate_limit_per_minute: 60,
+          remaining_requests: 1000,
+          last_used_at: null,
+          billing_mode: "cloud_free",
+        },
+      },
+    };
+  }
   if (path === "/projects" && init.method === "POST") {
     const body = JSON.parse(String(init.body ?? "{}")) as ProjectFormState;
     return {
@@ -2440,6 +2701,25 @@ function demoResponse(path: string, init: RequestInit) {
     };
   }
   if (path === "/projects") return { data: demoProjects };
+  if (path === "/usage/summary") {
+    return {
+      data: {
+        workspace_id: "workspace_prod",
+        workspace_name: "Acme Corp",
+        plan_code: "pro",
+        plan_name: "Pro",
+        month: new Date().toISOString().slice(0, 7) + "-01",
+        request_count: 2_391_873,
+        rejected_count: 73,
+        active_api_key_count: 3,
+        monthly_request_limit: 10_000_000,
+        rate_limit_per_minute: 1200,
+        remaining_requests: 7_608_127,
+        last_used_at: "2026-05-12T11:00:00Z",
+        billing_mode: "cloud_paid",
+      },
+    };
+  }
   if (path === "/api-keys") {
     const body = JSON.parse(String(init.body ?? "{}")) as KeyFormState;
     return {

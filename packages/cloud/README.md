@@ -20,6 +20,8 @@ The cloud handler is for your hosted ClientPad Cloud control plane. It is separa
 
 This handler is an operator surface, not an end-user login flow. The dashboard should connect to it only in live/operator mode using a Cloud API URL plus an authenticated operator session. The raw `CLIENTPAD_CLOUD_ADMIN_TOKEN` is a backend secret, not the browser login UX.
 
+New operator signups create the operator account, workspace, starter project, and starter API key together so hosted deployments can become usable immediately. Existing operators can also bootstrap another workspace bundle through `/workspaces/bootstrap`.
+
 ## Routes
 
 - `GET /health`
@@ -30,10 +32,14 @@ This handler is an operator surface, not an end-user login flow. The dashboard s
 - `POST /auth/register`
 - `GET /auth/me`
 - `POST /auth/logout`
+- `GET /workspaces`
+- `POST /workspaces`
+- `POST /workspaces/bootstrap`
 - `POST /projects`
 - `GET /projects`
 - `POST /api-keys`
 - `GET /usage`
+- `GET /usage/summary`
 - `POST /billing/events`
 
 Public routes used by the dashboard bootstrap flow:
@@ -64,3 +70,11 @@ Use `/readiness` from the dashboard live bootstrap flow to inspect operator-safe
 - payment provider activity
 
 `/readiness` does not expose secrets or raw configuration values. In live mode it requires a valid operator session or the backend control-plane token.
+
+Use `/usage/summary` when you need billing-ready workspace totals:
+
+- current month request count
+- rejected requests
+- active API key count
+- remaining request quota
+- plan and rate-limit metadata

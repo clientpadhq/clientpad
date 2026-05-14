@@ -1206,6 +1206,48 @@ td small {
   margin-top: 3px;
 }
 
+.bootstrap-panel {
+  display: grid;
+  gap: 14px;
+  padding-top: 2px;
+  border-top: 1px solid #dbe2ea;
+}
+
+.bootstrap-grid,
+.usage-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.usage-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.bootstrap-grid .field {
+  margin: 0;
+}
+
+.usage-summary-item {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fbfcfd;
+}
+
+.usage-summary-item span {
+  color: #667386;
+  font-size: 12px;
+}
+
+.usage-summary-item strong {
+  font-size: 15px;
+  font-weight: 750;
+  color: #111827;
+}
+
 .status-stack {
   display: grid;
   gap: 10px;
@@ -1287,11 +1329,15 @@ td small {
 @media (max-width: 1180px) {
   .status-banner { grid-template-columns: 1fr; }
   .activation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bootstrap-grid,
+  .usage-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pipeline-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 760px) {
   .activation-grid,
+  .bootstrap-grid,
+  .usage-summary-grid,
   .pipeline-metrics { grid-template-columns: 1fr; }
   .status-banner-actions,
   .empty-actions { width: 100%; }

@@ -2,6 +2,8 @@
 
 ClientPad Cloud is the managed gateway that monetizes hosted `CLIENTPAD_API_KEY` usage while keeping the packages free and open source.
 
+New operator signups can bootstrap a workspace, first project, and starter API key so the hosted dashboard does not begin as a shell.
+
 ## Production Components
 
 1. PostgreSQL
@@ -21,6 +23,7 @@ ClientPad Cloud is the managed gateway that monetizes hosted `CLIENTPAD_API_KEY`
    - Deploy `@clientpad/dashboard` as the web interface.
    - Operators use email/password sessions to log in, create projects, create keys, inspect activity, view plans, and copy quickstart code.
    - Preview mode still exists for sample data and safe exploration.
+   - The first-run flow can also bootstrap a workspace bundle and return a live usage summary.
 
 5. Billing
    - Billing provider events are stored in `cloud_billing_events`.
@@ -55,6 +58,11 @@ CLIENTPAD_CLOUD_ADMIN_TOKEN=replace-with-long-random-secret
 `CLIENTPAD_CLOUD_ADMIN_TOKEN` stays on the backend control plane. It is not the dashboard login credential. The hosted dashboard uses cookie-backed operator sessions issued from `@clientpad/cloud`.
 
 For first-time operator setup, expose the Cloud API and have the first operator register or sign in through the dashboard. The dashboard validates `/health`, `/auth/status`, `/auth/login`, `/auth/me`, and `/readiness` before it treats Live mode as connected.
+
+Useful bootstrap and billing-aware routes:
+
+- `/workspaces/bootstrap` creates a workspace, starter project, and starter API key in one request
+- `/usage/summary` returns month-to-date requests, rejections, active keys, remaining quota, and plan metadata
 
 ## Initial Deploy Checklist
 

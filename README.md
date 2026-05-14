@@ -14,7 +14,7 @@ This repository ships installable packages instead of a hosted product with subs
 - `@clientpad/cloud`: hosted control plane for projects, plans, subscriptions, usage, API keys, and operator auth/session management.
 - `@clientpad/dashboard`: developer web dashboard for projects, API keys, usage, billing, docs, preview/live operator access, and WhatsApp operations.
 
-The dashboard opens in **Preview** mode for sample data or **Live** mode after an operator signs in to ClientPad Cloud with email and password. Live mode validates both `/health` and `/readiness` before it claims the cloud is connected. Live mode also expects a workspace public API key before inbox and pipeline data become operational.
+The dashboard opens in **Preview** mode for sample data or **Live** mode after an operator signs in to ClientPad Cloud with email and password. Live mode validates both `/health` and `/readiness` before it claims the cloud is connected. New operator signups create an operator account, workspace, starter project, and starter API key in one pass so the hosted dashboard can move from empty to usable quickly.
 
 ## Install
 
@@ -176,12 +176,15 @@ Hosted dashboard access is separate from the public API key flow:
 - the Cloud API issues a cookie-backed operator session
 - the dashboard restores that session on refresh
 - the raw `CLIENTPAD_CLOUD_ADMIN_TOKEN` stays on the backend as an operator/control-plane secret, not a browser login credential
+- new signups bootstrap a workspace, starter project, and starter API key so usage tracking starts immediately
 
 Hosted keys use the same API key format and SDK. Usage can be inspected with:
 
 ```ts
 const usage = await clientpad.usage.retrieve();
 ```
+
+Cloud usage summaries also surface month-to-date request totals, rejections, active API keys, and remaining quota so billing can be built on top of actual usage instead of guesswork.
 
 Self-hosted deployments can leave `monthly_request_limit` and `rate_limit_per_minute` empty for unlimited local usage.
 

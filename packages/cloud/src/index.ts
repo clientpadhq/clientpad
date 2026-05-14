@@ -44,6 +44,17 @@ type ProjectRow = {
   created_at: string;
 };
 
+type WorkspaceRow = {
+  id: string;
+  name: string;
+  phone: string | null;
+  business_type: string | null;
+  default_currency: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 type SubscriptionRow = {
   id: string;
   workspace_id: string;
@@ -82,6 +93,22 @@ type OperatorWorkspaceRow = {
   has_public_api_key: boolean;
   has_whatsapp_configuration: boolean;
   has_payment_provider_configuration: boolean;
+};
+
+type WorkspaceUsageSummaryRow = {
+  workspace_id: string;
+  workspace_name: string;
+  plan_code: string | null;
+  plan_name: string | null;
+  month: string;
+  request_count: number;
+  rejected_count: number;
+  active_api_key_count: number;
+  monthly_request_limit: number | null;
+  rate_limit_per_minute: number | null;
+  remaining_requests: number | null;
+  last_used_at: string | null;
+  billing_mode: ApiKeyBillingMode | null;
 };
 
 type ReadinessSummary = {
@@ -174,6 +201,9 @@ export class ClientPadCloud {
       if (path === "/auth/register" && request.method === "POST") return this.withCors(await this.register(request), request);
       if (path === "/auth/me" && request.method === "GET") return this.withCors(await this.getMe(request), request);
       if (path === "/auth/logout" && request.method === "POST") return this.withCors(await this.logout(request), request);
+      if (path === "/workspaces" && request.method === "GET") return this.withCors(await this.listWorkspaces(request), request);
+      if (path === "/workspaces" && request.method === "POST") return this.withCors(await this.createWorkspace(request), request);
+      if (path === "/workspaces/bootstrap" && request.method === "POST") return this.withCors(await this.bootstrapWorkspace(request), request);
       if (path === "/billing/events" && request.method === "POST") return this.withCors(await this.recordBillingEvent(request), request);
 
       const operator = await this.requireOperator(request);
@@ -183,6 +213,7 @@ export class ClientPadCloud {
       if (path === "/projects" && request.method === "POST") return this.withCors(await this.createProject(request, operator), request);
       if (path === "/api-keys" && request.method === "POST") return this.withCors(await this.createHostedApiKey(request, operator), request);
       if (path === "/usage" && request.method === "GET") return this.withCors(await this.getUsage(url, operator), request);
+      if (path === "/usage/summary" && request.method === "GET") return this.withCors(await this.getUsageSummary(url, operator), request);
       if (path === "/readiness" && request.method === "GET") return this.withCors(await this.getReadiness(url, operator), request);
 
       return this.withCors(jsonError("Route not found.", 404), request);
@@ -217,7 +248,8 @@ export class ClientPadCloud {
       status: "ok",
       service: "@clientpad/cloud",
       time: new Date().toISOString(),
-      registration_open: row.operator_count === 0,
+      registration_open: true,
+      first_operator_setup_required: row.operator_count === 0,
       operator_count: row.operator_count,
       workspace_count: row.workspace_count,
     });
@@ -276,11 +308,11 @@ export class ClientPadCloud {
     const userRow = user.rows[0];
     if (!userRow) return jsonError("Could not create operator account.", 500);
 
-    const workspace = await this.db.query<{ id: string; name: string }>(
+    const workspace = await this.db.query<WorkspaceRow>(
       `
         insert into workspaces (name, created_by)
         values ($1, $2)
-        returning id, name
+        returning id, name, phone, business_type, default_currency, created_by, created_at, updated_at
       `,
       [workspaceName, userRow.id]
     );
@@ -295,9 +327,31 @@ export class ClientPadCloud {
       [workspaceRow.id, userRow.id]
     );
 
+    const plan = await this.getPlanByCode(optionalString(body.plan_code) ?? "free");
+    if (!plan) return jsonError("Could not load bootstrap plan.", 500);
+    const bootstrap = await this.bootstrapWorkspaceBundle({
+      workspaceId: workspaceRow.id,
+      workspaceName: workspaceRow.name,
+      projectName: optionalString(body.project_name) ?? `${workspaceRow.name} API`,
+      keyName: optionalString(body.api_key_name) ?? `${workspaceRow.name} starter key`,
+      ownerEmail: userRow.email,
+      environment: optionalString(body.environment) ?? "production",
+      plan,
+    });
+    if (bootstrap instanceof Response) return bootstrap;
+
     const session = await this.createSession(userRow.id);
     const workspaces = await this.getWorkspacesForUser(userRow.id);
-    return this.sessionResponse(request, userRow, session, workspaces);
+    const response = this.sessionResponse(request, userRow, session, workspaces);
+    response.headers.set("Set-Cookie", this.sessionCookie(session.token, new Date(session.expires_at), new URL(request.url).protocol === "https:"));
+    const payload = await response.json();
+    return Response.json({
+      ...payload,
+      bootstrap,
+    }, {
+      status: response.status,
+      headers: response.headers,
+    });
   }
 
   private async getMe(request: Request) {
@@ -315,6 +369,221 @@ export class ClientPadCloud {
     const response = Response.json({ status: "ok" });
     response.headers.set("Set-Cookie", this.sessionCookie("", new Date(0), new URL(request.url).protocol === "https:"));
     return response;
+  }
+
+  private async listWorkspaces(request: Request) {
+    const operator = await this.requireOperator(request);
+    if (operator instanceof Response) return operator;
+
+    if (operator.kind === "admin") {
+      const { rows } = await this.db.query<WorkspaceRow>(
+        `
+          select id, name, phone, business_type, default_currency, created_by, created_at, updated_at
+          from workspaces
+          order by created_at asc
+        `
+      );
+      return Response.json({ data: rows });
+    }
+
+    const { rows } = await this.db.query<OperatorWorkspaceRow>(
+      `
+        select
+          w.id,
+          w.name,
+          m.role,
+          coalesce((select count(*)::int from cloud_projects p where p.workspace_id = w.id), 0) as project_count,
+          coalesce((select count(*)::int from api_keys k where k.workspace_id = w.id and k.revoked_at is null), 0) as key_count,
+          coalesce((select count(*)::int from cloud_subscriptions s where s.workspace_id = w.id and s.status in ('trialing', 'active')), 0) as active_subscription_count,
+          coalesce((select count(*)::int from whatsapp_conversations wc where wc.workspace_id = w.id), 0) as whatsapp_account_count,
+          coalesce((select count(*) filter (where status = 'active')::int from whatsapp_conversations wc where wc.workspace_id = w.id), 0) as active_whatsapp_account_count,
+          coalesce((select count(distinct provider)::int from cloud_billing_events be where be.workspace_id = w.id), 0) as payment_provider_count,
+          (select max(greatest(
+            coalesce(last_message_at, timestamp 'epoch'),
+            coalesce(last_inbound_at, timestamp 'epoch'),
+            coalesce(last_outbound_at, timestamp 'epoch'),
+            coalesce(updated_at, timestamp 'epoch')
+          )) from whatsapp_conversations wc where wc.workspace_id = w.id) as latest_whatsapp_activity_at,
+          (select max(created_at) from cloud_billing_events be where be.workspace_id = w.id) as latest_payment_event_at,
+          coalesce((select count(*)::int from whatsapp_conversations wc where wc.workspace_id = w.id and coalesce(last_inbound_at, last_message_at, updated_at) >= now() - interval '7 days'), 0) as recent_webhook_count,
+          coalesce((select count(*)::int from api_keys k where k.workspace_id = w.id and k.revoked_at is null), 0) > 0 as has_public_api_key,
+          coalesce((select count(*) filter (where status = 'active')::int from whatsapp_conversations wc where wc.workspace_id = w.id), 0) > 0 as has_whatsapp_configuration,
+          coalesce((select count(distinct provider)::int from cloud_billing_events be where be.workspace_id = w.id), 0) > 0 as has_payment_provider_configuration
+        from workspace_members m
+        join workspaces w on w.id = m.workspace_id
+        where m.user_id = $1
+        order by w.created_at asc
+      `,
+      [operator.user.id]
+    );
+
+    return Response.json({ data: rows });
+  }
+
+  private async createWorkspace(request: Request) {
+    const operator = await this.requireOperator(request);
+    if (operator instanceof Response) return operator;
+
+    const body = await readJsonObject(request);
+    if (body instanceof Response) return body;
+
+    const name = requiredString(body.name, "name");
+    if (!name.ok) return jsonError(name.error, 400);
+    const createdBy = operator.kind === "session" ? operator.user.id : null;
+    const workspace = await this.db.query<WorkspaceRow>(
+      `
+        insert into workspaces (name, phone, business_type, default_currency, created_by)
+        values ($1, $2, $3, $4, $5)
+        returning id, name, phone, business_type, default_currency, created_by, created_at, updated_at
+      `,
+      [
+        name.value,
+        optionalString(body.phone),
+        optionalString(body.business_type),
+        optionalString(body.default_currency) ?? "NGN",
+        createdBy,
+      ]
+    );
+    const workspaceRow = workspace.rows[0];
+    if (!workspaceRow) return jsonError("Could not create workspace.", 500);
+
+    if (operator.kind === "session") {
+      await this.db.query(
+        `
+          insert into workspace_members (workspace_id, user_id, role)
+          values ($1, $2, 'owner')
+          on conflict do nothing
+        `,
+        [workspaceRow.id, operator.user.id]
+      );
+    }
+
+    return Response.json({ data: workspaceRow }, { status: 201 });
+  }
+
+  private async bootstrapWorkspace(request: Request) {
+    const operator = await this.requireOperator(request);
+    if (operator instanceof Response) return operator;
+
+    const body = await readJsonObject(request);
+    if (body instanceof Response) return body;
+
+    const workspaceName = requiredString(body.workspace_name ?? body.name, "workspace_name");
+    const projectName = requiredString(body.project_name ?? body.name, "project_name");
+    if (!workspaceName.ok) return jsonError(workspaceName.error, 400);
+    if (!projectName.ok) return jsonError(projectName.error, 400);
+
+    let workspaceId = optionalString(body.workspace_id);
+    let workspaceRow: WorkspaceRow | null = null;
+
+    if (workspaceId) {
+      if (operator.kind === "session" && !operator.workspaces.some((workspace) => workspace.id === workspaceId)) {
+        return jsonError("You do not have access to that workspace.", 403);
+      }
+      const { rows } = await this.db.query<WorkspaceRow>(
+        `
+          select id, name, phone, business_type, default_currency, created_by, created_at, updated_at
+          from workspaces
+          where id = $1
+          limit 1
+        `,
+        [workspaceId]
+      );
+      workspaceRow = rows[0] ?? null;
+      if (!workspaceRow) return jsonError("Workspace not found.", 404);
+    } else {
+      const createdName = workspaceName.value;
+      const createdBy = operator.kind === "session" ? operator.user.id : null;
+      const created = await this.db.query<WorkspaceRow>(
+        `
+          insert into workspaces (name, created_by)
+          values ($1, $2)
+          returning id, name, phone, business_type, default_currency, created_by, created_at, updated_at
+        `,
+        [createdName, createdBy]
+      );
+      workspaceRow = created.rows[0] ?? null;
+      workspaceId = workspaceRow?.id ?? null;
+      if (!workspaceRow) return jsonError("Could not prepare workspace.", 500);
+
+      if (operator.kind === "session") {
+        await this.db.query(
+          `
+            insert into workspace_members (workspace_id, user_id, role)
+            values ($1, $2, 'owner')
+            on conflict do nothing
+          `,
+          [workspaceRow.id, operator.user.id]
+        );
+      }
+    }
+
+    if (!workspaceId || !workspaceRow) return jsonError("Could not prepare workspace.", 500);
+
+    const plan = await this.getPlanByCode(optionalString(body.plan_code) ?? "free");
+    if (!plan) return jsonError("Could not load bootstrap plan.", 500);
+    const bootstrap = await this.bootstrapWorkspaceBundle({
+      workspaceId,
+      workspaceName: workspaceRow.name,
+      projectName: projectName.value,
+      keyName: optionalString(body.api_key_name) ?? `${workspaceRow.name} starter key`,
+      ownerEmail: optionalString(body.owner_email),
+      environment: optionalString(body.environment) ?? "production",
+      plan,
+    });
+    if (bootstrap instanceof Response) return bootstrap;
+
+    return Response.json({
+      data: {
+        workspace: workspaceRow,
+        ...bootstrap,
+      },
+    }, { status: 201 });
+  }
+
+  private async bootstrapWorkspaceBundle(input: {
+    workspaceId: string;
+    workspaceName: string;
+    projectName: string;
+    keyName: string;
+    ownerEmail: string | null;
+    environment: string;
+    plan: PlanRow;
+  }) {
+    const project = await this.db.query<ProjectRow>(
+      `
+        insert into cloud_projects (workspace_id, name, slug, environment, owner_email)
+        values ($1, $2, $3, $4, $5)
+        returning id, workspace_id, name, slug, environment, owner_email, created_at
+      `,
+      [input.workspaceId, input.projectName, slugify(input.projectName), input.environment, input.ownerEmail]
+    );
+    const projectRow = project.rows[0];
+    if (!projectRow) return jsonError("Could not create starter project.", 500);
+
+    await this.db.query(
+      `
+        insert into cloud_subscriptions (workspace_id, plan_id, status)
+        values ($1, $2, 'active')
+        on conflict do nothing
+      `,
+      [input.workspaceId, input.plan.id]
+    );
+
+    const apiKey = await this.createHostedApiKeyRecord({
+      workspaceId: input.workspaceId,
+      name: input.keyName,
+      plan: input.plan,
+      scopes: normalizeScopes(["leads:read", "leads:write", "clients:read", "clients:write", "usage:read", "whatsapp:read", "whatsapp:write"]),
+    });
+
+    const usage = await this.getUsageSummaryForWorkspace(input.workspaceId, input.plan);
+
+    return {
+      project: projectRow,
+      api_key: apiKey,
+      usage,
+    };
   }
 
   private async getReadiness(url: URL, auth: OperatorAccess) {
@@ -548,6 +817,61 @@ export class ClientPadCloud {
     );
 
     return Response.json({ data: rows, month });
+  }
+
+  private async getUsageSummary(url: URL, auth: OperatorAccess) {
+    const workspaceId = requiredString(url.searchParams.get("workspace_id"), "workspace_id");
+    if (!workspaceId.ok) return jsonError(workspaceId.error, 400);
+    if (auth.kind === "session" && !auth.workspaces.some((workspace) => workspace.id === workspaceId.value)) {
+      return jsonError("You do not have access to that workspace.", 403);
+    }
+
+    const { rows } = await this.db.query<WorkspaceUsageSummaryRow>(
+      `
+        select
+          w.id as workspace_id,
+          w.name as workspace_name,
+          p.code as plan_code,
+          p.name as plan_name,
+          $2::date as month,
+          coalesce(sum(u.request_count), 0)::int as request_count,
+          coalesce(sum(u.rejected_count), 0)::int as rejected_count,
+          coalesce(count(distinct k.id) filter (where k.revoked_at is null), 0)::int as active_api_key_count,
+          p.monthly_request_limit,
+          p.rate_limit_per_minute,
+          case
+            when p.monthly_request_limit is null then null
+            else greatest(p.monthly_request_limit - coalesce(sum(u.request_count), 0)::int, 0)
+          end as remaining_requests,
+          max(k.last_used_at) as last_used_at,
+          coalesce(mode.billing_mode, 'cloud_free') as billing_mode
+        from workspaces w
+        left join cloud_subscriptions s
+          on s.workspace_id = w.id and s.status in ('trialing', 'active')
+        left join cloud_plans p
+          on p.id = s.plan_id
+        left join api_keys k
+          on k.workspace_id = w.id
+        left join api_key_usage_months u
+          on u.api_key_id = k.id and u.month = $2::date
+        left join lateral (
+          select k2.billing_mode
+          from api_keys k2
+          where k2.workspace_id = w.id and k2.revoked_at is null
+          order by k2.created_at desc
+          limit 1
+        ) mode on true
+        where w.id = $1
+        group by w.id, w.name, p.code, p.name, p.monthly_request_limit, p.rate_limit_per_minute, mode.billing_mode
+        limit 1
+      `,
+      [workspaceId.value, getCurrentMonthStart()]
+    );
+
+    const row = rows[0];
+    if (!row) return jsonError("Workspace not found.", 404);
+
+    return Response.json({ data: row });
   }
 
   private async getReadinessSummary(auth: OperatorAccess): Promise<ReadinessSummary> {
@@ -854,6 +1178,55 @@ export class ClientPadCloud {
     return rows[0] ?? null;
   }
 
+  private async createHostedApiKeyRecord(input: {
+    workspaceId: string;
+    name: string;
+    plan: PlanRow;
+    scopes: ApiScope[];
+  }) {
+    const publicPrefix = randomBytes(6).toString("hex");
+    const secret = randomBytes(24).toString("base64url");
+    const rawKey = `cp_live_${publicPrefix}_${secret}`;
+    const keyHash = createHash("sha256").update(`${this.apiKeyPepper}:${rawKey}`).digest("hex");
+    const billingMode = planToBillingMode(input.plan.code);
+
+    const result = await this.db.query<{ id: string }>(
+      `
+        insert into api_keys (
+          workspace_id,
+          name,
+          public_prefix,
+          key_hash,
+          scopes,
+          billing_mode,
+          monthly_request_limit,
+          rate_limit_per_minute
+        )
+        values ($1, $2, $3, $4, $5, $6, $7, $8)
+        returning id
+      `,
+      [
+        input.workspaceId,
+        input.name,
+        publicPrefix,
+        keyHash,
+        input.scopes,
+        billingMode,
+        input.plan.monthly_request_limit,
+        input.plan.rate_limit_per_minute,
+      ]
+    );
+
+    return {
+      id: result.rows[0]?.id,
+      key: rawKey,
+      scopes: input.scopes,
+      billing_mode: billingMode,
+      monthly_request_limit: input.plan.monthly_request_limit,
+      rate_limit_per_minute: input.plan.rate_limit_per_minute,
+    };
+  }
+
   private async requireOperator(request: Request): Promise<OperatorAccess | Response> {
     const adminToken = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim();
     if (adminToken && safeEqualText(adminToken, this.adminToken)) {
@@ -959,6 +1332,43 @@ export class ClientPadCloud {
       latest_whatsapp_activity_at: normalizeTimestamp(row.latest_whatsapp_activity_at),
       latest_payment_event_at: normalizeTimestamp(row.latest_payment_event_at),
     }));
+  }
+
+  private async getUsageSummaryForWorkspace(workspaceId: string, plan: PlanRow) {
+    const month = getCurrentMonthStart();
+    const { rows } = await this.db.query<{
+      request_count: number;
+      rejected_count: number;
+      active_api_key_count: number;
+      last_used_at: string | null;
+    }>(
+      `
+        select
+          coalesce(sum(u.request_count), 0)::int as request_count,
+          coalesce(sum(u.rejected_count), 0)::int as rejected_count,
+          coalesce(count(distinct k.id) filter (where k.revoked_at is null), 0)::int as active_api_key_count,
+          max(k.last_used_at) as last_used_at
+        from api_keys k
+        left join api_key_usage_months u
+          on u.api_key_id = k.id and u.month = $2::date
+        where k.workspace_id = $1
+      `,
+      [workspaceId, month]
+    );
+
+    const row = rows[0] ?? { request_count: 0, rejected_count: 0, active_api_key_count: 0, last_used_at: null };
+    return {
+      workspace_id: workspaceId,
+      month,
+      request_count: row.request_count ?? 0,
+      rejected_count: row.rejected_count ?? 0,
+      active_api_key_count: row.active_api_key_count ?? 0,
+      monthly_request_limit: plan.monthly_request_limit,
+      rate_limit_per_minute: plan.rate_limit_per_minute,
+      remaining_requests: plan.monthly_request_limit == null ? null : Math.max(plan.monthly_request_limit - (row.request_count ?? 0), 0),
+      last_used_at: normalizeTimestamp(row.last_used_at),
+      billing_mode: planToBillingMode(plan.code),
+    };
   }
 
   private async createSession(userId: string) {
@@ -1188,12 +1598,18 @@ const openApiDocument = {
     "/health": { get: { summary: "Health check" } },
     "/plans": { get: { summary: "List public plans" } },
     "/readiness": { get: { summary: "Operator readiness summary" } },
+    "/workspaces": {
+      get: { summary: "List accessible workspaces" },
+      post: { summary: "Create a workspace" },
+    },
+    "/workspaces/bootstrap": { post: { summary: "Create a starter workspace bundle" } },
     "/projects": {
       get: { summary: "List hosted projects" },
       post: { summary: "Create hosted project and workspace" },
     },
     "/api-keys": { post: { summary: "Create hosted API key" } },
     "/usage": { get: { summary: "List workspace usage by API key" } },
+    "/usage/summary": { get: { summary: "Summarize billing-ready workspace usage" } },
     "/billing/events": { post: { summary: "Record billing provider event" } },
   },
 };
