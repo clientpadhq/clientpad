@@ -1,4 +1,4 @@
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { Pool } from "pg";
 import { API_SCOPES, type ApiScope, type ApiKeyBillingMode } from "@clientpad/core";
 
@@ -17,7 +17,11 @@ export type ClientPadCloudConfig = {
   databaseUrl?: string;
   apiKeyPepper: string;
   adminToken: string;
+  stripeSecretKey?: string;
+  stripeWebhookSecret?: string;
+  stripePriceIds?: Record<string, string>;
   db?: Queryable;
+  fetch?: typeof fetch;
 };
 
 export type ClientPadCloudHandler = (request: Request) => Promise<Response>;
@@ -173,6 +177,10 @@ export class ClientPadCloud {
   private readonly db: Queryable;
   private readonly apiKeyPepper: string;
   private readonly adminToken: string;
+  private readonly stripeSecretKey: string | null;
+  private readonly stripeWebhookSecret: string | null;
+  private readonly stripePriceIds: Record<string, string>;
+  private readonly fetchImpl: typeof fetch;
   private readonly sessionCookieName = "clientpad_operator_session";
   private readonly sessionDays = 30;
 
@@ -184,6 +192,10 @@ export class ClientPadCloud {
     this.db = config.db ?? new Pool({ connectionString: config.databaseUrl });
     this.apiKeyPepper = config.apiKeyPepper;
     this.adminToken = config.adminToken;
+    this.stripeSecretKey = optionalString(config.stripeSecretKey) ?? null;
+    this.stripeWebhookSecret = optionalString(config.stripeWebhookSecret) ?? null;
+    this.stripePriceIds = config.stripePriceIds ?? {};
+    this.fetchImpl = config.fetch ?? fetch;
   }
 
   async handle(request: Request): Promise<Response> {
@@ -205,6 +217,9 @@ export class ClientPadCloud {
       if (path === "/workspaces" && request.method === "POST") return this.withCors(await this.createWorkspace(request), request);
       if (path === "/workspaces/bootstrap" && request.method === "POST") return this.withCors(await this.bootstrapWorkspace(request), request);
       if (path === "/billing/events" && request.method === "POST") return this.withCors(await this.recordBillingEvent(request), request);
+      if (path === "/billing/checkout-session" && request.method === "POST") return this.withCors(await this.createCheckoutSession(request), request);
+      if (path === "/billing/portal-session" && request.method === "POST") return this.withCors(await this.createPortalSession(request), request);
+      if (path === "/billing/stripe/webhook" && request.method === "POST") return this.withCors(await this.handleStripeWebhook(request), request);
 
       const operator = await this.requireOperator(request);
       if (operator instanceof Response) return this.withCors(operator, request);
@@ -1138,6 +1153,297 @@ export class ClientPadCloud {
     return Response.json({ data: { accepted: true } });
   }
 
+  private async createCheckoutSession(request: Request) {
+    const operator = await this.requireOperator(request);
+    if (operator instanceof Response) return operator;
+
+    const body = await readJsonObject(request);
+    if (body instanceof Response) return body;
+
+    const workspaceId = requiredString(body.workspace_id, "workspace_id");
+    const planCode = requiredString(body.plan_code, "plan_code");
+    const successUrl = requiredString(body.success_url, "success_url");
+    const cancelUrl = requiredString(body.cancel_url, "cancel_url");
+    if (!workspaceId.ok) return jsonError(workspaceId.error, 400);
+    if (!planCode.ok) return jsonError(planCode.error, 400);
+    if (!successUrl.ok) return jsonError(successUrl.error, 400);
+    if (!cancelUrl.ok) return jsonError(cancelUrl.error, 400);
+    if (operator.kind === "session" && !operator.workspaces.some((workspace) => workspace.id === workspaceId.value)) {
+      return jsonError("You do not have access to that workspace.", 403);
+    }
+    if (!this.stripeSecretKey) return jsonError("Stripe secret key is not configured.", 503);
+
+    const plan = await this.getPlanByCode(planCode.value);
+    if (!plan) return jsonError(`Unknown plan: ${planCode.value}`, 400);
+
+    const priceId = this.getStripePriceId(plan);
+    if (!priceId) {
+      return jsonError(`No Stripe price ID configured for the ${plan.code} plan.`, 400);
+    }
+
+    const params = new URLSearchParams();
+    params.set("mode", "subscription");
+    params.set("success_url", successUrl.value);
+    params.set("cancel_url", cancelUrl.value);
+    params.set("line_items[0][price]", priceId);
+    params.set("line_items[0][quantity]", "1");
+    params.set("client_reference_id", workspaceId.value);
+    params.set("metadata[workspace_id]", workspaceId.value);
+    params.set("metadata[plan_code]", plan.code);
+    params.set("subscription_data[metadata][workspace_id]", workspaceId.value);
+    params.set("subscription_data[metadata][plan_code]", plan.code);
+
+    const email = operator.kind === "session" ? operator.user.email : optionalString(body.customer_email);
+    if (email) params.set("customer_email", email);
+
+    const response = await this.fetchImpl("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.stripeSecretKey}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params.toString(),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      return jsonError(payload?.error?.message ?? "Could not create checkout session.", response.status || 502);
+    }
+
+    await this.recordBillingEventFromPayload({
+      workspaceId: workspaceId.value,
+      provider: "stripe",
+      providerEventId: payload.id ?? `checkout_session_${Date.now()}`,
+      eventType: "checkout.session.created",
+      payload,
+    });
+
+    return Response.json(
+      {
+        data: {
+          id: payload.id,
+          url: payload.url,
+          workspace_id: workspaceId.value,
+          plan_code: plan.code,
+          price_id: priceId,
+        },
+      },
+      { status: 201 }
+    );
+  }
+
+  private async createPortalSession(request: Request) {
+    const operator = await this.requireOperator(request);
+    if (operator instanceof Response) return operator;
+
+    const body = await readJsonObject(request);
+    if (body instanceof Response) return body;
+
+    const workspaceId = requiredString(body.workspace_id, "workspace_id");
+    const returnUrl = requiredString(body.return_url, "return_url");
+    if (!workspaceId.ok) return jsonError(workspaceId.error, 400);
+    if (!returnUrl.ok) return jsonError(returnUrl.error, 400);
+    if (operator.kind === "session" && !operator.workspaces.some((workspace) => workspace.id === workspaceId.value)) {
+      return jsonError("You do not have access to that workspace.", 403);
+    }
+    if (!this.stripeSecretKey) return jsonError("Stripe secret key is not configured.", 503);
+
+    const { rows } = await this.db.query<{ provider_customer_id: string | null }>(
+      `
+        select provider_customer_id
+        from cloud_subscriptions
+        where workspace_id = $1
+          and status in ('trialing', 'active')
+          and provider_customer_id is not null
+        order by created_at desc
+        limit 1
+      `,
+      [workspaceId.value]
+    );
+    const customerId = rows[0]?.provider_customer_id;
+    if (!customerId) return jsonError("No Stripe customer is connected for that workspace yet.", 400);
+
+    const params = new URLSearchParams();
+    params.set("customer", customerId);
+    params.set("return_url", returnUrl.value);
+
+    const response = await this.fetchImpl("https://api.stripe.com/v1/billing_portal/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.stripeSecretKey}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: params.toString(),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      return jsonError(payload?.error?.message ?? "Could not create billing portal session.", response.status || 502);
+    }
+
+    await this.recordBillingEventFromPayload({
+      workspaceId: workspaceId.value,
+      provider: "stripe",
+      providerEventId: payload.id ?? `portal_session_${Date.now()}`,
+      eventType: "billing_portal.session.created",
+      payload,
+    });
+
+    return Response.json({ data: { id: payload.id, url: payload.url, workspace_id: workspaceId.value } }, { status: 201 });
+  }
+
+  private async handleStripeWebhook(request: Request) {
+    if (!this.stripeWebhookSecret) return jsonError("Stripe webhook secret is not configured.", 503);
+
+    const signature = request.headers.get("stripe-signature");
+    const body = await request.text();
+    const verified = verifyStripeWebhookSignature(body, signature, this.stripeWebhookSecret);
+    if (!verified.ok) return jsonError(verified.error, 401);
+
+    const event = JSON.parse(body) as { id?: string; type?: string; data?: { object?: Record<string, unknown> } };
+    const eventType = optionalString(event.type) ?? "unknown";
+    const object = event.data?.object ?? {};
+    const metadata = isRecord(object.metadata) ? object.metadata : null;
+    const workspaceId = optionalString(metadata?.workspace_id) ?? optionalString(object.client_reference_id) ?? optionalString(object.workspace_id) ?? null;
+
+    await this.recordBillingEventFromPayload({
+      workspaceId,
+      provider: "stripe",
+      providerEventId: optionalString(event.id) ?? `stripe_${Date.now()}`,
+      eventType,
+      payload: event,
+    });
+
+    if (eventType === "checkout.session.completed") {
+      await this.syncStripeCheckoutSession(object);
+    }
+    if (eventType.startsWith("customer.subscription.")) {
+      await this.syncStripeSubscription(object);
+    }
+
+    return Response.json({ received: true });
+  }
+
+  private async syncStripeCheckoutSession(object: Record<string, unknown>) {
+    const metadata = isRecord(object.metadata) ? object.metadata : null;
+    const workspaceId = optionalString(metadata?.workspace_id) ?? optionalString(object.client_reference_id);
+    const planCode = optionalString(metadata?.plan_code) ?? "free";
+    const customerId = optionalString(object.customer);
+    const subscriptionId = optionalString(object.subscription);
+    if (!workspaceId || !subscriptionId) return;
+
+    const plan = await this.getPlanByCode(planCode);
+    if (!plan) return;
+
+    await this.db.query(
+      `
+        insert into cloud_subscriptions (
+          workspace_id,
+          plan_id,
+          status,
+          provider,
+          provider_customer_id,
+          provider_subscription_id,
+          current_period_start,
+          current_period_end,
+          metadata
+        )
+        values ($1, $2, 'active', 'stripe', $3, $4, $5, $6, $7::jsonb)
+        on conflict (provider_subscription_id) do update set
+          plan_id = excluded.plan_id,
+          status = excluded.status,
+          provider = excluded.provider,
+          provider_customer_id = excluded.provider_customer_id,
+          current_period_start = excluded.current_period_start,
+          current_period_end = excluded.current_period_end,
+          metadata = excluded.metadata,
+          updated_at = now()
+      `,
+      [
+        workspaceId,
+        plan.id,
+        customerId,
+        subscriptionId,
+        stripeUnixToDate(object.current_period_start),
+        stripeUnixToDate(object.current_period_end),
+        JSON.stringify({ checkout_session_id: object.id, plan_code: plan.code }),
+      ]
+    );
+  }
+
+  private async syncStripeSubscription(object: Record<string, unknown>) {
+    const metadata = isRecord(object.metadata) ? object.metadata : null;
+    const workspaceId = optionalString(metadata?.workspace_id);
+    const planCode = optionalString(metadata?.plan_code) ?? "free";
+    const subscriptionId = optionalString(object.id);
+    if (!workspaceId || !subscriptionId) return;
+
+    const plan = await this.getPlanByCode(planCode);
+    if (!plan) return;
+
+    await this.db.query(
+      `
+        insert into cloud_subscriptions (
+          workspace_id,
+          plan_id,
+          status,
+          provider,
+          provider_customer_id,
+          provider_subscription_id,
+          current_period_start,
+          current_period_end,
+          metadata
+        )
+        values ($1, $2, $3, 'stripe', $4, $5, $6, $7, $8::jsonb)
+        on conflict (provider_subscription_id) do update set
+          plan_id = excluded.plan_id,
+          status = excluded.status,
+          provider = excluded.provider,
+          provider_customer_id = excluded.provider_customer_id,
+          current_period_start = excluded.current_period_start,
+          current_period_end = excluded.current_period_end,
+          metadata = excluded.metadata,
+          updated_at = now()
+      `,
+      [
+        workspaceId,
+        plan.id,
+        optionalString(object.status) ?? "active",
+        optionalString(object.customer),
+        subscriptionId,
+        stripeUnixToDate(object.current_period_start),
+        stripeUnixToDate(object.current_period_end),
+        JSON.stringify({ subscription_id: subscriptionId, plan_code: plan.code }),
+      ]
+    );
+  }
+
+  private getStripePriceId(plan: PlanRow) {
+    return this.stripePriceIds[plan.code] ?? optionalString((plan.features as { stripe_price_id?: string } | null | undefined)?.stripe_price_id);
+  }
+
+  private async recordBillingEventFromPayload(input: {
+    workspaceId: string | null;
+    provider: string;
+    providerEventId: string;
+    eventType: string;
+    payload: unknown;
+  }) {
+    await this.db.query(
+      `
+        insert into cloud_billing_events (
+          workspace_id,
+          provider,
+          provider_event_id,
+          event_type,
+          payload,
+          processed_at
+        )
+        values ($1, $2, $3, $4, $5::jsonb, now())
+        on conflict (provider_event_id) do nothing
+      `,
+      [input.workspaceId, input.provider, input.providerEventId, input.eventType, JSON.stringify(input.payload)]
+    );
+  }
+
   private async getPlanByCode(code: string) {
     const { rows } = await this.db.query<PlanRow>(
       `
@@ -1576,10 +1882,44 @@ function jsonError(message: string, status: number) {
   return Response.json({ error: { message } }, { status });
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 function getCurrentMonthStart() {
   const now = new Date();
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
   return `${now.getUTCFullYear()}-${month}-01`;
+}
+
+function stripeUnixToDate(value: unknown) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return new Date(parsed * 1000);
+}
+
+function verifyStripeWebhookSignature(body: string, signatureHeader: string | null, secret: string) {
+  if (!signatureHeader) return { ok: false as const, error: "Missing Stripe signature." };
+
+  const parts = signatureHeader
+    .split(",")
+    .map((entry) => entry.trim().split("=", 2))
+    .reduce<Record<string, string[]>>((acc, [key, value]) => {
+      if (key && value) (acc[key] ??= []).push(value);
+      return acc;
+    }, {});
+
+  const timestamp = Number(parts.t?.[0]);
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return { ok: false as const, error: "Invalid Stripe signature timestamp." };
+
+  const signedPayload = `${timestamp}.${body}`;
+  const expected = createHmac("sha256", secret).update(signedPayload, "utf8").digest("hex");
+  const matches = (parts.v1 ?? []).some((candidate) => safeEqualText(candidate, expected));
+  if (!matches) return { ok: false as const, error: "Invalid Stripe signature." };
+
+  const ageSeconds = Math.abs(Date.now() / 1000 - timestamp);
+  if (ageSeconds > 300) return { ok: false as const, error: "Stripe signature has expired." };
+  return { ok: true as const };
 }
 
 function normalizeTimestamp(value: string | Date | null | undefined) {

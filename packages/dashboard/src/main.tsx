@@ -612,6 +612,7 @@ function Dashboard({
   const [bootstrapProjectName, setBootstrapProjectName] = useState("ClientPad API");
   const [bootstrapKeyName, setBootstrapKeyName] = useState("Starter API key");
   const [bootstrapping, setBootstrapping] = useState(false);
+  const [billingAction, setBillingAction] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [health, setHealth] = useState<CloudHealth | null>(null);
@@ -705,6 +706,59 @@ function Dashboard({
     setCreatedKey(key);
     setNotice("API key created. Copy it now; it will not be shown again.");
     await refresh(input.workspace_id);
+  }
+
+  async function startCheckout(planCode: string) {
+    const workspaceId = selectedWorkspace || currentSession.selectedWorkspaceId || currentSession.workspaces?.[0]?.id || "";
+    if (!workspaceId) {
+      setNotice("Create or select a workspace first.");
+      return;
+    }
+
+    const selectedPlan = plans.find((plan) => plan.code === planCode);
+    if (!selectedPlan) {
+      setNotice("Select a plan before starting checkout.");
+      return;
+    }
+
+    setBillingAction(planCode);
+    try {
+      const checkout = await api.createCheckoutSession({
+        workspace_id: workspaceId,
+        plan_code: planCode,
+        success_url: `${window.location.origin}${window.location.pathname}?billing=success&plan=${encodeURIComponent(planCode)}`,
+        cancel_url: `${window.location.origin}${window.location.pathname}?billing=cancel&plan=${encodeURIComponent(planCode)}`,
+        customer_email: currentSession.user?.email,
+      });
+      setNotice(`Redirecting to ${selectedPlan.name} checkout...`);
+      window.location.assign(checkout.url);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not start billing checkout.");
+    } finally {
+      setBillingAction(null);
+    }
+  }
+
+  async function openBillingPortal() {
+    const workspaceId = selectedWorkspace || currentSession.selectedWorkspaceId || currentSession.workspaces?.[0]?.id || "";
+    if (!workspaceId) {
+      setNotice("Create or select a workspace first.");
+      return;
+    }
+
+    setBillingAction("portal");
+    try {
+      const portal = await api.createPortalSession({
+        workspace_id: workspaceId,
+        return_url: `${window.location.origin}${window.location.pathname}`,
+      });
+      setNotice("Opening billing portal...");
+      window.location.assign(portal.url);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not open billing portal.");
+    } finally {
+      setBillingAction(null);
+    }
   }
 
   async function bootstrapWorkspace() {
@@ -888,7 +942,15 @@ function Dashboard({
           )}
           {page === "usage" && <Usage usage={usage} keys={filteredKeys} selectedProject={selectedProject} usageSummary={usageSummary} />}
           {page === "billing" && (
-            <Billing plans={plans} selectedPlanCode={selectedPlanCode} onSelectPlan={selectPlan} usageSummary={usageSummary} />
+            <Billing
+              plans={plans}
+              selectedPlanCode={selectedPlanCode}
+              onSelectPlan={selectPlan}
+              usageSummary={usageSummary}
+              onCheckout={startCheckout}
+              onManageBilling={openBillingPortal}
+              billingAction={billingAction}
+            />
           )}
           {page === "docs" && (
             <Docs
@@ -1413,12 +1475,19 @@ function Billing({
   selectedPlanCode,
   onSelectPlan,
   usageSummary,
+  onCheckout,
+  onManageBilling,
+  billingAction,
 }: {
   plans: Plan[];
   selectedPlanCode: string;
   onSelectPlan: (code: string) => void;
   usageSummary: UsageSummary | null;
+  onCheckout: (code: string) => Promise<void> | void;
+  onManageBilling: () => Promise<void> | void;
+  billingAction: string | null;
 }) {
+  const canManageBilling = Boolean(usageSummary && usageSummary.plan_code && usageSummary.plan_code !== "free");
   return (
     <div className="billing-grid">
       <Panel className="billing-summary">
@@ -1426,6 +1495,11 @@ function Billing({
         <Quota label="Requests" value={usageSummary?.request_count ?? 2_391_873} limit={usageSummary?.monthly_request_limit ?? 10_000_000} suffix="" />
         <Quota label="Rejected" value={usageSummary?.rejected_count ?? 73} limit={Math.max(usageSummary?.rejected_count ?? 73, 100)} suffix="" />
         <p className="helper-text">Uses the same quota model as Usage: request count, rejections, rate limits, active API keys, and remaining monthly capacity.</p>
+        <div className="split-actions">
+          <button className="button outline" onClick={onManageBilling} disabled={!canManageBilling}>
+            {canManageBilling ? "Manage billing" : "Billing portal unavailable"}
+          </button>
+        </div>
       </Panel>
       {plans.length > 0 ? plans.map((plan) => (
         <Panel key={plan.id} className={selectedPlanCode === plan.code ? "selected-plan" : ""}>
@@ -1440,9 +1514,20 @@ function Billing({
             <li>{plan.included_projects} included projects</li>
             <li>Usage activity dashboard</li>
           </ul>
-          <button className={selectedPlanCode === plan.code ? "button primary blue" : "button outline"} onClick={() => onSelectPlan(plan.code)}>
-            {selectedPlanCode === plan.code ? "Selected" : `Select ${plan.name}`}
-          </button>
+          <div className="split-actions">
+            <button className={selectedPlanCode === plan.code ? "button primary blue" : "button outline"} onClick={() => onSelectPlan(plan.code)}>
+              {selectedPlanCode === plan.code ? "Selected" : `Select ${plan.name}`}
+            </button>
+            {plan.monthly_price_cents > 0 ? (
+              <button className="button primary blue" onClick={() => onCheckout(plan.code)} disabled={billingAction === plan.code}>
+                {billingAction === plan.code ? "Starting checkout..." : `Start ${plan.name}`}
+              </button>
+            ) : (
+              <button className="button outline" disabled>
+                Included
+              </button>
+            )}
+          </div>
         </Panel>
       )) : <Panel className="empty-state-panel compact"><h3>No plans loaded</h3><p>Connect the Cloud API to show available plans and current limits.</p></Panel>}
     </div>
@@ -2568,6 +2653,31 @@ class CloudApi {
     const body = await this.request<{ data: ApiKeyResult }>("/api-keys", {
       method: "POST",
       body: JSON.stringify({ ...input, scopes: input.scopes.split(",").map((scope) => scope.trim()).filter(Boolean) }),
+    });
+    return body.data;
+  }
+
+  async createCheckoutSession(input: {
+    workspace_id: string;
+    plan_code: string;
+    success_url: string;
+    cancel_url: string;
+    customer_email?: string;
+  }) {
+    const body = await this.request<{ data: { id: string; url: string; workspace_id: string; plan_code: string; price_id: string } }>(
+      "/billing/checkout-session",
+      {
+        method: "POST",
+        body: JSON.stringify(input),
+      }
+    );
+    return body.data;
+  }
+
+  async createPortalSession(input: { workspace_id: string; return_url: string }) {
+    const body = await this.request<{ data: { id: string; url: string; workspace_id: string } }>("/billing/portal-session", {
+      method: "POST",
+      body: JSON.stringify(input),
     });
     return body.data;
   }

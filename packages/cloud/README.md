@@ -13,6 +13,9 @@ export const handler = createClientPadCloudHandler({
   databaseUrl: process.env.DATABASE_URL!,
   apiKeyPepper: process.env.API_KEY_PEPPER!,
   adminToken: process.env.CLIENTPAD_CLOUD_ADMIN_TOKEN!,
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY,
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  stripePriceIds: JSON.parse(process.env.STRIPE_PRICE_IDS_JSON ?? "{}"),
 });
 ```
 
@@ -41,6 +44,9 @@ New operator signups create the operator account, workspace, starter project, an
 - `GET /usage`
 - `GET /usage/summary`
 - `POST /billing/events`
+- `POST /billing/checkout-session`
+- `POST /billing/portal-session`
+- `POST /billing/stripe/webhook`
 
 Public routes used by the dashboard bootstrap flow:
 
@@ -78,3 +84,5 @@ Use `/usage/summary` when you need billing-ready workspace totals:
 - active API key count
 - remaining request quota
 - plan and rate-limit metadata
+
+Use `/billing/checkout-session` to create a Stripe Checkout subscription session for the selected workspace and plan. Use `/billing/portal-session` to open the Stripe billing portal for an existing customer. Use `/billing/stripe/webhook` to keep subscriptions and billing events synchronized after checkout.

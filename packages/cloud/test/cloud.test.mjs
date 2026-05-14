@@ -1,15 +1,20 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { createClientPadCloudHandler } from "../dist/index.js";
 
 const queries = [];
 const adminToken = "admin_secret";
 const pepper = "pepper";
+const stripeSecretKey = "sk_test_123";
+const stripeWebhookSecret = "whsec_test_123";
+const stripePriceIds = { developer: "price_developer" };
 
 let operatorUser = null;
 let workspaceRecord = null;
 let currentSession = null;
 let revokedSession = false;
+let currentSubscription = null;
+const stripeFetchCalls = [];
 
 const db = {
   async query(text, values = []) {
@@ -105,6 +110,12 @@ const db = {
       return { rows: [], rowCount: 1 };
     }
 
+    if (text.includes("select provider_customer_id") && text.includes("from cloud_subscriptions")) {
+      return currentSubscription?.provider_customer_id
+        ? { rows: [{ provider_customer_id: currentSubscription.provider_customer_id }], rowCount: 1 }
+        : { rows: [], rowCount: 0 };
+    }
+
     if (text.includes("from workspace_members m") && text.includes("join workspaces w on w.id = m.workspace_id")) {
       if (!operatorUser || !workspaceRecord) return { rows: [], rowCount: 0 };
       return {
@@ -155,17 +166,18 @@ const db = {
     }
 
     if (text.includes("from cloud_plans") && text.includes("code =")) {
+      const code = values[0];
       return {
         rows: [
           {
-            id: "plan_free",
-            code: "free",
-            name: "Free",
-            monthly_price_cents: 0,
+            id: code === "developer" ? "plan_developer" : "plan_free",
+            code,
+            name: code === "developer" ? "Developer" : "Free",
+            monthly_price_cents: code === "developer" ? 1900 : 0,
             currency: "USD",
-            monthly_request_limit: 1000,
-            rate_limit_per_minute: 60,
-            included_projects: 1,
+            monthly_request_limit: code === "developer" ? 100000 : 1000,
+            rate_limit_per_minute: code === "developer" ? 300 : 60,
+            included_projects: code === "developer" ? 3 : 1,
             features: {},
           },
         ],
@@ -295,6 +307,39 @@ const db = {
       };
     }
 
+    if (text.includes("insert into cloud_billing_events")) {
+      return { rows: [], rowCount: 1 };
+    }
+
+    if (text.includes("insert into cloud_subscriptions")) {
+      if (values.length === 7) {
+        currentSubscription = {
+          workspace_id: values[0],
+          plan_id: values[1],
+          status: "active",
+          provider: "stripe",
+          provider_customer_id: values[2],
+          provider_subscription_id: values[3],
+          current_period_start: values[4],
+          current_period_end: values[5],
+          metadata: values[6],
+        };
+      } else {
+        currentSubscription = {
+          workspace_id: values[0],
+          plan_id: values[1],
+          status: values[2],
+          provider: "stripe",
+          provider_customer_id: values[3],
+          provider_subscription_id: values[4],
+          current_period_start: values[5],
+          current_period_end: values[6],
+          metadata: values[7],
+        };
+      }
+      return { rows: [], rowCount: 1 };
+    }
+
     if (text.includes("from workspaces") && text.includes("where id = $1") && text.includes("limit 1")) {
       return workspaceRecord
         ? {
@@ -395,7 +440,53 @@ const db = {
   },
 };
 
-const handler = createClientPadCloudHandler({ db, adminToken, apiKeyPepper: pepper });
+const handler = createClientPadCloudHandler({
+  db,
+  adminToken,
+  apiKeyPepper: pepper,
+  stripeSecretKey,
+  stripeWebhookSecret,
+  stripePriceIds,
+  fetch: async (input, init) => {
+    const url = typeof input === "string" ? input : input.url;
+    stripeFetchCalls.push({
+      url,
+      method: init?.method ?? "GET",
+      headers: init?.headers,
+      body: init?.body ?? null,
+    });
+
+    if (url.includes("/checkout/sessions")) {
+      return new Response(
+        JSON.stringify({
+          id: "cs_test_123",
+          url: "https://checkout.stripe.com/pay/cs_test_123",
+          customer: "cus_test_123",
+          subscription: "sub_test_123",
+          metadata: { workspace_id: "workspace_1", plan_code: "developer" },
+          current_period_start: 1715000000,
+          current_period_end: 1717600000,
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    }
+
+    if (url.includes("/billing_portal/sessions")) {
+      return new Response(
+        JSON.stringify({
+          id: "bps_test_123",
+          url: "https://billing.stripe.com/session/bps_test_123",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    }
+
+    return new Response(JSON.stringify({ error: { message: "unexpected stripe call" } }), {
+      status: 500,
+      headers: { "content-type": "application/json" },
+    });
+  },
+});
 
 const health = await handler(new Request("https://cloud.example.com/api/cloud/v1/health"));
 assert.equal(health.status, 200);
@@ -539,6 +630,91 @@ assert.equal(readinessBody.summary.has_public_api_key, true);
 assert.equal(readinessBody.workspace.name, "Acme Cloud");
 assert.equal(readinessBody.workspace.has_whatsapp_configuration, true);
 assert.equal(readinessBody.workspace.has_payment_provider_configuration, true);
+
+const checkout = await handler(
+  new Request("https://cloud.example.com/api/cloud/v1/billing/checkout-session", {
+    method: "POST",
+    headers: { cookie, "content-type": "application/json" },
+    body: JSON.stringify({
+      workspace_id: "workspace_1",
+      plan_code: "developer",
+      success_url: "https://dashboard.clientpad.test/success",
+      cancel_url: "https://dashboard.clientpad.test/cancel",
+      customer_email: "operator@clientpad.com",
+    }),
+  })
+);
+assert.equal(checkout.status, 201);
+const checkoutBody = await checkout.json();
+assert.equal(checkoutBody.data.plan_code, "developer");
+assert.equal(checkoutBody.data.price_id, "price_developer");
+assert.equal(
+  stripeFetchCalls.some(
+    (call) => call.url.includes("/checkout/sessions") && String(call.body).includes("line_items%5B0%5D%5Bprice%5D=price_developer")
+  ),
+  true
+);
+
+const checkoutFree = await handler(
+  new Request("https://cloud.example.com/api/cloud/v1/billing/checkout-session", {
+    method: "POST",
+    headers: { cookie, "content-type": "application/json" },
+    body: JSON.stringify({
+      workspace_id: "workspace_1",
+      plan_code: "free",
+      success_url: "https://dashboard.clientpad.test/success",
+      cancel_url: "https://dashboard.clientpad.test/cancel",
+    }),
+  })
+);
+assert.equal(checkoutFree.status, 400);
+
+const stripeCheckoutPayload = JSON.stringify({
+  id: "evt_checkout_1",
+  type: "checkout.session.completed",
+  data: {
+    object: {
+      id: "cs_test_123",
+      customer: "cus_test_123",
+      subscription: "sub_test_123",
+      client_reference_id: "workspace_1",
+      metadata: { workspace_id: "workspace_1", plan_code: "developer" },
+      current_period_start: 1715000000,
+      current_period_end: 1717600000,
+    },
+  },
+});
+const checkoutTimestamp = String(Math.floor(Date.now() / 1000));
+const checkoutSignature = createHmac("sha256", stripeWebhookSecret).update(`${checkoutTimestamp}.${stripeCheckoutPayload}`).digest("hex");
+const webhook = await handler(
+  new Request("https://cloud.example.com/api/cloud/v1/billing/stripe/webhook", {
+    method: "POST",
+    headers: {
+      "stripe-signature": `t=${checkoutTimestamp},v1=${checkoutSignature}`,
+      "content-type": "application/json",
+    },
+    body: stripeCheckoutPayload,
+  })
+);
+assert.equal(webhook.status, 200);
+assert.equal((await webhook.json()).received, true);
+assert.equal(currentSubscription?.provider_subscription_id, "sub_test_123");
+assert.equal(currentSubscription?.provider_customer_id, "cus_test_123");
+assert.equal(queries.some((query) => String(query.text).includes("insert into cloud_billing_events")), true);
+
+const portal = await handler(
+  new Request("https://cloud.example.com/api/cloud/v1/billing/portal-session", {
+    method: "POST",
+    headers: { cookie, "content-type": "application/json" },
+    body: JSON.stringify({
+      workspace_id: "workspace_1",
+      return_url: "https://dashboard.clientpad.test/settings",
+    }),
+  })
+);
+assert.equal(portal.status, 201);
+const portalBody = await portal.json();
+assert.equal(portalBody.data.url, "https://billing.stripe.com/session/bps_test_123");
 
 const logout = await handler(
   new Request("https://cloud.example.com/api/cloud/v1/auth/logout", {
