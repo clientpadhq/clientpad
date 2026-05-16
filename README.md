@@ -13,6 +13,7 @@ This repository ships installable packages instead of a hosted product with subs
 - `@clientpad/whatsapp`: WhatsApp automation, lead capture, booking flows, payments, and review prompts for service businesses.
 - `@clientpad/cloud`: hosted control plane for projects, plans, subscriptions, usage, API keys, and operator auth/session management.
 - `@clientpad/dashboard`: developer web dashboard for projects, API keys, usage, billing, docs, preview/live operator access, and WhatsApp operations.
+- `@clientpad/marketing`: public `clientpad.xyz` marketing and docs site with static Netlify export plus `llms.txt` support.
 
 The dashboard opens in **Preview** mode for sample data or **Live** mode after an operator signs in to ClientPad Cloud with email and password. Live mode validates both `/health` and `/readiness` before it claims the cloud is connected. New operator signups create an operator account, workspace, starter project, and starter API key in one pass so the hosted dashboard can move from empty to usable quickly.
 
@@ -211,6 +212,14 @@ npm run build
 
 `npm run build` packs all publishable packages into `dist/`.
 
+Build the public marketing site for `clientpad.xyz`:
+
+```bash
+npm run marketing:build
+```
+
+The marketing package exports static files to `packages/marketing/dist`, including clean docs routes, `robots.txt`, `sitemap.xml`, `llms.txt`, and `llms-full.txt`.
+
 ### CI parity
 
 Run the same checks CI runs, locally:
@@ -248,6 +257,7 @@ See [docs/PUBLISHING.md](docs/PUBLISHING.md) for the full release safety workflo
 - [ClientPad Cloud](docs/CLIENTPAD_CLOUD.md)
 - [npm package strategy](docs/NPM_PACKAGE_STRATEGY.md)
 - [Publishing checklist](docs/PUBLISHING.md)
+- [Domain and Netlify deployment](docs/DOMAIN_DEPLOYMENT.md)
 
 ## License
 

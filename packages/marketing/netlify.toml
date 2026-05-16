@@ -1,0 +1,10 @@
+[build]
+  command = "ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd); cd \"$ROOT\" && corepack enable && pnpm install --frozen-lockfile && pnpm --filter @clientpad/marketing build"
+  publish = "dist"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "DENY"
