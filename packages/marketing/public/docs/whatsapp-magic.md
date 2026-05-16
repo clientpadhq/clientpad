@@ -1,23 +1,27 @@
-# WhatsApp Magic — ClientPad
+# WhatsApp Magic
 
-ClientPad's WhatsApp integration turns everyday WhatsApp conversations into structured CRM activity. Service businesses can capture leads, manage bookings, send payment links, and collect reviews — all through WhatsApp.
+ClientPad's WhatsApp integration turns inbound messages into structured client operations: leads, conversations, bookings, payments, follow-ups, and pipeline activity.
 
 ## Capabilities
 
-- **Lead Capture** — Incoming WhatsApp messages auto-create leads with contact info and intent detection.
-- **Booking Flows** — Clients can request services, receive quotes, and confirm bookings in chat.
-- **Payment Links** — Send payment links through supported providers and track payment status.
-- **Follow-Ups** — Automated reminders, follow-up messages, and review requests.
-- **Pipeline Tracking** — Each WhatsApp conversation maps to a CRM pipeline stage.
-- **Team Inbox** — Shared inbox with assignment, AI reply suggestions, and owner-approval workflows.
+- Lead capture from inbound WhatsApp messages.
+- Shared owner inbox with assignment and status.
+- Pipeline movement from new lead to quoted, booked, completed, paid, and review requested.
+- AI-assisted reply drafts where configured.
+- Payment link delivery through supported providers.
+- Webhook diagnostics in the dashboard.
 
-## Setup
+## Setup requirements
 
-ClientPad connects to the WhatsApp Business Platform through provider-based integration. You'll need:
+You need:
 
-1. A Meta Business account
-2. A WhatsApp Business phone number
-3. Webhook configuration pointing to your ClientPad server
+1. A Meta Business account.
+2. A WhatsApp Business phone number.
+3. WhatsApp app credentials.
+4. A webhook URL pointing at your ClientPad server.
+5. A default ClientPad workspace for inbound messages.
+
+## CLI setup
 
 ```bash
 clientpad init --whatsapp
@@ -26,7 +30,7 @@ clientpad whatsapp:setup
 clientpad whatsapp:flows salon
 ```
 
-## Webhook Server
+## Webhook server
 
 ```ts
 import { createWhatsAppWebhookHandler } from "@clientpad/whatsapp";
@@ -40,19 +44,8 @@ export const whatsappWebhook = createWhatsAppWebhookHandler({
 });
 ```
 
-## Supported Features
+## Dashboard diagnostics
 
-- WhatsApp message receipt and sending
-- Conversation threading and assignment
-- AI-suggested reply drafts
-- Pipeline stage management
-- Owner approval workflows for sensitive actions
-- Provider-based payment link delivery
+The dashboard can show whether WhatsApp credentials are present, whether the webhook is configured, and whether recent inbound activity has reached the backend.
 
-## Limitations
-
-- Requires a Meta Business Account and WhatsApp Business Platform access
-- Payment processing requires a supported payment provider integration
-- Message template approval follows Meta's policies
-
-[← Back to ClientPad](/)
+[Back to ClientPad](/)

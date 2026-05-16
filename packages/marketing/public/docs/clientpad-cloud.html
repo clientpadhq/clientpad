@@ -3,66 +3,61 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ClientPad Cloud — ClientPad</title>
-<meta name="description" content="ClientPad Cloud is the optional managed gateway with hosted PostgreSQL, API endpoint, usage analytics, and a developer dashboard.">
+<title>ClientPad Cloud - ClientPad</title>
+<meta name="description" content="ClientPad Cloud is the optional hosted gateway for operator auth, API keys, usage tracking, readiness, and Lemon Squeezy checkout.">
 <link rel="alternate" type="text/markdown" href="/docs/clientpad-cloud.md">
 <style>
-  :root { --bg: #fafbfc; --fg: #1a1a2e; --accent: #1f6feb; --muted: #6b7280; --card: #fff; --border: #e5e7eb; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.7; }
-  nav { background: var(--fg); padding: 0.75rem 1.5rem; }
-  nav a { color: #fff; text-decoration: none; font-weight: 500; }
-  main { max-width: 760px; margin: 0 auto; padding: 3rem 1.5rem; }
-  h1 { font-size: 2rem; margin-bottom: 1rem; }
-  h2 { font-size: 1.35rem; margin: 2rem 0 0.75rem; }
-  p, li { color: var(--muted); margin-bottom: 0.75rem; }
-  ul { padding-left: 1.5rem; margin-bottom: 1rem; }
-  pre { background: var(--fg); color: #e5e7eb; padding: 1rem 1.25rem; border-radius: 0.5rem; overflow-x: auto; margin: 1rem 0; font-size: 0.9rem; }
-  code { background: #f3f4f6; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-size: 0.9em; }
-  pre code { background: none; padding: 0; }
-  a { color: var(--accent); }
-  table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-  th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-  th { font-weight: 600; }
-  td { color: var(--muted); }
+  :root { --bg: #f7faf8; --ink: #101828; --muted: #526071; --line: #d9e4df; --panel: #fff; --blue: #225ea8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.65; }
+  nav { border-bottom: 1px solid var(--line); background: #fff; padding: 1rem 1.25rem; }
+  nav div, main { max-width: 880px; margin: 0 auto; }
+  nav a, a { color: var(--blue); }
+  main { padding: 3rem 1.25rem; }
+  h1 { font-size: 2.45rem; line-height: 1.05; margin: 0 0 1rem; }
+  h2 { margin: 2rem 0 0.75rem; }
+  p, li { color: var(--muted); }
+  code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.92em; }
+  pre { overflow-x: auto; border-radius: 8px; background: #111827; color: #e5e7eb; padding: 1rem; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin: 1rem 0; }
+  .card { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 1rem; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
-<nav><a href="/">&larr; ClientPad</a></nav>
+<nav><div><a href="/">ClientPad</a> / Cloud</div></nav>
 <main>
 <h1>ClientPad Cloud</h1>
-<p>ClientPad Cloud is the optional managed gateway that provides hosted infrastructure for ClientPad projects. The open-source packages remain free and MIT-licensed — Cloud adds hosting, management, and billing.</p>
+<p>ClientPad Cloud is the optional hosted gateway for teams that do not want to run the infrastructure themselves. The open-source packages remain MIT licensed and self-hostable.</p>
 
-<h2>Components</h2>
+<h2>Production domains</h2>
+<div class="grid">
+  <div class="card"><strong>Public site</strong><br><code>https://clientpad.xyz</code></div>
+  <div class="card"><strong>Dashboard</strong><br><code>https://app.clientpad.xyz</code></div>
+  <div class="card"><strong>Cloud API</strong><br><code>https://api.clientpad.xyz/api/cloud/v1</code></div>
+  <div class="card"><strong>Public API</strong><br><code>https://api.clientpad.xyz/api/public/v1</code></div>
+</div>
+
+<h2>What Cloud provides</h2>
 <ol>
-<li><strong>Managed PostgreSQL</strong> — Database hosting with automated migrations</li>
-<li><strong>Public API Gateway</strong> — Managed endpoint at your Cloud URL</li>
-<li><strong>Control Plane</strong> — Project management, API key issuance, and usage tracking</li>
-<li><strong>Developer Dashboard</strong> — Web interface for projects, keys, usage, and billing</li>
-<li><strong>Billing</strong> — Plan-based subscriptions with request quotas and rate limits</li>
+  <li>Operator signup, login, session restore, and logout.</li>
+  <li>Workspace and starter project bootstrap.</li>
+  <li>Workspace-scoped public API key creation.</li>
+  <li>Readiness checks for Cloud, auth, workspace, API key, WhatsApp, and billing state.</li>
+  <li>Usage summaries for month-to-date requests, active keys, rejections, and quota readiness.</li>
+  <li>Lemon Squeezy checkout and portal links for hosted billing.</li>
 </ol>
 
-<h2>Plans</h2>
-<table>
-<tr><th>Plan</th><th>Requests/month</th><th>Rate Limit</th><th>Projects</th></tr>
-<tr><td>Free</td><td>1,000</td><td>60/min</td><td>1</td></tr>
-<tr><td>Developer</td><td>100,000</td><td>300/min</td><td>3</td></tr>
-<tr><td>Pro</td><td>10,000,000</td><td>1,200/min</td><td>10</td></tr>
-<tr><td>Business</td><td>50,000,000</td><td>5,000/min</td><td>50</td></tr>
-</table>
+<h2>Self-hosted vs hosted</h2>
+<p>Self-hosted deployments run their own PostgreSQL database, migrations, server, and dashboard. Hosted Cloud is the commercial path for managed infrastructure, operational reliability, usage visibility, and support.</p>
 
-<h2>Self-Hosted vs Cloud</h2>
-<p>Self-hosted deployments run your own PostgreSQL and server. API keys are free and unlimited — you control the infrastructure.</p>
-<p>ClientPad Cloud adds managed hosting, automated backups, usage analytics, rate limiting, and a dashboard. You pay for the infrastructure, not the software.</p>
-
+<h2>SDK example</h2>
 <pre><code>import { ClientPad } from "@clientpad/sdk";
 
 const clientpad = new ClientPad({
-  baseUrl: "https://your-project.clientpad.cloud/api/public/v1",
+  baseUrl: "https://api.clientpad.xyz/api/public/v1",
   apiKey: process.env.CLIENTPAD_API_KEY!,
 });</code></pre>
-
-<p><a href="/">&larr; Back to ClientPad</a></p>
 </main>
 </body>
 </html>

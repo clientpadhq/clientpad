@@ -3,58 +3,57 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WhatsApp Magic — ClientPad</title>
-<meta name="description" content="ClientPad WhatsApp integration turns WhatsApp conversations into structured CRM: leads, bookings, payments, follow-ups, and reviews.">
+<title>WhatsApp Magic - ClientPad</title>
+<meta name="description" content="ClientPad WhatsApp automation for lead capture, shared inbox, pipeline movement, payment links, and webhook diagnostics.">
 <link rel="alternate" type="text/markdown" href="/docs/whatsapp-magic.md">
 <style>
-  :root { --bg: #fafbfc; --fg: #1a1a2e; --accent: #1f6feb; --muted: #6b7280; --card: #fff; --border: #e5e7eb; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.7; }
-  nav { background: var(--fg); padding: 0.75rem 1.5rem; }
-  nav a { color: #fff; text-decoration: none; font-weight: 500; }
-  main { max-width: 760px; margin: 0 auto; padding: 3rem 1.5rem; }
-  h1 { font-size: 2rem; margin-bottom: 1rem; }
-  h2 { font-size: 1.35rem; margin: 2rem 0 0.75rem; }
-  h3 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
-  p, li { color: var(--muted); margin-bottom: 0.75rem; }
-  ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
-  pre { background: var(--fg); color: #e5e7eb; padding: 1rem 1.25rem; border-radius: 0.5rem; overflow-x: auto; margin: 1rem 0; font-size: 0.9rem; }
-  code { background: #f3f4f6; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-size: 0.9em; }
-  pre code { background: none; padding: 0; }
-  a { color: var(--accent); }
-  blockquote { border-left: 3px solid var(--accent); padding-left: 1rem; color: var(--muted); margin: 1rem 0; }
+  :root { --bg: #f7faf8; --ink: #101828; --muted: #526071; --line: #d9e4df; --panel: #fff; --blue: #225ea8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.65; }
+  nav { border-bottom: 1px solid var(--line); background: #fff; padding: 1rem 1.25rem; }
+  nav div, main { max-width: 880px; margin: 0 auto; }
+  nav a, a { color: var(--blue); }
+  main { padding: 3rem 1.25rem; }
+  h1 { font-size: 2.45rem; line-height: 1.05; margin: 0 0 1rem; }
+  h2 { margin: 2rem 0 0.75rem; }
+  p, li { color: var(--muted); }
+  code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.92em; }
+  pre { overflow-x: auto; border-radius: 8px; background: #111827; color: #e5e7eb; padding: 1rem; }
+  .callout { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 1rem; }
 </style>
 </head>
 <body>
-<nav><a href="/">&larr; ClientPad</a></nav>
+<nav><div><a href="/">ClientPad</a> / WhatsApp Magic</div></nav>
 <main>
 <h1>WhatsApp Magic</h1>
-<p>ClientPad's WhatsApp integration turns everyday WhatsApp conversations into structured CRM activity. Service businesses can capture leads, manage bookings, send payment links, and collect reviews — all through WhatsApp.</p>
+<p>ClientPad's WhatsApp integration turns inbound messages into structured client operations: leads, conversations, bookings, payments, follow-ups, and pipeline activity.</p>
 
 <h2>Capabilities</h2>
 <ul>
-<li><strong>Lead Capture</strong> — Incoming WhatsApp messages auto-create leads with contact info and intent detection.</li>
-<li><strong>Booking Flows</strong> — Clients can request services, receive quotes, and confirm bookings in chat.</li>
-<li><strong>Payment Links</strong> — Send payment links through supported providers and track payment status.</li>
-<li><strong>Follow-Ups</strong> — Automated reminders, follow-up messages, and review requests.</li>
-<li><strong>Pipeline Tracking</strong> — Each WhatsApp conversation maps to a CRM pipeline stage.</li>
-<li><strong>Team Inbox</strong> — Shared inbox with assignment, AI reply suggestions, and owner-approval workflows.</li>
+  <li>Lead capture from inbound WhatsApp messages.</li>
+  <li>Shared owner inbox with assignment and status.</li>
+  <li>Pipeline movement from new lead to quoted, booked, completed, paid, and review requested.</li>
+  <li>AI-assisted reply drafts where configured.</li>
+  <li>Payment link delivery through supported providers.</li>
+  <li>Webhook diagnostics in the dashboard.</li>
 </ul>
 
-<h2>Setup</h2>
-<p>ClientPad connects to the WhatsApp Business Platform through provider-based integration. You'll need:</p>
+<h2>Setup requirements</h2>
 <ol>
-<li>A Meta Business account</li>
-<li>A WhatsApp Business phone number</li>
-<li>Webhook configuration pointing to your ClientPad server</li>
+  <li>A Meta Business account.</li>
+  <li>A WhatsApp Business phone number.</li>
+  <li>WhatsApp app credentials.</li>
+  <li>A webhook URL pointing at your ClientPad server.</li>
+  <li>A default ClientPad workspace for inbound messages.</li>
 </ol>
 
+<h2>CLI setup</h2>
 <pre><code>clientpad init --whatsapp
 clientpad migrate
 clientpad whatsapp:setup
 clientpad whatsapp:flows salon</code></pre>
 
-<h2>Webhook Server</h2>
+<h2>Webhook server</h2>
 <pre><code>import { createWhatsAppWebhookHandler } from "@clientpad/whatsapp";
 
 export const whatsappWebhook = createWhatsAppWebhookHandler({
@@ -65,24 +64,7 @@ export const whatsappWebhook = createWhatsAppWebhookHandler({
   defaultWorkspaceId: process.env.CLIENTPAD_WORKSPACE_ID!,
 });</code></pre>
 
-<h2>Supported Features</h2>
-<ul>
-<li>WhatsApp message receipt and sending</li>
-<li>Conversation threading and assignment</li>
-<li>AI-suggested reply drafts</li>
-<li>Pipeline stage management</li>
-<li>Owner approval workflows for sensitive actions</li>
-<li>Provider-based payment link delivery</li>
-</ul>
-
-<h2>Limitations</h2>
-<ul>
-<li>Requires a Meta Business Account and WhatsApp Business Platform access</li>
-<li>Payment processing requires a supported payment provider integration</li>
-<li>Message template approval follows Meta's policies</li>
-</ul>
-
-<p><a href="/">&larr; Back to ClientPad</a></p>
+<div class="callout">The dashboard can show whether WhatsApp credentials are present, whether the webhook is configured, and whether recent inbound activity has reached the backend.</div>
 </main>
 </body>
 </html>

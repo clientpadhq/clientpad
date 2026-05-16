@@ -1,6 +1,6 @@
 # ClientPad Public API
 
-ClientPad exposes a versioned REST API for developers and integrations. All endpoints are scoped to a workspace and authenticated with API keys.
+ClientPad exposes a versioned REST API for developers and integrations. Endpoints are scoped to a workspace and authenticated with API keys.
 
 ## Authentication
 
@@ -10,25 +10,35 @@ Send a workspace API key as a bearer token:
 Authorization: Bearer cp_live_<public_prefix>_<secret>
 ```
 
-API keys are workspace-scoped and permissioned. Raw keys are shown only once when created.
+API keys are shown only once when created. Store them in server-side environment variables.
+
+## Base URL
+
+Hosted Cloud:
+
+```text
+https://api.clientpad.xyz/api/public/v1
+```
+
+Self-hosted deployments should point the SDK at their own `/api/public/v1` route.
 
 ## Endpoints
 
 ### Leads
 
-- `GET /api/public/v1/leads` — List leads with pagination
-- `POST /api/public/v1/leads` — Create a lead
+- `GET /leads` lists leads with pagination.
+- `POST /leads` creates a lead.
 
 ### Clients
 
-- `GET /api/public/v1/clients` — List clients with pagination
-- `POST /api/public/v1/clients` — Create a client
+- `GET /clients` lists clients with pagination.
+- `POST /clients` creates a client.
 
 ### Usage
 
-- `GET /api/public/v1/usage` — Retrieve API key usage stats
+- `GET /usage` returns API key usage stats.
 
-All list responses return `{ data: T[], pagination: { limit, offset } }`. Create responses return `{ data: { id: string } }`.
+List responses return `{ data: T[], pagination: { limit, offset } }`. Create responses return `{ data: { id: string } }`.
 
 ## TypeScript SDK
 
@@ -40,26 +50,23 @@ pnpm add @clientpad/sdk
 import { ClientPad } from "@clientpad/sdk";
 
 const clientpad = new ClientPad({
-  baseUrl: "https://example.com/api/public/v1",
+  baseUrl: "https://api.clientpad.xyz/api/public/v1",
   apiKey: process.env.CLIENTPAD_API_KEY!,
 });
 
-// List leads
-const { data: leads, pagination } = await clientpad.leads.list({ limit: 20 });
+const { data: leads } = await clientpad.leads.list({ limit: 20 });
 
-// Create a lead
-const { data: { id } } = await clientpad.leads.create({
+const { data: created } = await clientpad.leads.create({
   name: "Ada Customer",
   phone: "+234...",
   source: "Website",
 });
 
-// Check usage
 const usage = await clientpad.usage.retrieve();
 ```
 
-## Rate Limits
+## Rate limits
 
-Rate limits are configured per API key. Self-hosted deployments can leave limits empty for unlimited local usage. ClientPad Cloud keys have plan-based quotas.
+Self-hosted deployments can leave limits empty for unlimited local usage. Hosted Cloud keys use workspace quota and rate-limit settings backed by usage tracking.
 
-[← Back to ClientPad](/)
+[Back to ClientPad](/)

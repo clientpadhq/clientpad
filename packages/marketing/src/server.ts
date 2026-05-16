@@ -120,13 +120,13 @@ function mediaTypeMatches(mediaType: { type: string; subtype: string }, type: st
 }
 
 function buildLlmsTxt(): string {
-  const baseUrl = process.env.MARKETING_BASE_URL || "https://clientpad.com";
+  const baseUrl = process.env.MARKETING_BASE_URL || "https://clientpad.xyz";
   const mdBase = `${baseUrl}`;
 
   const sections = [
     {
       title: "ClientPad",
-      description: "ClientPad is open-source WhatsApp-first CRM infrastructure for service businesses and developers building client workflows. Turns WhatsApp conversations into leads, bookings, payments, follow-ups, reviews, and client pipelines.",
+      description: "ClientPad is open-source infrastructure for WhatsApp-first leads, client workflows, API keys, usage tracking, and operator dashboards.",
       links: [
         { title: "ClientPad Home", href: `${mdBase}/index.md`, description: "Landing page with product overview and capabilities" },
       ],
@@ -137,7 +137,7 @@ function buildLlmsTxt(): string {
         { title: "WhatsApp Magic", href: `${mdBase}/docs/whatsapp-magic.md`, description: "WhatsApp automation for service businesses: lead capture, bookings, payments" },
         { title: "Public API", href: `${mdBase}/docs/public-api.md`, description: "REST API reference and TypeScript SDK guide" },
         { title: "Open-Source Architecture", href: `${mdBase}/docs/open-source.md`, description: "Package structure, database design, and auth architecture" },
-        { title: "ClientPad Cloud", href: `${mdBase}/docs/clientpad-cloud.md`, description: "Managed hosting, plans, and billing" },
+        { title: "ClientPad Cloud", href: `${mdBase}/docs/clientpad-cloud.md`, description: "Hosted gateway, operator dashboard, usage tracking, and Lemon Squeezy checkout" },
       ],
     },
     {
