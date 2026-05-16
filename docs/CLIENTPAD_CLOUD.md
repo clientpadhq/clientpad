@@ -86,9 +86,9 @@ npm run test:dashboard
 
 Then deploy:
 
-- `/api/public/v1/*` with `@clientpad/server`
-- `/api/cloud/v1/*` with `@clientpad/cloud`
-- dashboard static app with `@clientpad/dashboard`
+- `api.clientpad.xyz/api/public/v1/*` with `@clientpad/server`
+- `api.clientpad.xyz/api/cloud/v1/*` with `@clientpad/cloud`
+- `app.clientpad.xyz` static app with `@clientpad/dashboard`
 
 ## Default Plans
 

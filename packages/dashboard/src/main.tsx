@@ -262,6 +262,9 @@ type RevenueClient = {
 const serviceStages = ["New Lead", "Quoted", "Booked", "In Progress", "Completed", "Paid", "Review Requested"] as const;
 
 const sessionKey = "clientpad.cloud.session";
+const defaultCloudBaseUrl = window.location.hostname.includes("localhost")
+  ? "http://localhost:3000/api/cloud/v1"
+  : "https://api.clientpad.xyz/api/cloud/v1";
 
 function loadSession() {
   const saved = localStorage.getItem(sessionKey);
@@ -381,7 +384,7 @@ function App() {
 
 function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notice?: string }) {
   const [mode, setMode] = useState<ConnectionMode>("preview");
-  const [baseUrl, setBaseUrl] = useState("http://localhost:3000/api/cloud/v1");
+  const [baseUrl, setBaseUrl] = useState(defaultCloudBaseUrl);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -2944,11 +2947,11 @@ function toKeyRecords(usage: UsageRow[], projects: Project[]): ApiKeyRecord[] {
 function quickstartSnippet(language: QuickstartLanguage, selectedProject?: Project) {
   const resource = selectedProject?.slug ?? "resource";
   const snippets: Record<QuickstartLanguage, string> = {
-    curl: `curl https://api.clientpad.cloud/v1/resources \\\n  -H "Authorization: Bearer cp_live_your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d '{"name":"${resource}"}'`,
-    python: `import requests\n\nrequests.post(\n  "https://api.clientpad.cloud/v1/resources",\n  headers={"Authorization": "Bearer cp_live_your_api_key_here"},\n  json={"name": "${resource}"},\n)`,
-    node: `import { ClientPad } from "@clientpad/sdk";\n\nconst clientpad = new ClientPad({\n  baseUrl: "https://api.clientpad.cloud/v1",\n  apiKey: process.env.CLIENTPAD_API_KEY!,\n});\n\nawait clientpad.leads.create({ name: "${resource}" });`,
-    go: `req, _ := http.NewRequest("POST", "https://api.clientpad.cloud/v1/resources", body)\nreq.Header.Set("Authorization", "Bearer cp_live_your_api_key_here")`,
-    ruby: `Net::HTTP.post(\n  URI("https://api.clientpad.cloud/v1/resources"),\n  { name: "${resource}" }.to_json,\n  "Authorization" => "Bearer cp_live_your_api_key_here"\n)`,
+    curl: `curl https://api.clientpad.xyz/api/public/v1/resources \\\n  -H "Authorization: Bearer cp_live_your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d '{"name":"${resource}"}'`,
+    python: `import requests\n\nrequests.post(\n  "https://api.clientpad.xyz/api/public/v1/resources",\n  headers={"Authorization": "Bearer cp_live_your_api_key_here"},\n  json={"name": "${resource}"},\n)`,
+    node: `import { ClientPad } from "@clientpad/sdk";\n\nconst clientpad = new ClientPad({\n  baseUrl: "https://api.clientpad.xyz/api/public/v1",\n  apiKey: process.env.CLIENTPAD_API_KEY!,\n});\n\nawait clientpad.leads.create({ name: "${resource}" });`,
+    go: `req, _ := http.NewRequest("POST", "https://api.clientpad.xyz/api/public/v1/resources", body)\nreq.Header.Set("Authorization", "Bearer cp_live_your_api_key_here")`,
+    ruby: `Net::HTTP.post(\n  URI("https://api.clientpad.xyz/api/public/v1/resources"),\n  { name: "${resource}" }.to_json,\n  "Authorization" => "Bearer cp_live_your_api_key_here"\n)`,
   };
   return snippets[language];
 }

@@ -34,6 +34,8 @@ Open the Vite URL, usually `http://localhost:5173`. Use **Preview dashboard** fo
 http://localhost:3000/api/cloud/v1
 ```
 
+In production, the dashboard expects `app.clientpad.xyz` to point at the static app and `api.clientpad.xyz` to point at the Cloud API.
+
 The dashboard expects the Cloud API health endpoint at `/health` and the operator readiness endpoint at `/readiness`. Both are used to validate live mode before the dashboard claims it is connected.
 
 Live mode uses an operator account, not a raw token prompt. The dashboard does not treat an entered URL as "connected" until the operator signs in and both the health check and readiness check pass.
@@ -42,7 +44,7 @@ Preview mode does not require the Cloud API URL or operator credentials. Live mo
 
 ### Live bootstrap flow
 
-1. Enter the Cloud API base URL, for example `https://host.com/api/cloud/v1`.
+1. Enter the Cloud API base URL, for example `https://api.clientpad.xyz/api/cloud/v1`.
 2. Sign in with operator email and password, or create the first operator account if this Cloud deployment has none yet.
 3. The dashboard checks `/health`, `/readiness`, and `/auth/me`.
 4. If the connection is valid, the dashboard stores the validated session locally and shows readiness state for the selected workspace.
