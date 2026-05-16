@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@clientpad/core": "workspace:*",
+    "@lemonsqueezy/lemonsqueezy.js": "^4.0.0",
     "pg": "^8.13.3"
   },
   "devDependencies": {

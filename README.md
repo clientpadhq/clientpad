@@ -15,7 +15,7 @@ This repository ships installable packages instead of a hosted product with subs
 - `@clientpad/dashboard`: developer web dashboard for projects, API keys, usage, billing, docs, preview/live operator access, and WhatsApp operations.
 - `@clientpad/marketing`: public `clientpad.xyz` marketing and docs site with static Netlify export plus `llms.txt` support.
 
-The dashboard opens in **Preview** mode for sample data or **Live** mode after an operator signs in to ClientPad Cloud with email and password. Live mode validates both `/health` and `/readiness` before it claims the cloud is connected. Live mode also expects a workspace public API key before inbox and pipeline data become operational.
+The dashboard opens in **Preview** mode for sample data or **Live** mode after an operator signs in to ClientPad Cloud with email and password. Live mode validates both `/health` and `/readiness` before it claims the cloud is connected. New operator signups create an operator account, workspace, starter project, and starter API key in one pass so the hosted dashboard can move from empty to usable quickly.
 
 ## Install
 
@@ -160,6 +160,12 @@ Create responses return:
 
 ClientPad remains fully open source. Self-hosted API keys can be free and unlimited because developers run their own database and infrastructure.
 
+Production domain layout:
+
+- `clientpad.xyz` for the public site
+- `app.clientpad.xyz` for the dashboard
+- `api.clientpad.xyz` for the public API and Cloud control plane
+
 Revenue comes from an optional hosted ClientPad Cloud gateway:
 
 - hosted PostgreSQL and migrations
@@ -170,6 +176,7 @@ Revenue comes from an optional hosted ClientPad Cloud gateway:
 - per-minute rate limits
 - usage analytics and audit logs
 - backups, upgrades, and support
+- Lemon Squeezy Checkout and customer portal for hosted subscriptions
 
 Hosted dashboard access is separate from the public API key flow:
 
@@ -177,12 +184,17 @@ Hosted dashboard access is separate from the public API key flow:
 - the Cloud API issues a cookie-backed operator session
 - the dashboard restores that session on refresh
 - the raw `CLIENTPAD_CLOUD_ADMIN_TOKEN` stays on the backend as an operator/control-plane secret, not a browser login credential
+- new signups bootstrap a workspace, starter project, and starter API key so usage tracking starts immediately
 
 Hosted keys use the same API key format and SDK. Usage can be inspected with:
 
 ```ts
 const usage = await clientpad.usage.retrieve();
 ```
+
+Cloud usage summaries also surface month-to-date request totals, rejections, active API keys, and remaining quota so billing can be built on top of actual usage instead of guesswork.
+
+Hosted billing uses Lemon Squeezy checkout for subscriptions when `@clientpad/cloud` is configured with a Lemon Squeezy API key, store ID, webhook secret, and plan variant IDs.
 
 Self-hosted deployments can leave `monthly_request_limit` and `rate_limit_per_minute` empty for unlimited local usage.
 

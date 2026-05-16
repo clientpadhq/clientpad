@@ -10,8 +10,8 @@ The dashboard has two entry modes:
 On first run, the dashboard highlights the activation steps for:
 
 1. Connecting the Cloud API
-2. Selecting or creating a workspace project
-3. Issuing a public API key
+2. Creating or selecting a workspace
+3. Bootstrapping the first project and starter API key
 4. Connecting WhatsApp
 5. Getting the first live lead or conversation
 
@@ -34,6 +34,8 @@ Open the Vite URL, usually `http://localhost:5173`. Use **Preview dashboard** fo
 http://localhost:3000/api/cloud/v1
 ```
 
+In production, the dashboard expects `app.clientpad.xyz` to point at the static app and `api.clientpad.xyz` to point at the Cloud API.
+
 The dashboard expects the Cloud API health endpoint at `/health` and the operator readiness endpoint at `/readiness`. Both are used to validate live mode before the dashboard claims it is connected.
 
 Live mode uses an operator account, not a raw token prompt. The dashboard does not treat an entered URL as "connected" until the operator signs in and both the health check and readiness check pass.
@@ -42,11 +44,12 @@ Preview mode does not require the Cloud API URL or operator credentials. Live mo
 
 ### Live bootstrap flow
 
-1. Enter the Cloud API base URL, for example `https://host.com/api/cloud/v1`.
+1. Enter the Cloud API base URL, for example `https://api.clientpad.xyz/api/cloud/v1`.
 2. Sign in with operator email and password, or create the first operator account if this Cloud deployment has none yet.
 3. The dashboard checks `/health`, `/readiness`, and `/auth/me`.
 4. If the connection is valid, the dashboard stores the validated session locally and shows readiness state for the selected workspace.
-5. Use the readiness panel to create or select a workspace, issue a public API key, and complete WhatsApp setup.
+5. Use the activation panel to bootstrap a workspace bundle or use `/workspaces/bootstrap` from the Cloud API directly.
+6. Usage summaries expose month-to-date requests, rejections, active keys, and remaining quota for billing-ready tracking.
 
 ### Readiness signals
 
@@ -93,6 +96,8 @@ pnpm --filter @clientpad/dashboard preview
 - **Public API key missing** means inbox and pipeline screens will stay in setup mode.
 - **WhatsApp not connected** means the dashboard can show setup steps, but live conversations will not appear until Meta webhooks are configured.
 - **Readiness degraded** means the Cloud API is reachable, but at least one live dependency still needs attention before the workspace is operational.
+- **Usage summary** means the dashboard can already surface billing-ready request totals and quota headroom.
+- **Upgrade plan** launches Lemon Squeezy checkout when the Cloud API has Lemon Squeezy variant IDs configured.
 
 ## Screens
 

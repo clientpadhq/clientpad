@@ -1,15 +1,22 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { createClientPadCloudHandler } from "../dist/index.js";
 
 const queries = [];
 const adminToken = "admin_secret";
 const pepper = "pepper";
+const lemonSqueezyApiKey = "ls_test_123";
+const lemonSqueezyWebhookSecret = "ls_whsec_test_123";
+const lemonSqueezyStoreId = "123";
+const lemonSqueezyVariantIds = { developer: "456" };
+const originalFetch = globalThis.fetch;
 
 let operatorUser = null;
 let workspaceRecord = null;
 let currentSession = null;
 let revokedSession = false;
+let currentSubscription = null;
+const lemonSqueezyFetchCalls = [];
 
 const db = {
   async query(text, values = []) {
@@ -45,8 +52,26 @@ const db = {
       workspaceRecord = {
         id: "workspace_1",
         name: values[0],
+        phone: values[1] ?? null,
+        business_type: values[2] ?? null,
+        default_currency: values[3] ?? "NGN",
+        created_by: values[4] ?? null,
       };
-      return { rows: [{ id: workspaceRecord.id, name: workspaceRecord.name }], rowCount: 1 };
+      return {
+        rows: [
+          {
+            id: workspaceRecord.id,
+            name: workspaceRecord.name,
+            phone: workspaceRecord.phone,
+            business_type: workspaceRecord.business_type,
+            default_currency: workspaceRecord.default_currency,
+            created_by: workspaceRecord.created_by,
+            created_at: "2026-05-08T00:00:00Z",
+            updated_at: "2026-05-08T00:00:00Z",
+          },
+        ],
+        rowCount: 1,
+      };
     }
 
     if (text.includes("insert into workspace_members")) {
@@ -85,6 +110,12 @@ const db = {
     if (text.includes("update operator_sessions set revoked_at = now()")) {
       revokedSession = true;
       return { rows: [], rowCount: 1 };
+    }
+
+    if (text.includes("select provider_customer_id") && text.includes("from cloud_subscriptions")) {
+      return currentSubscription?.provider_customer_id
+        ? { rows: [{ provider_customer_id: currentSubscription.provider_customer_id }], rowCount: 1 }
+        : { rows: [], rowCount: 0 };
     }
 
     if (text.includes("from workspace_members m") && text.includes("join workspaces w on w.id = m.workspace_id")) {
@@ -137,17 +168,18 @@ const db = {
     }
 
     if (text.includes("from cloud_plans") && text.includes("code =")) {
+      const code = values[0];
       return {
         rows: [
           {
-            id: "plan_free",
-            code: "free",
-            name: "Free",
-            monthly_price_cents: 0,
+            id: code === "developer" ? "plan_developer" : "plan_free",
+            code,
+            name: code === "developer" ? "Developer" : "Free",
+            monthly_price_cents: code === "developer" ? 1900 : 0,
             currency: "USD",
-            monthly_request_limit: 1000,
-            rate_limit_per_minute: 60,
-            included_projects: 1,
+            monthly_request_limit: code === "developer" ? 100000 : 1000,
+            rate_limit_per_minute: code === "developer" ? 300 : 60,
+            included_projects: code === "developer" ? 3 : 1,
             features: {},
           },
         ],
@@ -277,8 +309,80 @@ const db = {
       };
     }
 
-    if (text.includes("from workspaces where id = $1 limit 1")) {
-      return workspaceRecord ? { rows: [{ id: workspaceRecord.id, name: workspaceRecord.name }], rowCount: 1 } : { rows: [], rowCount: 0 };
+    if (text.includes("insert into cloud_billing_events")) {
+      return { rows: [], rowCount: 1 };
+    }
+
+    if (text.includes("insert into cloud_subscriptions")) {
+      if (values.length === 8) {
+        currentSubscription = {
+          workspace_id: values[0],
+          plan_id: values[1],
+          status: "active",
+          provider: "lemonsqueezy",
+          provider_customer_id: values[3],
+          provider_subscription_id: values[4],
+          current_period_start: values[5],
+          current_period_end: values[6],
+          metadata: values[7],
+        };
+      } else {
+        currentSubscription = {
+          workspace_id: values[0],
+          plan_id: values[1],
+          status: values[2],
+          provider: "lemonsqueezy",
+          provider_customer_id: values[3],
+          provider_subscription_id: values[4],
+          current_period_start: values[5],
+          current_period_end: values[6],
+          metadata: values[7],
+        };
+      }
+      return { rows: [], rowCount: 1 };
+    }
+
+    if (text.includes("from workspaces") && text.includes("where id = $1") && text.includes("limit 1")) {
+      return workspaceRecord
+        ? {
+            rows: [
+              {
+                id: workspaceRecord.id,
+                name: workspaceRecord.name,
+                phone: workspaceRecord.phone,
+                business_type: workspaceRecord.business_type,
+                default_currency: workspaceRecord.default_currency,
+                created_by: workspaceRecord.created_by,
+                created_at: "2026-05-08T00:00:00Z",
+                updated_at: "2026-05-08T00:00:00Z",
+              },
+            ],
+            rowCount: 1,
+          }
+        : { rows: [], rowCount: 0 };
+    }
+
+    if (text.includes("from workspaces w") && text.includes("left join cloud_subscriptions s")) {
+      return {
+        rows: [
+          {
+            workspace_id: workspaceRecord?.id ?? "workspace_1",
+            workspace_name: workspaceRecord?.name ?? "Acme Cloud",
+            plan_code: "free",
+            plan_name: "Free",
+            month: "2026-05-01",
+            request_count: 0,
+            rejected_count: 0,
+            active_api_key_count: 1,
+            monthly_request_limit: 1000,
+            rate_limit_per_minute: 60,
+            remaining_requests: 1000,
+            last_used_at: null,
+            billing_mode: "cloud_free",
+          },
+        ],
+        rowCount: 1,
+      };
     }
 
     if (text.includes("insert into cloud_projects")) {
@@ -303,6 +407,20 @@ const db = {
       return { rows: [{ id: "api_key_1", key: fakeKey, scopes: ["usage:read"], billing_mode: "cloud_free", monthly_request_limit: 1000, rate_limit_per_minute: 60 }], rowCount: 1 };
     }
 
+    if (text.includes("select") && text.includes("coalesce(sum(u.request_count), 0)::int as request_count") && text.includes("from api_keys k") && text.includes("left join api_key_usage_months u")) {
+      return {
+        rows: [
+          {
+            request_count: 12,
+            rejected_count: 1,
+            active_api_key_count: 1,
+            last_used_at: "2026-05-12T11:00:00Z",
+          },
+        ],
+        rowCount: 1,
+      };
+    }
+
     if (text.includes("from api_keys k")) {
       return {
         rows: [
@@ -324,7 +442,60 @@ const db = {
   },
 };
 
-const handler = createClientPadCloudHandler({ db, adminToken, apiKeyPepper: pepper });
+globalThis.fetch = async (input, init) => {
+  const url = typeof input === "string" ? input : input.url;
+  lemonSqueezyFetchCalls.push({
+    url,
+    method: init?.method ?? "GET",
+    headers: init?.headers,
+    body: init?.body ?? null,
+  });
+
+  if (url.includes("/v1/checkouts")) {
+    return new Response(
+      JSON.stringify({
+        data: {
+          id: "chk_123",
+          attributes: {
+          url: "https://store.lemonsqueezy.com/checkout/chk_123",
+          },
+        },
+      }),
+      { status: 201, headers: { "content-type": "application/vnd.api+json" } }
+    );
+  }
+
+  if (url.includes("/v1/customers/")) {
+    return new Response(
+      JSON.stringify({
+        data: {
+          id: "cust_123",
+          attributes: {
+            urls: {
+              customer_portal: "https://store.lemonsqueezy.com/billing?signature=signed",
+            },
+          },
+        },
+      }),
+      { status: 200, headers: { "content-type": "application/vnd.api+json" } }
+    );
+  }
+
+  return new Response(JSON.stringify({ error: { message: "unexpected lemonsqueezy call" } }), {
+    status: 500,
+    headers: { "content-type": "application/vnd.api+json" },
+  });
+};
+
+const handler = createClientPadCloudHandler({
+  db,
+  adminToken,
+  apiKeyPepper: pepper,
+  lemonSqueezyApiKey,
+  lemonSqueezyWebhookSecret,
+  lemonSqueezyStoreId,
+  lemonSqueezyVariantIds,
+});
 
 const health = await handler(new Request("https://cloud.example.com/api/cloud/v1/health"));
 assert.equal(health.status, 200);
@@ -335,7 +506,9 @@ assert.equal((await plans.json()).data[0].code, "free");
 
 const authStatus = await handler(new Request("https://cloud.example.com/api/cloud/v1/auth/status"));
 assert.equal(authStatus.status, 200);
-assert.equal((await authStatus.json()).registration_open, true);
+const authStatusBody = await authStatus.json();
+assert.equal(authStatusBody.registration_open, true);
+assert.equal(authStatusBody.first_operator_setup_required, true);
 
 const unauthorized = await handler(new Request("https://cloud.example.com/api/cloud/v1/projects"));
 assert.equal(unauthorized.status, 401);
@@ -356,6 +529,8 @@ assert.equal(register.status, 200);
 const registerBody = await register.json();
 assert.equal(registerBody.auth.user.email, "operator@clientpad.com");
 assert.equal(registerBody.auth.workspaces[0].name, "Acme Cloud");
+assert.equal(registerBody.bootstrap.project.name, "Acme Cloud API");
+assert.equal(registerBody.bootstrap.api_key.key.startsWith("cp_live_"), true);
 assert.equal(register.headers.get("set-cookie")?.includes("clientpad_operator_session"), true);
 
 const cookie = register.headers.get("set-cookie")?.split(";")[0];
@@ -370,6 +545,14 @@ assert.equal(me.status, 200);
 const meBody = await me.json();
 assert.equal(meBody.auth.user.email, "operator@clientpad.com");
 assert.equal(meBody.auth.workspaces[0].name, "Acme Cloud");
+
+const workspaces = await handler(
+  new Request("https://cloud.example.com/api/cloud/v1/workspaces", {
+    headers: { cookie },
+  })
+);
+assert.equal(workspaces.status, 200);
+assert.equal((await workspaces.json()).data[0].name, "Acme Cloud");
 
 const loginFailure = await handler(
   new Request("https://cloud.example.com/api/cloud/v1/auth/login", {
@@ -404,6 +587,25 @@ assert.equal(apiKeyBody.data.monthly_request_limit, 1000);
 assert.equal(apiKeyBody.data.rate_limit_per_minute, 60);
 assert.equal(apiKeyBody.data.key.startsWith("cp_live_"), true);
 
+const bootstrap = await handler(
+  new Request("https://cloud.example.com/api/cloud/v1/workspaces/bootstrap", {
+    method: "POST",
+    headers: { cookie, "content-type": "application/json" },
+    body: JSON.stringify({
+      workspace_id: "workspace_1",
+      workspace_name: "Acme Cloud",
+      project_name: "Acme Cloud API",
+      api_key_name: "Starter API key",
+      plan_code: "free",
+    }),
+  })
+);
+assert.equal(bootstrap.status, 201);
+const bootstrapBody = await bootstrap.json();
+assert.equal(bootstrapBody.data.workspace.name, "Acme Cloud");
+assert.equal(bootstrapBody.data.project.workspace_id, "workspace_1");
+assert.equal(bootstrapBody.data.api_key.key.startsWith("cp_live_"), true);
+
 const expectedHash = createHash("sha256").update(`${pepper}:${apiKeyBody.data.key}`).digest("hex");
 assert.equal(queries.some((query) => query.values.includes(expectedHash)), true);
 
@@ -414,6 +616,16 @@ const usage = await handler(
 );
 assert.equal(usage.status, 200);
 assert.equal((await usage.json()).data[0].request_count, 12);
+
+const usageSummary = await handler(
+  new Request("https://cloud.example.com/api/cloud/v1/usage/summary?workspace_id=workspace_1", {
+    headers: { cookie },
+  })
+);
+assert.equal(usageSummary.status, 200);
+const usageSummaryBody = await usageSummary.json();
+assert.equal(usageSummaryBody.data.workspace_id, "workspace_1");
+assert.equal(usageSummaryBody.data.active_api_key_count, 1);
 
 const readiness = await handler(
   new Request("https://cloud.example.com/api/cloud/v1/readiness?workspace_id=workspace_1", {
@@ -427,6 +639,92 @@ assert.equal(readinessBody.summary.has_public_api_key, true);
 assert.equal(readinessBody.workspace.name, "Acme Cloud");
 assert.equal(readinessBody.workspace.has_whatsapp_configuration, true);
 assert.equal(readinessBody.workspace.has_payment_provider_configuration, true);
+
+const checkout = await handler(
+  new Request("https://cloud.example.com/api/cloud/v1/billing/checkout-session", {
+    method: "POST",
+    headers: { cookie, "content-type": "application/json" },
+    body: JSON.stringify({
+      workspace_id: "workspace_1",
+      plan_code: "developer",
+      success_url: "https://dashboard.clientpad.test/success",
+      cancel_url: "https://dashboard.clientpad.test/cancel",
+      customer_email: "operator@clientpad.com",
+    }),
+  })
+);
+assert.equal(checkout.status, 201);
+const checkoutBody = await checkout.json();
+assert.equal(checkoutBody.data.plan_code, "developer");
+assert.equal(checkoutBody.data.variant_id, "456");
+assert.equal(
+  lemonSqueezyFetchCalls.some(
+    (call) => call.url.includes("/v1/checkouts")
+  ),
+  true
+);
+
+const checkoutFree = await handler(
+  new Request("https://cloud.example.com/api/cloud/v1/billing/checkout-session", {
+    method: "POST",
+    headers: { cookie, "content-type": "application/json" },
+    body: JSON.stringify({
+      workspace_id: "workspace_1",
+      plan_code: "free",
+      success_url: "https://dashboard.clientpad.test/success",
+      cancel_url: "https://dashboard.clientpad.test/cancel",
+    }),
+  })
+);
+assert.equal(checkoutFree.status, 400);
+
+const lemonSqueezyWebhookPayload = JSON.stringify({
+  meta: {
+    event_name: "subscription_created",
+    custom_data: { workspace_id: "workspace_1", plan_code: "developer" },
+  },
+  data: {
+    type: "subscriptions",
+    id: "sub_test_123",
+    attributes: {
+      customer_id: 123,
+      status: "active",
+      created_at: "2026-05-12T11:00:00Z",
+      renews_at: "2026-06-12T11:00:00Z",
+    },
+  },
+});
+const checkoutSignature = createHmac("sha256", lemonSqueezyWebhookSecret).update(lemonSqueezyWebhookPayload).digest("hex");
+const webhook = await handler(
+  new Request("https://cloud.example.com/api/cloud/v1/billing/lemonsqueezy/webhook", {
+    method: "POST",
+    headers: {
+      "x-signature": checkoutSignature,
+      "x-event-name": "subscription_created",
+      "content-type": "application/json",
+    },
+    body: lemonSqueezyWebhookPayload,
+  })
+);
+assert.equal(webhook.status, 200);
+assert.equal((await webhook.json()).received, true);
+assert.equal(currentSubscription?.provider_subscription_id, "sub_test_123");
+assert.equal(currentSubscription?.provider_customer_id, "123");
+assert.equal(queries.some((query) => String(query.text).includes("insert into cloud_billing_events")), true);
+
+const portal = await handler(
+  new Request("https://cloud.example.com/api/cloud/v1/billing/portal-session", {
+    method: "POST",
+    headers: { cookie, "content-type": "application/json" },
+    body: JSON.stringify({
+      workspace_id: "workspace_1",
+      return_url: "https://dashboard.clientpad.test/settings",
+    }),
+  })
+);
+assert.equal(portal.status, 201);
+const portalBody = await portal.json();
+assert.equal(portalBody.data.url, "https://store.lemonsqueezy.com/billing?signature=signed");
 
 const logout = await handler(
   new Request("https://cloud.example.com/api/cloud/v1/auth/logout", {
