@@ -1,49 +1,48 @@
-# Open-Source Architecture — ClientPad
+# Open-Source Architecture
 
-ClientPad is free, open-source, self-hostable CRM infrastructure. The architecture avoids proprietary platform dependencies and is designed for developers to run, inspect, modify, and extend.
+ClientPad is free, open-source, self-hostable business infrastructure. Developers can run it locally, deploy it anywhere, inspect the code, and build on top of the packages.
 
 ## Database
 
-- **PostgreSQL** is the primary database
-- Local development uses PostgreSQL via Docker Compose
-- No proprietary database platform dependency
-- Migrations live in `db/migrations`
-- Authorization is enforced server-side, not delegated to hosted database policies
+- PostgreSQL is the primary database.
+- Migrations live in the repository and run through the CLI.
+- There is no Supabase dependency or proprietary database platform requirement.
+- Authorization is enforced by the application layer.
 
-## Authentication
+## Operator auth
 
-ClientPad owns its authentication layer:
+ClientPad Cloud owns the operator auth layer:
 
-- Users stored in the application database
-- Sessions issued by the application
-- Password hashing via Argon2id
-- Magic link support through configurable email providers
-- Role-based workspace access: owner, admin, staff
+- Operator users are stored in the application database.
+- Passwords are hashed before storage.
+- Sessions are issued by the Cloud API.
+- The hosted dashboard restores sessions on refresh.
+- Workspace access is checked server-side.
 
-## API Key Gateway
+## API key gateway
 
-All integrations use workspace-scoped API keys:
+Integrations use workspace-scoped API keys:
 
 ```text
 Authorization: Bearer cp_live_<prefix>_<secret>
 ```
 
-Keys are created via CLI or dashboard and are shown only once.
+Keys can be created through the CLI, dashboard, or bootstrap flow. Raw keys are shown only once.
 
-## Package Architecture
+## Packages
 
 | Package | Purpose |
-|---------|---------|
+| --- | --- |
 | `@clientpad/core` | Shared TypeScript types and protocol utilities |
-| `@clientpad/cli` | Project setup, migrations, API key management |
-| `@clientpad/server` | Public API handler for leads and clients |
+| `@clientpad/cli` | Project setup, migrations, and API key management |
+| `@clientpad/server` | Public API handler for leads, clients, and usage |
 | `@clientpad/sdk` | TypeScript SDK for consuming ClientPad APIs |
 | `@clientpad/whatsapp` | WhatsApp automation and messaging |
-| `@clientpad/cloud` | Hosted control plane for projects and billing |
-| `@clientpad/dashboard` | Developer web dashboard |
+| `@clientpad/cloud` | Hosted control plane, auth, readiness, usage, and billing |
+| `@clientpad/dashboard` | Operator dashboard |
 
 ## Monetization
 
-ClientPad is MIT-licensed and fully open source. Self-hosted API keys are free and unlimited. Revenue comes from the optional ClientPad Cloud hosted gateway.
+The software remains MIT licensed. Revenue comes from optional managed ClientPad Cloud infrastructure: hosting, readiness diagnostics, operator dashboard access, usage tracking, backups, support, and Lemon Squeezy checkout.
 
-[← Back to ClientPad](/)
+[Back to ClientPad](/)

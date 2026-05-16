@@ -1,39 +1,42 @@
 # ClientPad Cloud
 
-ClientPad Cloud is the optional managed gateway that provides hosted infrastructure for ClientPad projects. The open-source packages remain free and MIT-licensed — Cloud adds hosting, management, and billing.
+ClientPad Cloud is the optional hosted gateway for teams that do not want to run the infrastructure themselves.
 
-## Components
+The open-source packages remain MIT licensed and self-hostable. Cloud monetization is attached to managed infrastructure: operator auth, hosted API access, workspace bootstrap, API keys, usage tracking, readiness diagnostics, and Lemon Squeezy checkout.
 
-1. **Managed PostgreSQL** — Database hosting with automated migrations
-2. **Public API Gateway** — Managed endpoint at your Cloud URL
-3. **Control Plane** — Project management, API key issuance, and usage tracking
-4. **Developer Dashboard** — Web interface for projects, keys, usage, and billing
-5. **Billing** — Plan-based subscriptions with request quotas and rate limits
+## Production domains
 
-## Plans
+- Public site: `https://clientpad.xyz`
+- Operator dashboard: `https://app.clientpad.xyz`
+- Cloud API: `https://api.clientpad.xyz/api/cloud/v1`
+- Public API: `https://api.clientpad.xyz/api/public/v1`
 
-| Plan | Requests/month | Rate Limit | Projects |
-|------|---------------|------------|----------|
-| Free | 1,000 | 60/min | 1 |
-| Developer | 100,000 | 300/min | 3 |
-| Pro | 10,000,000 | 1,200/min | 10 |
-| Business | 50,000,000 | 5,000/min | 50 |
+## What Cloud provides
 
-## Self-Hosted vs Cloud
+1. Operator signup, login, session restore, and logout.
+2. Workspace and starter project bootstrap.
+3. Workspace-scoped public API key creation.
+4. Readiness checks for Cloud, auth, workspace, API key, WhatsApp, and billing state.
+5. Usage summaries for month-to-date requests, active keys, rejections, and quota readiness.
+6. Lemon Squeezy checkout and portal links for hosted billing.
 
-Self-hosted deployments run your own PostgreSQL and server. API keys are free and unlimited — you control the infrastructure.
+## Self-hosted vs hosted
 
-ClientPad Cloud adds managed hosting, automated backups, usage analytics, rate limiting, and a dashboard. You pay for the infrastructure, not the software.
+Self-hosted deployments run their own PostgreSQL database, migrations, server, and dashboard. Self-hosted API keys can remain free and unlimited because the developer owns the infrastructure.
 
-## Quick Start
+Hosted Cloud is the commercial path. Businesses pay for managed infrastructure, operational reliability, usage visibility, and support around the same open-source packages.
+
+## SDK example
 
 ```ts
 import { ClientPad } from "@clientpad/sdk";
 
 const clientpad = new ClientPad({
-  baseUrl: "https://your-project.clientpad.cloud/api/public/v1",
+  baseUrl: "https://api.clientpad.xyz/api/public/v1",
   apiKey: process.env.CLIENTPAD_API_KEY!,
 });
+
+const usage = await clientpad.usage.retrieve();
 ```
 
-[← Back to ClientPad](/)
+[Back to ClientPad](/)
