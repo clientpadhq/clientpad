@@ -7,9 +7,37 @@ const json = (body, init = {}) =>
     },
   });
 
+async function proxyDocsRequest(request) {
+  const docsUrl = "clientpad.mintlify.dev";
+  const customUrl = "docs.clientpad.xyz";
+  const url = new URL(request.url);
+
+  if (!url.pathname.startsWith("/docs")) {
+    return null;
+  }
+
+  const proxyUrl = new URL(request.url);
+  proxyUrl.hostname = docsUrl;
+
+  const proxyRequest = new Request(proxyUrl.toString(), request);
+  proxyRequest.headers.set("Host", docsUrl);
+  proxyRequest.headers.set("X-Forwarded-Host", customUrl);
+  proxyRequest.headers.set("X-Forwarded-Proto", "https");
+
+  return fetch(proxyRequest);
+}
+
 export default {
   async fetch(request) {
     const url = new URL(request.url);
+    try {
+      const docsResponse = await proxyDocsRequest(request);
+      if (docsResponse) {
+        return docsResponse;
+      }
+    } catch {
+      return fetch(request);
+    }
 
     if (url.pathname === "/" || url.pathname === "/health") {
       return json({
