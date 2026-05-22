@@ -11,7 +11,6 @@ import {
   ChevronRight,
   CircleHelp,
   Clipboard,
-  Cloud,
   CreditCard,
   Edit3,
   ExternalLink,
@@ -1782,7 +1781,7 @@ function Panel({ children, className = "" }: { children: React.ReactNode; classN
 function Logo() {
   return (
     <div className="logo">
-      <Cloud size={30} />
+      <span className="logo-mark" aria-hidden="true" />
       <strong>ClientPad Cloud</strong>
     </div>
   );

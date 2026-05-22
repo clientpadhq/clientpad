@@ -156,6 +156,7 @@ jobs:
         run: |
           pnpm --filter @clientpad/core build
           pnpm --filter @clientpad/sdk build
+          pnpm --filter @clientpad/mcp build
           pnpm --filter @clientpad/whatsapp build
           pnpm --filter @clientpad/server build
           pnpm --filter @clientpad/cloud build

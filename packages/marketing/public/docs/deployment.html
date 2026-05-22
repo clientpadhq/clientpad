@@ -5,4 +5,5 @@
 <h1>Deployment</h1>
 <section class="grid"><div class="card"><h3>clientpad.xyz</h3><p>Public marketing site from `@clientpad/marketing` static export.</p></div><div class="card"><h3>docs.clientpad.xyz</h3><p>Docs host backed by the same marketing package docs routes.</p></div><div class="card"><h3>app.clientpad.xyz</h3><p>Operator dashboard PWA.</p></div><div class="card"><h3>api.clientpad.xyz</h3><p>Cloud API and public API host.</p></div></section>
 <section class="band"><h2>Netlify checks</h2><ul><li>Marketing build: `pnpm --filter @clientpad/marketing build`.</li><li>Dashboard build: `pnpm --filter @clientpad/dashboard build`.</li><li>Use Netlify DNS while certificates are provisioning.</li><li>Do not point `api.clientpad.xyz` until the API host answers `/health` and `/readiness`.</li></ul></section>
-</main></body></html>
+</main><script type="module" src="/site.js"></script>
+</body></html>
