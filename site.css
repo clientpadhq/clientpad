@@ -85,7 +85,7 @@ main,
   height: 1.45rem;
   border-radius: 0.42rem;
   border: 1px solid var(--line);
-  background: var(--panel-2) url("/assets/clientpad-logo-only.png") center/78% no-repeat;
+  background: var(--panel-2) url("/clientpad/assets/clientpad-logo-only.png") center/78% no-repeat;
 }
 
 .brand strong {

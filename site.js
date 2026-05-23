@@ -66,17 +66,17 @@ function buildDropdown() {
   menu.innerHTML = `
     <div class="menu-group">
       <span class="menu-label">Product</span>
-      <a href="/">Home</a>
-      <a href="/cloud">ClientPad Cloud</a>
-      <a href="/pricing">Pricing</a>
-      <a href="/open-source">Open source</a>
+      <a href="/clientpad/">Home</a>
+      <a href="/clientpad/cloud">ClientPad Cloud</a>
+      <a href="/clientpad/pricing">Pricing</a>
+      <a href="/clientpad/open-source">Open source</a>
     </div>
     <div class="menu-group">
       <span class="menu-label">Documentation</span>
-      <a href="/docs">Docs Home</a>
-      <a href="/docs/quickstart">Quickstart</a>
-      <a href="/docs/public-api">Public API</a>
-      <a href="/docs/whatsapp-magic">WhatsApp Magic</a>
+      <a href="/clientpad/docs">Docs Home</a>
+      <a href="/clientpad/docs/quickstart">Quickstart</a>
+      <a href="/clientpad/docs/public-api">Public API</a>
+      <a href="/clientpad/docs/whatsapp-magic">WhatsApp Magic</a>
     </div>
     <div class="menu-group">
       <span class="menu-label">Links</span>
