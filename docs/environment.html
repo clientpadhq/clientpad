@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ClientPad Environment Variables</title><meta name="description" content="Environment variables for ClientPad database, Cloud, dashboard, WhatsApp, and Lemon Squeezy setup."><link rel="stylesheet" href="/site.css"><link rel="alternate" type="text/markdown" href="/docs/environment.md"></head>
+<body><nav><div class="nav-inner"><a class="brand" href="/docs">ClientPad Docs</a><div class="nav-links"><a href="/docs/deployment">Deployment</a><a href="/docs/troubleshooting">Troubleshooting</a></div></div></nav><main>
+<h1>Environment Variables</h1>
+<table><tr><th>Area</th><th>Variables</th></tr><tr><td>Database</td><td><code>DATABASE_URL</code>, <code>API_KEY_PEPPER</code></td></tr><tr><td>Cloud auth</td><td><code>CLIENTPAD_CLOUD_ADMIN_TOKEN</code>, session secret/config used by the Cloud package</td></tr><tr><td>Dashboard</td><td>Cloud API base URL, normally <code>https://api.clientpad.xyz/api/cloud/v1</code></td></tr><tr><td>WhatsApp</td><td><code>WHATSAPP_VERIFY_TOKEN</code>, <code>WHATSAPP_APP_SECRET</code>, <code>WHATSAPP_ACCESS_TOKEN</code>, <code>WHATSAPP_PHONE_NUMBER_ID</code>, <code>CLIENTPAD_WORKSPACE_ID</code></td></tr><tr><td>Lemon Squeezy</td><td><code>LEMONSQUEEZY_API_KEY</code>, <code>LEMONSQUEEZY_STORE_ID</code>, <code>LEMONSQUEEZY_WEBHOOK_SECRET</code>, plan variant IDs</td></tr></table>
+<section class="callout">Never expose API keys, database URLs, admin tokens, or provider secrets in browser code.</section>
+</main><script type="module" src="/site.js"></script>
+</body></html>

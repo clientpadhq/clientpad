@@ -1,0 +1,29 @@
+# ClientPad
+
+> ClientPad is open-source infrastructure for WhatsApp-first lead capture, client workflows, API keys, usage tracking, and operator dashboards.
+
+## Product
+
+- [ClientPad Home](https://clientpad.xyz/index.md): Product overview, package links, and quick start
+- [About ClientPad](https://clientpad.xyz/about.md): Mission, positioning, and open-source business model
+- [ClientPad Cloud](https://clientpad.xyz/docs/clientpad-cloud.md): Hosted gateway, dashboard, usage tracking, and billing-ready operations
+- [Pricing](https://clientpad.xyz/pricing.md): Open-source and hosted Cloud pricing model
+
+## Documentation
+
+- [Docs Home](https://clientpad.xyz/docs/index.md): Documentation entry point
+- [Quickstart](https://clientpad.xyz/docs/quickstart.md): Install and create the first lead
+- [SDK](https://clientpad.xyz/docs/sdk.md): TypeScript SDK usage
+- [WhatsApp Magic](https://clientpad.xyz/docs/whatsapp-magic.md): WhatsApp lead capture, inbox, payments, and pipeline operations
+- [Public API](https://clientpad.xyz/docs/public-api.md): REST API and TypeScript SDK usage
+- [Self-hosting](https://clientpad.xyz/docs/self-hosting.md): Run ClientPad with your own PostgreSQL and deployment
+- [Open-Source Architecture](https://clientpad.xyz/docs/open-source.md): Packages, database approach, auth, and deployment model
+- [Deployment](https://clientpad.xyz/docs/deployment.md): Domain and Netlify deployment guide
+- [Troubleshooting](https://clientpad.xyz/docs/troubleshooting.md): Common live-mode, DNS, API key, and webhook fixes
+
+## Links
+
+- [Dashboard](https://app.clientpad.xyz)
+- [Docs](https://docs.clientpad.xyz)
+- [GitHub](https://github.com/clientpadhq/clientpad)
+- [npm packages](https://www.npmjs.com/search?q=%40clientpad)

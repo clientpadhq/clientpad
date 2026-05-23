@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Public API - ClientPad</title>
+<meta name="description" content="ClientPad public API reference for leads, clients, usage, API keys, and the TypeScript SDK.">
+<link rel="stylesheet" href="/site.css">
+<link rel="alternate" type="text/markdown" href="/docs/public-api.md">
+</head>
+<body>
+<nav><div class="nav-inner"><a class="brand" href="/"><strong>ClientPad</strong></a><div class="nav-links"><a href="/docs">Docs</a><a href="/docs/quickstart">Quickstart</a><a href="/docs/sdk">SDK</a><a href="/docs/self-hosting">Self-hosting</a><a href="https://app.clientpad.xyz">Dashboard</a></div></div></nav>
+<header class="hero"><div class="hero-inner"><div class="eyebrow">Documentation</div><h1>Public API</h1><p class="lead">ClientPad exposes a versioned REST API for developers and integrations. Endpoints are scoped to a workspace and authenticated with API keys.</p></div></header>
+<main>
+<section class="band">
+  <h2>Authentication</h2>
+  <pre><code>Authorization: Bearer cp_live_&lt;public_prefix&gt;_&lt;secret&gt;</code></pre>
+  <p>API keys are shown only once when created. Store them in server-side environment variables.</p>
+  <h2>Base URL</h2>
+  <div class="callout"><code>https://api.clientpad.xyz/api/public/v1</code></div>
+  <p>Self-hosted deployments should point the SDK at their own <code>/api/public/v1</code> route.</p>
+</section>
+<section class="split">
+  <div class="card">
+    <h2>Endpoints</h2>
+    <ul>
+      <li><code>GET /leads</code> lists leads with pagination.</li>
+      <li><code>POST /leads</code> creates a lead.</li>
+      <li><code>GET /clients</code> lists clients with pagination.</li>
+      <li><code>POST /clients</code> creates a client.</li>
+      <li><code>GET /usage</code> returns API key usage stats.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Rate limits</h2>
+    <p>Self-hosted deployments can leave limits empty for unlimited local usage. Hosted Cloud keys use workspace quota and rate-limit settings backed by usage tracking.</p>
+  </div>
+</section>
+<section class="band">
+  <h2>TypeScript SDK</h2>
+  <pre><code>pnpm add @clientpad/sdk</code></pre>
+  <pre><code>import { ClientPad } from "@clientpad/sdk";
+
+const clientpad = new ClientPad({
+  baseUrl: "https://api.clientpad.xyz/api/public/v1",
+  apiKey: process.env.CLIENTPAD_API_KEY!,
+});
+
+const { data: leads } = await clientpad.leads.list({ limit: 20 });
+const usage = await clientpad.usage.retrieve();</code></pre>
+</section>
+</main>
+<footer><div class="footer-inner"><span>API reference</span><span><a href="/docs/sdk">SDK</a> · <a href="/docs/troubleshooting">Troubleshooting</a></span></div></footer>
+<script type="module" src="/site.js"></script>
+</body>
+</html>

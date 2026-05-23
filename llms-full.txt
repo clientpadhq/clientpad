@@ -1,0 +1,699 @@
+# ClientPad
+
+# ClientPad
+
+ClientPad is open-source infrastructure for WhatsApp-first leads, client workflows, API keys, usage tracking, and operator dashboards.
+
+It is designed for developers building business workflows into their own apps. The software stays MIT licensed and self-hostable. Hosted ClientPad Cloud is optional for teams that want managed infrastructure, dashboard access, usage tracking, and billing-ready operations.
+
+## What ClientPad handles
+
+- Public API gateway with workspace-scoped API keys.
+- TypeScript SDK for apps, workers, scripts, and integrations.
+- WhatsApp lead capture, owner inbox, and pipeline operations.
+- PostgreSQL-backed migrations and storage.
+- Operator auth, session restore, workspace bootstrap, and API key management.
+- Usage tracking for month-to-date requests, rejections, active keys, and quota readiness.
+- Hosted billing checkout through Lemon Squeezy for managed Cloud plans.
+
+## Domain layout
+
+- Public site: `https://clientpad.xyz`
+- Operator dashboard: `https://app.clientpad.xyz`
+- Cloud and public API: `https://api.clientpad.xyz`
+
+## Quick start
+
+```bash
+pnpm add @clientpad/sdk
+```
+
+```ts
+import { ClientPad } from "@clientpad/sdk";
+
+const clientpad = new ClientPad({
+  baseUrl: "https://api.clientpad.xyz/api/public/v1",
+  apiKey: process.env.CLIENTPAD_API_KEY!,
+});
+
+await clientpad.leads.create({
+  name: "Ada Customer",
+  phone: "+234...",
+  source: "WhatsApp",
+});
+```
+
+## Documentation
+
+- [Public API](/docs/public-api)
+- [WhatsApp Magic](/docs/whatsapp-magic)
+- [Open-source architecture](/docs/open-source)
+- [ClientPad Cloud](/docs/clientpad-cloud)
+- [GitHub repository](https://github.com/clientpadhq/clientpad)
+
+
+---
+
+# About ClientPad
+
+# About ClientPad
+
+ClientPad exists for businesses that need software to meet them where work already happens.
+
+Many service businesses run on WhatsApp, spreadsheets, manual follow-ups, and scattered payment links. ClientPad turns that daily activity into open infrastructure developers can inspect, run, extend, and sell services around.
+
+## Open by default
+
+The core stack is MIT licensed. Developers can self-host PostgreSQL, run migrations, create API keys, and build their own workflows without asking ClientPad for permission.
+
+## Commercial where it helps
+
+ClientPad Cloud is the managed path for teams that want hosted infrastructure, operator auth, usage tracking, readiness diagnostics, billing checkout, and support.
+
+## What we are building
+
+A practical infrastructure layer for small and growing businesses: WhatsApp lead capture, owner inboxes, pipelines, clients, API keys, usage analytics, and hosted Cloud operations.
+
+
+---
+
+# ClientPad Cloud
+
+# ClientPad Cloud
+
+ClientPad Cloud is the hosted path for teams that want managed ClientPad infrastructure without running every server themselves.
+
+Cloud adds operator auth, workspace bootstrap, API key management, usage tracking, readiness diagnostics, and Lemon Squeezy checkout on top of the same open-source packages.
+
+## What Cloud includes
+
+- Operator accounts and sessions.
+- Workspace and starter project bootstrap.
+- API key management.
+- Cloud readiness telemetry.
+- WhatsApp diagnostics.
+- Usage tracking for hosted billing.
+- Lemon Squeezy checkout and customer portal links.
+
+## Domains
+
+- Dashboard: `https://app.clientpad.xyz`
+- Cloud API: `https://api.clientpad.xyz/api/cloud/v1`
+- Public API: `https://api.clientpad.xyz/api/public/v1`
+
+
+---
+
+# ClientPad Pricing
+
+# ClientPad Pricing
+
+ClientPad's open-source packages are free and MIT licensed.
+
+Hosted ClientPad Cloud is the paid managed infrastructure path.
+
+## Open Source
+
+For developers and teams running their own infrastructure:
+
+- MIT licensed packages.
+- Self-hosted PostgreSQL.
+- Unlimited local API keys.
+- CLI migrations.
+- SDK and server package.
+
+## Hosted Cloud
+
+For businesses that want ClientPad operated as managed infrastructure:
+
+- Operator dashboard.
+- Workspace bootstrap.
+- Hosted API gateway.
+- Usage tracking.
+- Lemon Squeezy checkout.
+- Support and operational help.
+
+Hosted plan names and final prices should be configured in Lemon Squeezy before public launch.
+
+
+---
+
+# ClientPad for Developers
+
+# ClientPad for Developers
+
+Install ClientPad into your app and use API keys as the gateway for real business workflows.
+
+## Install
+
+```bash
+pnpm add @clientpad/sdk
+pnpm add @clientpad/core @clientpad/server
+pnpm add -D @clientpad/cli
+```
+
+## SDK
+
+```ts
+import { ClientPad } from "@clientpad/sdk";
+
+const clientpad = new ClientPad({
+  baseUrl: "https://api.clientpad.xyz/api/public/v1",
+  apiKey: process.env.CLIENTPAD_API_KEY!,
+});
+```
+
+## Build paths
+
+- Use `@clientpad/sdk` from apps and scripts.
+- Use `@clientpad/server` to expose the public API.
+- Use `@clientpad/whatsapp` to turn WhatsApp messages into client operations.
+- Use `@clientpad/cloud` and `@clientpad/dashboard` for hosted operator workflows.
+
+
+---
+
+# WhatsApp Operations
+
+# WhatsApp Operations
+
+ClientPad turns WhatsApp conversations into a live operator workflow.
+
+## What it supports
+
+- Lead capture from inbound messages.
+- Owner inbox visibility.
+- Pipeline movement.
+- Webhook readiness diagnostics.
+- Payment link delivery through supported providers.
+- Open self-hosted or hosted Cloud deployment.
+
+
+---
+
+# Open Source
+
+# Open Source
+
+ClientPad is infrastructure developers can run, inspect, modify, and extend.
+
+- MIT licensed packages.
+- PostgreSQL-backed.
+- No proprietary hosted database dependency.
+- API-key gateway.
+- Optional hosted Cloud path.
+
+
+---
+
+# Security
+
+# Security
+
+ClientPad separates operator sessions from workspace API keys.
+
+## Operator auth
+
+Cloud operator accounts use email/password login, server-issued sessions, session restore, and logout.
+
+## API keys
+
+Workspace API keys are bearer tokens for integrations and should be stored server-side.
+
+## Self-hosting
+
+Self-hosted deployments keep the database and infrastructure under the developer's control.
+
+
+---
+
+# Contact
+
+# Contact ClientPad
+
+Talk to ClientPad about Cloud, integrations, support, or partnerships.
+
+## Open source
+
+Use GitHub issues and discussions for package bugs, docs gaps, and contribution ideas.
+
+## Hosted Cloud
+
+Create a workspace from the dashboard to start the hosted setup path.
+
+## Security
+
+Use the security page for the current reporting path until a dedicated security inbox is published.
+
+
+---
+
+# Privacy
+
+# Privacy
+
+ClientPad is open-source infrastructure. Self-hosted deployments are controlled by the developer or business operating them.
+
+Hosted ClientPad Cloud may process operator account data, workspace metadata, API usage data, and integration diagnostics needed to run the service.
+
+This page is a practical pre-launch privacy overview and should be replaced with counsel-reviewed legal text before broad commercial launch.
+
+
+---
+
+# Terms
+
+# Terms
+
+ClientPad's open-source packages are provided under the repository license.
+
+Hosted ClientPad Cloud is a managed infrastructure service for operators and developers building business workflows.
+
+This page is a practical pre-launch terms overview and should be replaced with counsel-reviewed legal text before broad commercial launch.
+
+
+---
+
+# ClientPad Docs
+
+# ClientPad Docs
+
+ClientPad documentation covers the package quickstart, SDK usage, API keys, self-hosting, Cloud setup, WhatsApp, deployment, and troubleshooting.
+
+## Start here
+
+- [Quickstart](/docs/quickstart)
+- [SDK](/docs/sdk)
+- [Public API](/docs/public-api)
+- [Self-hosting](/docs/self-hosting)
+- [ClientPad Cloud](/docs/clientpad-cloud)
+- [WhatsApp Magic](/docs/whatsapp-magic)
+- [Environment variables](/docs/environment)
+- [Deployment](/docs/deployment)
+- [Troubleshooting](/docs/troubleshooting)
+
+
+---
+
+# Quickstart
+
+# Quickstart
+
+Install the SDK:
+
+```bash
+pnpm add @clientpad/sdk
+```
+
+Create a lead:
+
+```ts
+import { ClientPad } from "@clientpad/sdk";
+
+const clientpad = new ClientPad({
+  baseUrl: "https://api.clientpad.xyz/api/public/v1",
+  apiKey: process.env.CLIENTPAD_API_KEY!,
+});
+
+await clientpad.leads.create({
+  name: "Ada Customer",
+  phone: "+234...",
+  source: "Website",
+});
+```
+
+Use hosted Cloud for managed infrastructure or self-host the public API with your own PostgreSQL database.
+
+
+---
+
+# TypeScript SDK
+
+# TypeScript SDK
+
+`@clientpad/sdk` is the dependency-light client for apps, workers, scripts, and backend integrations.
+
+```bash
+pnpm add @clientpad/sdk
+```
+
+```ts
+const leads = await clientpad.leads.list({ limit: 20 });
+const created = await clientpad.leads.create({
+  name: "Ada Customer",
+  phone: "+234...",
+  source: "WhatsApp",
+});
+
+const clients = await clientpad.clients.list();
+const usage = await clientpad.usage.retrieve();
+```
+
+
+---
+
+# WhatsApp Magic
+
+# WhatsApp Magic
+
+ClientPad's WhatsApp integration turns inbound messages into structured client operations: leads, conversations, bookings, payments, follow-ups, and pipeline activity.
+
+## Capabilities
+
+- Lead capture from inbound WhatsApp messages.
+- Shared owner inbox with assignment and status.
+- Pipeline movement from new lead to quoted, booked, completed, paid, and review requested.
+- AI-assisted reply drafts where configured.
+- Payment link delivery through supported providers.
+- Webhook diagnostics in the dashboard.
+
+## Setup requirements
+
+You need:
+
+1. A Meta Business account.
+2. A WhatsApp Business phone number.
+3. WhatsApp app credentials.
+4. A webhook URL pointing at your ClientPad server.
+5. A default ClientPad workspace for inbound messages.
+
+## CLI setup
+
+```bash
+clientpad init --whatsapp
+clientpad migrate
+clientpad whatsapp:setup
+clientpad whatsapp:flows salon
+```
+
+## Webhook server
+
+```ts
+import { createWhatsAppWebhookHandler } from "@clientpad/whatsapp";
+
+export const whatsappWebhook = createWhatsAppWebhookHandler({
+  databaseUrl: process.env.DATABASE_URL!,
+  verifyToken: process.env.WHATSAPP_VERIFY_TOKEN!,
+  appSecret: process.env.WHATSAPP_APP_SECRET!,
+  accessToken: process.env.WHATSAPP_ACCESS_TOKEN!,
+  defaultWorkspaceId: process.env.CLIENTPAD_WORKSPACE_ID!,
+});
+```
+
+## Dashboard diagnostics
+
+The dashboard can show whether WhatsApp credentials are present, whether the webhook is configured, and whether recent inbound activity has reached the backend.
+
+[Back to ClientPad](/)
+
+
+---
+
+# Public API
+
+# ClientPad Public API
+
+ClientPad exposes a versioned REST API for developers and integrations. Endpoints are scoped to a workspace and authenticated with API keys.
+
+## Authentication
+
+Send a workspace API key as a bearer token:
+
+```http
+Authorization: Bearer cp_live_<public_prefix>_<secret>
+```
+
+API keys are shown only once when created. Store them in server-side environment variables.
+
+## Base URL
+
+Hosted Cloud:
+
+```text
+https://api.clientpad.xyz/api/public/v1
+```
+
+Self-hosted deployments should point the SDK at their own `/api/public/v1` route.
+
+## Endpoints
+
+### Leads
+
+- `GET /leads` lists leads with pagination.
+- `POST /leads` creates a lead.
+
+### Clients
+
+- `GET /clients` lists clients with pagination.
+- `POST /clients` creates a client.
+
+### Usage
+
+- `GET /usage` returns API key usage stats.
+
+List responses return `{ data: T[], pagination: { limit, offset } }`. Create responses return `{ data: { id: string } }`.
+
+## TypeScript SDK
+
+```bash
+pnpm add @clientpad/sdk
+```
+
+```ts
+import { ClientPad } from "@clientpad/sdk";
+
+const clientpad = new ClientPad({
+  baseUrl: "https://api.clientpad.xyz/api/public/v1",
+  apiKey: process.env.CLIENTPAD_API_KEY!,
+});
+
+const { data: leads } = await clientpad.leads.list({ limit: 20 });
+
+const { data: created } = await clientpad.leads.create({
+  name: "Ada Customer",
+  phone: "+234...",
+  source: "Website",
+});
+
+const usage = await clientpad.usage.retrieve();
+```
+
+## Rate limits
+
+Self-hosted deployments can leave limits empty for unlimited local usage. Hosted Cloud keys use workspace quota and rate-limit settings backed by usage tracking.
+
+[Back to ClientPad](/)
+
+
+---
+
+# Self-hosting
+
+# Self-hosting
+
+Self-hosted ClientPad deployments run your PostgreSQL database, migrations, server package, and dashboard.
+
+## Steps
+
+1. Create a PostgreSQL database and set `DATABASE_URL`.
+2. Run `clientpad migrate`.
+3. Create a workspace API key with `clientpad api-key create`.
+4. Mount `createClientPadHandler` in a fetch-compatible runtime.
+5. Point the dashboard at your Cloud/API URL.
+6. Add the WhatsApp webhook handler when you are ready for live conversations.
+
+
+---
+
+# Open-Source Architecture
+
+# Open-Source Architecture
+
+ClientPad is free, open-source, self-hostable business infrastructure. Developers can run it locally, deploy it anywhere, inspect the code, and build on top of the packages.
+
+## Database
+
+- PostgreSQL is the primary database.
+- Migrations live in the repository and run through the CLI.
+- There is no Supabase dependency or proprietary database platform requirement.
+- Authorization is enforced by the application layer.
+
+## Operator auth
+
+ClientPad Cloud owns the operator auth layer:
+
+- Operator users are stored in the application database.
+- Passwords are hashed before storage.
+- Sessions are issued by the Cloud API.
+- The hosted dashboard restores sessions on refresh.
+- Workspace access is checked server-side.
+
+## API key gateway
+
+Integrations use workspace-scoped API keys:
+
+```text
+Authorization: Bearer cp_live_<prefix>_<secret>
+```
+
+Keys can be created through the CLI, dashboard, or bootstrap flow. Raw keys are shown only once.
+
+## Packages
+
+| Package | Purpose |
+| --- | --- |
+| `@clientpad/core` | Shared TypeScript types and protocol utilities |
+| `@clientpad/cli` | Project setup, migrations, and API key management |
+| `@clientpad/server` | Public API handler for leads, clients, and usage |
+| `@clientpad/sdk` | TypeScript SDK for consuming ClientPad APIs |
+| `@clientpad/whatsapp` | WhatsApp automation and messaging |
+| `@clientpad/cloud` | Hosted control plane, auth, readiness, usage, and billing |
+| `@clientpad/dashboard` | Operator dashboard |
+
+## Monetization
+
+The software remains MIT licensed. Revenue comes from optional managed ClientPad Cloud infrastructure: hosting, readiness diagnostics, operator dashboard access, usage tracking, backups, support, and Lemon Squeezy checkout.
+
+[Back to ClientPad](/)
+
+
+---
+
+# ClientPad Cloud
+
+# ClientPad Cloud
+
+ClientPad Cloud is the optional hosted gateway for teams that do not want to run the infrastructure themselves.
+
+The open-source packages remain MIT licensed and self-hostable. Cloud monetization is attached to managed infrastructure: operator auth, hosted API access, workspace bootstrap, API keys, usage tracking, readiness diagnostics, and Lemon Squeezy checkout.
+
+## Production domains
+
+- Public site: `https://clientpad.xyz`
+- Operator dashboard: `https://app.clientpad.xyz`
+- Cloud API: `https://api.clientpad.xyz/api/cloud/v1`
+- Public API: `https://api.clientpad.xyz/api/public/v1`
+
+## What Cloud provides
+
+1. Operator signup, login, session restore, and logout.
+2. Workspace and starter project bootstrap.
+3. Workspace-scoped public API key creation.
+4. Readiness checks for Cloud, auth, workspace, API key, WhatsApp, and billing state.
+5. Usage summaries for month-to-date requests, active keys, rejections, and quota readiness.
+6. Lemon Squeezy checkout and portal links for hosted billing.
+
+## Self-hosted vs hosted
+
+Self-hosted deployments run their own PostgreSQL database, migrations, server, and dashboard. Self-hosted API keys can remain free and unlimited because the developer owns the infrastructure.
+
+Hosted Cloud is the commercial path. Businesses pay for managed infrastructure, operational reliability, usage visibility, and support around the same open-source packages.
+
+## SDK example
+
+```ts
+import { ClientPad } from "@clientpad/sdk";
+
+const clientpad = new ClientPad({
+  baseUrl: "https://api.clientpad.xyz/api/public/v1",
+  apiKey: process.env.CLIENTPAD_API_KEY!,
+});
+
+const usage = await clientpad.usage.retrieve();
+```
+
+[Back to ClientPad](/)
+
+
+---
+
+# Environment Variables
+
+# Environment Variables
+
+## Database
+
+- `DATABASE_URL`
+- `API_KEY_PEPPER`
+
+## Cloud auth
+
+- `CLIENTPAD_CLOUD_ADMIN_TOKEN`
+- Session secret/config used by the Cloud package
+
+## Dashboard
+
+- Cloud API base URL, normally `https://api.clientpad.xyz/api/cloud/v1`
+
+## WhatsApp
+
+- `WHATSAPP_VERIFY_TOKEN`
+- `WHATSAPP_APP_SECRET`
+- `WHATSAPP_ACCESS_TOKEN`
+- `WHATSAPP_PHONE_NUMBER_ID`
+- `CLIENTPAD_WORKSPACE_ID`
+
+## Lemon Squeezy
+
+- `LEMONSQUEEZY_API_KEY`
+- `LEMONSQUEEZY_STORE_ID`
+- `LEMONSQUEEZY_WEBHOOK_SECRET`
+- Plan variant IDs
+
+Never expose API keys, database URLs, admin tokens, or provider secrets in browser code.
+
+
+---
+
+# Deployment
+
+# Deployment
+
+## Domains
+
+- `clientpad.xyz`: public marketing site from `@clientpad/marketing`.
+- `docs.clientpad.xyz`: docs host backed by the same marketing package docs routes.
+- `app.clientpad.xyz`: operator dashboard PWA.
+- `api.clientpad.xyz`: Cloud API and public API host.
+
+## Netlify checks
+
+- Marketing build: `pnpm --filter @clientpad/marketing build`.
+- Dashboard build: `pnpm --filter @clientpad/dashboard build`.
+- Use Netlify DNS while certificates are provisioning.
+- Do not point `api.clientpad.xyz` until the API host answers `/health` and `/readiness`.
+
+
+---
+
+# Troubleshooting
+
+# Troubleshooting
+
+## Dashboard says disconnected
+
+Confirm the Cloud API URL, `/health`, `/readiness`, and operator session are valid.
+
+## API key rejected
+
+Check that the key is workspace-scoped, stored server-side, and sent as `Authorization: Bearer ...`.
+
+## DNS still pending
+
+Wait for Netlify certificate provisioning and nameserver propagation before changing primary domains.
+
+## WhatsApp not receiving
+
+Verify phone number ID, verify token, app secret, access token, webhook URL, and default workspace ID.
+
+## Billing checkout missing
+
+Confirm Lemon Squeezy API key, store ID, webhook secret, and variant IDs are configured in the Cloud host.
+
+## Preview vs live confusion
+
+Preview data is simulated. Live mode requires Cloud connectivity, auth, workspace access, and readiness checks.
+
+
+---
+

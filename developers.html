@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClientPad for Developers</title>
+<meta name="description" content="Install ClientPad packages, use the TypeScript SDK, run the server, create API keys, and build business workflows.">
+<link rel="stylesheet" href="/site.css">
+<link rel="alternate" type="text/markdown" href="/developers.md">
+</head>
+<body>
+<nav><div class="nav-inner"><a class="brand" href="/">ClientPad</a><div class="nav-links"><a href="/docs">Docs</a><a href="/docs/public-api">API</a><a href="/open-source">Open source</a><a href="https://github.com/clientpadhq/clientpad">GitHub</a></div></div></nav>
+<header class="hero"><div class="hero-inner"><div class="eyebrow">Developers</div><h1>Install ClientPad into your app and use API keys as the gateway for real business workflows.</h1><p class="lead">Start with the SDK, run the server package, add WhatsApp automation, or use Cloud when you want a managed operator dashboard and hosted gateway.</p></div></header>
+<main>
+<section class="split">
+  <div class="band"><h2>Install</h2><pre><code>pnpm add @clientpad/sdk
+pnpm add @clientpad/core @clientpad/server
+pnpm add -D @clientpad/cli</code></pre></div>
+  <div class="band"><h2>Use the SDK</h2><pre><code>import { ClientPad } from "@clientpad/sdk";
+
+const clientpad = new ClientPad({
+  baseUrl: "https://api.clientpad.xyz/api/public/v1",
+  apiKey: process.env.CLIENTPAD_API_KEY!,
+});</code></pre></div>
+</section>
+<section class="grid">
+  <div class="card"><h3>CLI</h3><p>Initialize projects, run migrations, and create workspace API keys.</p></div>
+  <div class="card"><h3>Server</h3><p>Expose the public API from any fetch-compatible runtime.</p></div>
+  <div class="card"><h3>SDK</h3><p>Typed leads, clients, and usage calls for apps, workers, scripts, and integrations.</p></div>
+</section>
+</main>
+<footer><div class="footer-inner"><span>Build on ClientPad</span><span><a href="/docs/quickstart">Quickstart</a> · <a href="/docs/self-hosting">Self-hosting</a></span></div></footer>
+<script type="module" src="/site.js"></script>
+</body>
+</html>

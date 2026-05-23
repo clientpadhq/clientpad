@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClientPad - Open-source client operations infrastructure</title>
+<meta name="description" content="ClientPad is open-source infrastructure for WhatsApp-first leads, client workflows, API keys, usage tracking, and operator dashboards.">
+<link rel="stylesheet" href="/site.css">
+<link rel="alternate" type="text/markdown" href="/index.md">
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <a class="brand" href="/"><strong>ClientPad</strong></a>
+    <div class="nav-links">
+      <a href="/about">About</a>
+      <a href="/cloud">Cloud</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/whatsapp">WhatsApp</a>
+      <a href="/developers">Developers</a>
+      <a href="/docs/public-api">API</a>
+      <a href="/docs">Docs</a>
+      <a href="https://app.clientpad.xyz">Dashboard</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-inner">
+    <div class="eyebrow">Open-source business infrastructure</div>
+    <h1>API keys, WhatsApp leads, and operator workflows in one stack.</h1>
+    <p class="lead">ClientPad gives developers a PostgreSQL-backed core, public API, TypeScript SDK, WhatsApp automation, usage tracking, and an operator dashboard without locking the software behind a closed platform.</p>
+    <div class="actions">
+      <a class="button primary" href="https://app.clientpad.xyz">Open dashboard</a>
+      <a class="button" href="https://github.com/clientpadhq/clientpad">View GitHub</a>
+      <a class="button" href="/docs">Read docs</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section>
+    <h2>What ClientPad handles</h2>
+    <div class="grid">
+      <div class="card"><h3>Public API gateway</h3><p>Workspace-scoped API keys for leads, clients, usage, and integration access.</p></div>
+      <div class="card"><h3>WhatsApp operations</h3><p>Capture inbound messages, organize conversations, assign ownership, and move leads through a pipeline.</p></div>
+      <div class="card"><h3>Operator dashboard</h3><p>Preview mode, live auth, readiness checks, API keys, usage, billing status, and settings.</p></div>
+      <div class="card"><h3>Usage tracking</h3><p>Track month-to-date requests, active keys, rejections, and quota readiness for hosted billing.</p></div>
+      <div class="card"><h3>Open packages</h3><p>Use the core, server, SDK, CLI, WhatsApp, Cloud, and dashboard packages directly from npm.</p></div>
+      <div class="card"><h3>Self-hostable backend</h3><p>Bring PostgreSQL, run migrations, and deploy the infrastructure wherever your business needs it.</p></div>
+    </div>
+  </section>
+
+  <section class="split">
+    <div class="band">
+      <h2>Start with the SDK</h2>
+      <p>Install the typed client and point it at a ClientPad public API root.</p>
+      <pre><code>pnpm add @clientpad/sdk</code></pre>
+      <pre><code>import { ClientPad } from "@clientpad/sdk";
+
+const clientpad = new ClientPad({
+  baseUrl: "https://api.clientpad.xyz/api/public/v1",
+  apiKey: process.env.CLIENTPAD_API_KEY!,
+});
+
+await clientpad.leads.create({
+  name: "Ada Customer",
+  phone: "+234...",
+  source: "WhatsApp",
+});</code></pre>
+    </div>
+    <div class="band">
+      <h2>Run it your way</h2>
+      <p>ClientPad stays MIT licensed. Self-host the stack for free, or use the hosted Cloud gateway when you want managed infrastructure, dashboard access, usage tracking, and Lemon Squeezy checkout.</p>
+      <ul>
+        <li><a href="/pricing">Pricing</a></li>
+        <li><a href="/cloud">Hosted Cloud</a></li>
+        <li><a href="/developers">Developer quickstart</a></li>
+        <li><a href="/docs/open-source">Open-source architecture</a></li>
+        <li><a href="/docs/clientpad-cloud">Cloud gateway model</a></li>
+        <li><a href="/docs/whatsapp-magic">WhatsApp setup guide</a></li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <span>ClientPad - MIT licensed infrastructure</span>
+    <span><a href="/about">About</a> · <a href="/security">Security</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/llms.txt">llms.txt</a></span>
+  </div>
+</footer>
+<script type="module" src="/site.js"></script>
+</body>
+</html>

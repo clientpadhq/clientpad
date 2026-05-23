@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security - ClientPad</title>
+<meta name="description" content="ClientPad security model for operator sessions, API keys, self-hosting, and hosted Cloud operations.">
+<link rel="stylesheet" href="/site.css">
+<link rel="alternate" type="text/markdown" href="/security.md">
+</head>
+<body>
+<nav><div class="nav-inner"><a class="brand" href="/">ClientPad</a><div class="nav-links"><a href="/docs/open-source">Architecture</a><a href="/contact">Contact</a><a href="https://github.com/clientpadhq/clientpad">GitHub</a></div></div></nav>
+<header class="hero"><div class="hero-inner"><div class="eyebrow">Security</div><h1>ClientPad separates operator sessions from workspace API keys.</h1><p class="lead">Operators sign in to the dashboard. Applications and integrations use workspace-scoped API keys. Secrets should stay in backend environments, never pasted into client-side code.</p></div></header>
+<main>
+<section class="grid">
+  <div class="card"><h3>Operator auth</h3><p>Cloud operator accounts use email/password login, server-issued sessions, session restore, and logout.</p></div>
+  <div class="card"><h3>API keys</h3><p>Workspace API keys are bearer tokens for integrations and should be stored server-side.</p></div>
+  <div class="card"><h3>Self-hosting</h3><p>Self-hosted deployments keep the database and infrastructure under the developer's control.</p></div>
+</section>
+<section class="callout">Security reports can be sent through the contact route until a dedicated security email is published.</section>
+</main>
+<footer><div class="footer-inner"><span>Security-first infrastructure</span><span><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></span></div></footer>
+<script type="module" src="/site.js"></script>
+</body>
+</html>
