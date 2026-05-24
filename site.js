@@ -216,10 +216,10 @@ function runMotion() {
 
 setTheme(resolveTheme());
 normalizeLegacySeparators();
-normalizeInternalLinks();
 ensureBrandMark();
 ensureFooterBrand();
 buildDropdown();
+normalizeInternalLinks();
 setupThemeToggle();
 setupMobileNavToggle();
 runMotion();
