@@ -14,3 +14,12 @@ services:
         sync: false
       - key: CLIENTPAD_CLOUD_ADMIN_TOKEN
         sync: false
+
+  - type: web
+    name: clientpad-frontend
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @clientpad/marketing build
+    startCommand: node packages/marketing/dist/server.js
+    healthCheckPath: /
