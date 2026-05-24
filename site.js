@@ -14,7 +14,14 @@ function setTheme(theme) {
 }
 
 function ensureBrandMark() {
-  const brand = document.querySelector(".brand");
+  let brand = document.querySelector(".brand");
+  if (!brand) {
+    const fallbackBrand = document.querySelector('nav a[href="/clientpad/"], nav a[href="/clientpad/"], nav a');
+    if (fallbackBrand) {
+      fallbackBrand.classList.add("brand");
+      brand = fallbackBrand;
+    }
+  }
   if (!brand) return;
   if (!brand.querySelector(".brand-mark")) {
     const mark = document.createElement("span");
