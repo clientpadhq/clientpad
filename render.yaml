@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: clientpad-api
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @clientpad/core build && pnpm --filter @clientpad/sdk build && pnpm --filter @clientpad/whatsapp build && pnpm --filter @clientpad/server build && pnpm --filter @clientpad/cloud build
+    startCommand: node packages/api-host/render-server.mjs
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: API_KEY_PEPPER
+        sync: false
+      - key: CLIENTPAD_CLOUD_ADMIN_TOKEN
+        sync: false
