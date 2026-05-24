@@ -10,11 +10,11 @@
     const path = window.location.pathname;
     const host = window.location.hostname;
     if (host === "docs.clientpad.xyz") {
-      window.location.replace("/docs/");
+      window.location.replace("/clientpad/docs/");
       return;
     }
-    if (path.startsWith("/docs")) {
-      window.location.replace("/docs/");
+    if (path.startsWith("/clientpad/docs")) {
+      window.location.replace("/clientpad/docs/");
       return;
     }
     window.location.replace("/");

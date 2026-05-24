@@ -81,13 +81,14 @@ main,
 }
 
 .brand-mark {
-  width: 1.95rem;
-  height: 1.95rem;
+  width: 2.28rem;
+  height: 2.28rem;
   border-radius: 0.42rem;
   border: 1px solid var(--line);
-  background: var(--panel-2) url("/clientpad/assets/clientpad-logo-only.png") center/94% no-repeat;
+  background: var(--panel-2) url("/clientpad/assets/clientpad-logo-only.png") center/112% no-repeat;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
+  filter: saturate(1.08) contrast(1.04);
   transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 
@@ -398,9 +399,9 @@ footer {
 }
 
 .footer-brand .brand-mark {
-  width: 1.72rem;
-  height: 1.72rem;
-  background-size: 94%;
+  width: 2.12rem;
+  height: 2.12rem;
+  background-size: 112%;
 }
 
 .footer-links {
