@@ -143,11 +143,14 @@ button { cursor: pointer; }
 }
 
 .logo-mark {
-  width: 1.55rem;
-  height: 1.55rem;
+  width: 2.2rem;
+  height: 2.2rem;
   border-radius: 0.42rem;
   border: 1px solid var(--line);
-  background: var(--panel-2) url("/assets/clientpad-logo-only.png") center/78% no-repeat;
+  background: var(--panel-2) url("/assets/clientpad-logo-only.png") center/112% no-repeat;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  filter: saturate(1.08) contrast(1.04);
 }
 
 .logo strong { font-size: 16px; font-weight: 780; color: var(--ink); }
