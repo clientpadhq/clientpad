@@ -327,6 +327,24 @@ button { cursor: pointer; }
   padding: 0;
 }
 
+.theme-toggle {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line) !important;
+  border-radius: 999px;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  padding: 0 10px !important;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.theme-toggle svg {
+  stroke-width: 1.9;
+}
+
 .avatar {
   width: 38px;
   height: 38px;
@@ -681,7 +699,7 @@ td small {
   font-size: 14px;
 }
 .plan-list li::before {
-  content: "✓";
+  content: "+";
   margin-right: 10px;
   color: #415166;
 }
