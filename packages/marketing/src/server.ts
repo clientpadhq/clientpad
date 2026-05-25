@@ -379,7 +379,9 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
     return;
   }
 
-  const normalizedUrl = host.startsWith("docs.") && (url === "/" || url === "/index.html") ? "/docs" : url;
+  const hostName = host.split(":")[0].toLowerCase();
+  const isDocsHost = hostName.startsWith("docs.") || hostName.includes("clientpad-docs.onrender.com");
+  const normalizedUrl = isDocsHost && (url === "/" || url === "/index.html") ? "/docs" : url;
   const { path: rawPath, ext } = normalizePathKeepExt(normalizedUrl);
   const path = rawPath === "/index" ? "/" : rawPath;
   const isDirectMdRequest = ext === ".md";
