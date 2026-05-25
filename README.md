@@ -230,6 +230,12 @@ npm run marketing:build
 
 The marketing package exports static files to `packages/marketing/dist`, including public pages, docs pages, `docs.clientpad.xyz` rewrites, clean docs routes, `robots.txt`, `sitemap.xml`, `llms.txt`, and `llms-full.txt`.
 
+Deploy directly to Cloudflare (no GitHub auto-deploy required):
+
+```bash
+npm run cf:deploy:all
+```
+
 ### CI parity
 
 Run the same checks CI runs, locally:
@@ -267,7 +273,8 @@ See [docs/PUBLISHING.md](docs/PUBLISHING.md) for the full release safety workflo
 - [ClientPad Cloud](docs/CLIENTPAD_CLOUD.md)
 - [npm package strategy](docs/NPM_PACKAGE_STRATEGY.md)
 - [Publishing checklist](docs/PUBLISHING.md)
-- [Domain and Netlify deployment](docs/DOMAIN_DEPLOYMENT.md)
+- [Cloudflare direct deployment](docs/CLOUDFLARE_DEPLOYMENT.md)
+- [Domain and Cloudflare deployment](docs/DOMAIN_DEPLOYMENT.md)
 
 ## License
 

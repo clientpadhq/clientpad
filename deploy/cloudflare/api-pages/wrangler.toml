@@ -1,0 +1,4 @@
+name = "clientpad-api-pages"
+main = "_worker.js"
+compatibility_date = "2026-05-23"
+workers_dev = true
