@@ -1,29 +1,26 @@
-# ClientPad domain and Netlify deployment
+# ClientPad domain and Cloudflare deployment
 
 ClientPad uses four production hostnames:
 
-| Hostname | Purpose | Netlify site |
+| Hostname | Purpose | Cloudflare target |
 | --- | --- | --- |
-| `clientpad.xyz` | Public marketing and docs site | Marketing site |
-| `docs.clientpad.xyz` | Developer and operator docs | Marketing/docs site |
-| `app.clientpad.xyz` | Operator dashboard PWA | Dashboard site |
-| `api.clientpad.xyz` | Cloud API and public API | Cloud API host |
+| `clientpad.xyz` | Public marketing and docs site | Pages project (`clientpad-marketing`) |
+| `docs.clientpad.xyz` | Developer and operator docs | Pages project (`clientpad-marketing`) |
+| `app.clientpad.xyz` | Operator dashboard PWA | Pages project (`clientpad-dashboard`) |
+| `api.clientpad.xyz` | Cloud API and public API | Worker (`clientpad-api-pages`) |
 
 ## DNS
 
-The domain should use Netlify DNS while it is hosted on Netlify. In the registrar, set the nameservers to the nameservers Netlify gives for `clientpad.xyz`.
+Use Cloudflare DNS for `clientpad.xyz`.
 
-Recommended records in Netlify DNS:
+Recommended records:
 
 | Type | Name | Value |
 | --- | --- | --- |
-| NETLIFY | `clientpad.xyz` | Marketing Netlify site |
-| CNAME | `www` | Marketing Netlify site hostname |
-| CNAME | `docs` | Marketing/docs Netlify site hostname |
-| CNAME | `app` | Dashboard Netlify site hostname |
-| CNAME | `api` | Cloud API host |
-
-If Netlify is still provisioning the certificate, custom-domain edits can be locked until the certificate job finishes. Wait for the certificate state to complete before changing the primary domain.
+| CNAME | `www` | `clientpad-marketing.pages.dev` |
+| CNAME | `docs` | `clientpad-marketing.pages.dev` |
+| CNAME | `app` | `clientpad-dashboard.pages.dev` |
+| Route / Custom domain | `api` | `clientpad-api-pages` worker |
 
 ## Marketing site
 
@@ -53,13 +50,11 @@ The build exports:
 - `llms.txt`
 - `llms-full.txt`
 
-For a separate Netlify marketing site, set the Netlify base directory to:
+Deploy directly to Cloudflare Pages:
 
-```text
-packages/marketing
+```bash
+pnpm run cf:deploy:marketing
 ```
-
-The package includes `packages/marketing/netlify.toml`.
 
 ## Dashboard site
 
@@ -69,7 +64,11 @@ The dashboard remains the operator app and should use:
 app.clientpad.xyz
 ```
 
-The root `netlify.toml` currently builds the dashboard package and publishes the dashboard SPA.
+Deploy directly to Cloudflare Pages:
+
+```bash
+pnpm run cf:deploy:dashboard
+```
 
 ## Cloud API
 
@@ -86,3 +85,17 @@ https://api.clientpad.xyz/api/public/v1
 ```
 
 Set `api.clientpad.xyz` only after the Cloud API host is deployed and ready to answer `/health` and `/readiness`.
+
+Deploy API worker:
+
+```bash
+pnpm run cf:deploy:api
+```
+
+## GitHub auto-deploy
+
+If your Pages projects are currently connected to GitHub, disable Git integration in Cloudflare Pages and use direct uploads only:
+
+1. Workers & Pages -> project -> Settings -> Builds & deployments
+2. Remove/disable Git repository connection
+3. Deploy with Wrangler (`cf:deploy:*` scripts)

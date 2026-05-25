@@ -14,7 +14,14 @@ function setTheme(theme) {
 }
 
 function ensureBrandMark() {
-  const brand = document.querySelector(".brand");
+  let brand = document.querySelector(".brand");
+  if (!brand) {
+    const fallbackBrand = document.querySelector('nav a[href="/"], nav a[href="/clientpad/"], nav a');
+    if (fallbackBrand) {
+      fallbackBrand.classList.add("brand");
+      brand = fallbackBrand;
+    }
+  }
   if (!brand) return;
   if (!brand.querySelector(".brand-mark")) {
     const mark = document.createElement("span");
@@ -32,14 +39,72 @@ function ensureBrandMark() {
 }
 
 function ensureFooterBrand() {
-  const footerInner = document.querySelector(".footer-inner");
+  let footer = document.querySelector("footer");
+  if (!footer) {
+    footer = document.createElement("footer");
+    footer.innerHTML = '<div class="footer-inner"></div>';
+    document.body.append(footer);
+  }
+
+  let footerInner = footer.querySelector(".footer-inner");
+  if (!footerInner) {
+    footerInner = document.createElement("div");
+    footerInner.className = "footer-inner";
+    footer.append(footerInner);
+  }
+
   if (!footerInner) return;
-  const first = footerInner.querySelector("span");
-  if (!first || footerInner.querySelector(".footer-brand")) return;
-  const wrapper = document.createElement("span");
-  wrapper.className = "footer-brand";
-  wrapper.innerHTML = '<span class="brand-mark" aria-hidden="true"></span><span>ClientPad</span>';
-  first.prepend(wrapper);
+
+  footerInner.innerHTML = `
+    <span class="footer-brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>ClientPad X</span>
+    </span>
+    <span class="footer-links">
+      <a href="/docs">Docs</a>
+      <span class="footer-sep">&middot;</span>
+      <a href="https://github.com/clientpadhq/clientpad" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <span class="footer-sep">&middot;</span>
+      <a href="https://github.com/Abdulmuiz44" target="_blank" rel="noopener noreferrer">Builder</a>
+      <span class="footer-sep">&middot;</span>
+      <a href="/privacy">Privacy</a>
+      <span class="footer-sep">&middot;</span>
+      <a href="/terms">Terms</a>
+      <span class="footer-sep">&middot;</span>
+      <a href="/llms.txt">llms.txt</a>
+    </span>
+  `;
+}
+
+function normalizeLegacySeparators() {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+  for (const node of nodes) {
+    if (!node.nodeValue) continue;
+    node.nodeValue = node.nodeValue.replace(/Â·/g, "·");
+  }
+}
+
+function normalizeInternalLinks() {
+  const anchors = Array.from(document.querySelectorAll("a[href]"));
+  const currentOrigin = window.location.origin;
+  const currentPath = window.location.pathname;
+  const repoPrefix = "/clientpad/";
+  const inProjectPages = currentPath.startsWith(repoPrefix);
+  const basePrefix = inProjectPages ? repoPrefix : "/";
+
+  for (const anchor of anchors) {
+    const href = anchor.getAttribute("href");
+    if (!href) continue;
+    if (href.startsWith("http://") || href.startsWith("https://") || href.startsWith("mailto:") || href.startsWith("#")) continue;
+    if (!href.startsWith("/")) continue;
+
+    // Avoid double-prefixing.
+    if (inProjectPages && href.startsWith(repoPrefix)) continue;
+
+    anchor.setAttribute("href", `${basePrefix}${href.slice(1)}`);
+  }
 }
 
 function buildDropdown() {
@@ -82,6 +147,7 @@ function buildDropdown() {
       <span class="menu-label">Links</span>
       <a href="https://app.clientpad.xyz">Dashboard</a>
       <a href="https://github.com/clientpadhq/clientpad">GitHub</a>
+      <a href="https://github.com/Abdulmuiz44">Builder</a>
     </div>
   `;
 
@@ -156,9 +222,11 @@ function runMotion() {
 }
 
 setTheme(resolveTheme());
+normalizeLegacySeparators();
 ensureBrandMark();
 ensureFooterBrand();
 buildDropdown();
+normalizeInternalLinks();
 setupThemeToggle();
 setupMobileNavToggle();
 runMotion();

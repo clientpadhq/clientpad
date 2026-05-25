@@ -14,7 +14,8 @@
     "README.md"
   ],
   "scripts": {
-    "build": "node -e \"process.stdout.write('api host is deployed as a Netlify function package')\""
+    "build": "node -e \"process.stdout.write('api host deploy wrapper is ready')\"",
+    "start:render": "node render-server.mjs"
   },
   "dependencies": {
     "@clientpad/cloud": "workspace:*",

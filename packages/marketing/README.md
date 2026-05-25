@@ -32,16 +32,16 @@ The build includes:
 - `sitemap.xml`
 - `llms.txt`
 - `llms-full.txt`
-- Netlify `_headers`
+- `_headers`
 
-## Netlify
+## Cloudflare direct deploy
 
-Use this package as the base directory for the public marketing site:
+Deploy this package directly to Cloudflare Pages from repository root:
 
-```text
-packages/marketing
+```bash
+pnpm run cf:deploy:marketing
 ```
 
-The package includes `netlify.toml` for the build command and publish directory.
+See `docs/CLOUDFLARE_DEPLOYMENT.md` for project setup, API token requirements, and direct-upload workflow details.
 
 The operator dashboard should stay on `app.clientpad.xyz`; the marketing site should use `clientpad.xyz` and optionally `www.clientpad.xyz`; documentation can use `docs.clientpad.xyz`.

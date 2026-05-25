@@ -143,11 +143,14 @@ button { cursor: pointer; }
 }
 
 .logo-mark {
-  width: 1.55rem;
-  height: 1.55rem;
+  width: 2.2rem;
+  height: 2.2rem;
   border-radius: 0.42rem;
   border: 1px solid var(--line);
-  background: var(--panel-2) url("/assets/clientpad-logo-only.png") center/78% no-repeat;
+  background: var(--panel-2) url("/assets/clientpad-logo-only.png") center/112% no-repeat;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  filter: saturate(1.08) contrast(1.04);
 }
 
 .logo strong { font-size: 16px; font-weight: 780; color: var(--ink); }
@@ -322,6 +325,24 @@ button { cursor: pointer; }
   background: transparent;
   color: #223044;
   padding: 0;
+}
+
+.theme-toggle {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line) !important;
+  border-radius: 999px;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  padding: 0 10px !important;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.theme-toggle svg {
+  stroke-width: 1.9;
 }
 
 .avatar {
@@ -678,7 +699,7 @@ td small {
   font-size: 14px;
 }
 .plan-list li::before {
-  content: "✓";
+  content: "+";
   margin-right: 10px;
   color: #415166;
 }

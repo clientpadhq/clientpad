@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { join } from "node:path";
+import { extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -183,6 +183,52 @@ async function tryReadFile(filePath: string): Promise<string | null> {
   }
 }
 
+async function tryReadAsset(filePath: string): Promise<Buffer | null> {
+  try {
+    return await readFile(filePath);
+  } catch {
+    return null;
+  }
+}
+
+function getStaticContentType(pathname: string): string | null {
+  if (pathname === "/_headers" || pathname === "/_redirects") {
+    return "text/plain; charset=utf-8";
+  }
+  const ext = extname(pathname).toLowerCase();
+  const mime: Record<string, string> = {
+    ".css": "text/css; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".txt": "text/plain; charset=utf-8",
+    ".xml": "application/xml; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+    ".ico": "image/x-icon",
+    ".map": "application/json; charset=utf-8",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".ttf": "font/ttf",
+    ".otf": "font/otf",
+  };
+  return mime[ext] || null;
+}
+
+function resolvePublicFile(pathname: string): string | null {
+  if (!pathname.startsWith("/")) return null;
+  const decoded = decodeURIComponent(pathname);
+  if (decoded.includes("\0")) return null;
+  const relativePath = decoded.replace(/^\/+/, "");
+  const publicRoot = resolve(PUBLIC_DIR);
+  const absolutePath = resolve(publicRoot, relativePath);
+  if (absolutePath !== publicRoot && !absolutePath.startsWith(publicRoot + sep)) return null;
+  return absolutePath;
+}
+
 function estimateTokens(text: string): number {
   const words = text.split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.round(words * 1.3));
@@ -333,10 +379,31 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
     return;
   }
 
-  const normalizedUrl = host.startsWith("docs.") && (url === "/" || url === "/index.html") ? "/docs" : url;
+  const hostName = host.split(":")[0].toLowerCase();
+  const isDocsHost = hostName.startsWith("docs.") || hostName.includes("clientpad-docs.onrender.com");
+  const normalizedUrl = isDocsHost && (url === "/" || url === "/index.html") ? "/docs" : url;
   const { path: rawPath, ext } = normalizePathKeepExt(normalizedUrl);
   const path = rawPath === "/index" ? "/" : rawPath;
   const isDirectMdRequest = ext === ".md";
+
+  // Serve static public assets used by rendered HTML.
+  const staticContentType = getStaticContentType(path);
+  if (staticContentType) {
+    const absolutePath = resolvePublicFile(path);
+    if (!absolutePath) {
+      serveError(res, 404, "Not found");
+      return;
+    }
+    const asset = await tryReadAsset(absolutePath);
+    if (asset) {
+      res.writeHead(200, {
+        "content-type": staticContentType,
+        "cache-control": path.startsWith("/assets/") ? "public, max-age=31536000, immutable" : "public, max-age=3600",
+      });
+      res.end(asset);
+      return;
+    }
+  }
 
   // 406 Not Acceptable: reject if Accept explicitly excludes both html and markdown
   if (accept && !isDirectMdRequest) {

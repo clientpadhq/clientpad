@@ -1,6 +1,12 @@
 # ClientPad API Host
 
-This package is the Netlify deploy target for `api.clientpad.xyz`.
+This package was originally used as a Netlify deploy target for `api.clientpad.xyz`.
+
+Current Cloudflare-first deployment uses:
+
+- Worker entrypoint: `deploy/cloudflare/api-pages/_worker.js`
+- Worker config: `deploy/cloudflare/api-pages/wrangler.toml`
+- Deploy command: `pnpm run cf:deploy:api`
 
 It combines:
 

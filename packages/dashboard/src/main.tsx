@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { ClientPad, type WhatsAppConversation, type WhatsAppMessage, type WhatsAppSuggestion } from "@clientpad/sdk";
 import {
+  Moon,
+  Sun,
   Bell,
   BookOpen,
   Building2,
@@ -187,6 +189,7 @@ type ConnectionState = "preview" | "checking" | "connected" | "misconfigured" | 
 
 type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "docs" | "settings";
 type QuickstartLanguage = "curl" | "python" | "node" | "go" | "ruby";
+type DashboardTheme = "light" | "dark";
 
 type Plan = {
   id: string;
@@ -261,9 +264,37 @@ type RevenueClient = {
 const serviceStages = ["New Lead", "Quoted", "Booked", "In Progress", "Completed", "Paid", "Review Requested"] as const;
 
 const sessionKey = "clientpad.cloud.session";
+const dashboardThemeKey = "clientpad.dashboard.theme";
+const dashboardPageParamKey = "page";
 const defaultCloudBaseUrl = window.location.hostname.includes("localhost")
   ? "http://localhost:3000/api/cloud/v1"
   : "https://api.clientpad.xyz/api/cloud/v1";
+const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "docs", "settings"];
+const dashboardPageSet = new Set<Page>(dashboardPages);
+
+function resolveDashboardTheme(): DashboardTheme {
+  const stored = localStorage.getItem(dashboardThemeKey);
+  if (stored === "light" || stored === "dark") return stored;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function applyDashboardTheme(theme: DashboardTheme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem(dashboardThemeKey, theme);
+}
+
+function resolvePageFromUrl(): Page {
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get(dashboardPageParamKey);
+  return raw && dashboardPageSet.has(raw as Page) ? (raw as Page) : "overview";
+}
+
+function syncPageToUrl(page: Page) {
+  const url = new URL(window.location.href);
+  if (page === "overview") url.searchParams.delete(dashboardPageParamKey);
+  else url.searchParams.set(dashboardPageParamKey, page);
+  window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+}
 
 function loadSession() {
   const saved = localStorage.getItem(sessionKey);
@@ -509,7 +540,7 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
                   type="password"
                   autoComplete="current-password"
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="••••••••"
+                  placeholder="********"
                 />
               </label>
               {authMode === "register" ? (
@@ -595,7 +626,8 @@ function Dashboard({
 
   const api = useMemo(() => new CloudApi(currentSession.baseUrl, Boolean(currentSession.demo)), [currentSession.baseUrl, currentSession.demo]);
   const mode = currentSession.mode ?? (currentSession.demo ? "preview" : "live");
-  const [page, setPage] = useState<Page>("overview");
+  const [page, setPage] = useState<Page>(() => resolvePageFromUrl());
+  const [theme, setTheme] = useState<DashboardTheme>(() => resolveDashboardTheme());
   const [plans, setPlans] = useState<Plan[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [workspaces, setWorkspaces] = useState<CloudWorkspace[]>(currentSession.workspaces ?? []);
@@ -837,6 +869,14 @@ function Dashboard({
   const rejectedRequests = usage.reduce((sum, row) => sum + Number(row.rejected_count || 0), 0);
   const connectionSummary: ConnectionState = mode === "preview" ? "preview" : connectionState;
 
+  useEffect(() => {
+    applyDashboardTheme(theme);
+  }, [theme]);
+
+  useEffect(() => {
+    syncPageToUrl(page);
+  }, [page]);
+
   return (
     <div className="console">
       <Sidebar page={page} setPage={setPage} />
@@ -855,6 +895,8 @@ function Dashboard({
           readiness={readiness}
           lastSyncedAt={lastSyncedAt}
           onLogout={onLogout}
+          theme={theme}
+          onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
         />
         <section className="content">
           <StatusBanner
@@ -1027,8 +1069,8 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
           </button>
         </div>
         <footer>
-          <span>© 2025 ClientPad Cloud</span>
-          <span>Status · Privacy · Terms</span>
+          <span>{`(c) ${new Date().getFullYear()} ClientPad Cloud`}</span>
+          <span>Status | Privacy | Terms</span>
         </footer>
       </div>
     </aside>
@@ -1049,6 +1091,8 @@ function Topbar({
   readiness,
   lastSyncedAt,
   onLogout,
+  theme,
+  onToggleTheme,
 }: {
   projects: Project[];
   user: CloudAuthUser | null;
@@ -1063,7 +1107,10 @@ function Topbar({
   readiness: CloudReadiness | null;
   lastSyncedAt: string | null;
   onLogout: () => void;
+  theme: DashboardTheme;
+  onToggleTheme: () => void;
 }) {
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const connectionLabel =
     mode === "preview"
       ? "Preview mode"
@@ -1074,6 +1121,20 @@ function Topbar({
           : connectionState === "misconfigured"
             ? "Live misconfigured"
             : "Live unavailable";
+
+  useEffect(() => {
+    const handleGlobalSearchShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalSearchShortcut);
+    return () => window.removeEventListener("keydown", handleGlobalSearchShortcut);
+  }, []);
+
   return (
     <header className="topbar">
       <label className="workspace-picker">
@@ -1093,8 +1154,8 @@ function Topbar({
       </label>
       <label className="searchbox">
         <Search size={18} />
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search clients by phone/name, projects, keys..." />
-        <kbd>⌘ K</kbd>
+        <input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search clients by phone/name, projects, keys..." />
+        <kbd>Ctrl K</kbd>
       </label>
       <div className="top-actions">
         <StatusChip tone={mode === "preview" ? "blue" : connectionState === "connected" ? "green" : connectionState === "checking" ? "amber" : "gray"} label={connectionLabel} />
@@ -1108,6 +1169,10 @@ function Topbar({
         />
         <StatusChip tone={projects.length > 0 ? "green" : "amber"} label={projects.length > 0 ? `${projects.length} projects` : "No project selected"} />
         <StatusChip tone={lastSyncedAt ? "green" : "gray"} label={lastSyncedAt ? `Synced ${timeAgo(lastSyncedAt)}` : "Waiting for sync"} />
+        <button className="theme-toggle" onClick={onToggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
+          {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          <span>{theme === "dark" ? "Light" : "Dark"}</span>
+        </button>
         <button aria-label="Notifications">
           <Bell size={18} />
         </button>
@@ -1594,7 +1659,7 @@ function SettingsPage({
                 <span className={workspace.id === session.selectedWorkspaceId ? "dot good" : "dot warn"} />
                 <div>
                   <strong>{workspace.name}</strong>
-                  <small>{workspace.role} · {workspace.project_count} projects · {workspace.key_count} keys</small>
+                  <small>{workspace.role} | {workspace.project_count} projects | {workspace.key_count} keys</small>
                 </div>
               </div>
             ))}
@@ -2504,10 +2569,10 @@ function TeamInboxDemo() {
         <div className="panel-head"><h2>Message timeline</h2><Badge tone="green">Assigned</Badge></div>
         <div className="messages">
           <p className="bubble inbound">Hi, can I get the quote for AC servicing today?</p>
-          <p className="bubble outbound">Yes — ₦45,000 including call-out. We can book 3 PM.</p>
+          <p className="bubble outbound">Yes - NGN 45,000 including call-out. We can book 3 PM.</p>
           <p className="bubble inbound">Great, please book it and send payment link.</p>
         </div>
-        <label className="mention-field">Assignment / mentions<input defaultValue="@Aisha assigned · @Ops please watch payment" /></label>
+        <label className="mention-field">Assignment / mentions<input defaultValue="@Aisha assigned | @Ops please watch payment" /></label>
       </Panel>
       <Panel className="quick-replies">
         <h2>Quick reply suggestions</h2>
@@ -2887,7 +2952,7 @@ const demoConversations = [
 ];
 
 const demoReplies = [
-  "Thanks — we are checking this now.",
+  "Thanks - we are checking this now.",
   "Here is your payment link.",
   "Can you share your preferred time window?",
   "Your booking is confirmed.",
@@ -2933,7 +2998,7 @@ function toKeyRecords(usage: UsageRow[], projects: Project[]): ApiKeyRecord[] {
     return {
       ...row,
       id: row.api_key_id,
-      key: `cp_live_${"•".repeat(24)}${["444f", "2a7b", "9c3d"][index] ?? "7f0a"}`,
+      key: `cp_live_${"*".repeat(24)}${["444f", "2a7b", "9c3d"][index] ?? "7f0a"}`,
       scopes: ["leads:read", "leads:write", "clients:read", "clients:write"],
       project_slug: project.slug,
       created_at: project.created_at,
@@ -3044,7 +3109,7 @@ function priceForPlan(plan: Plan) {
 }
 
 function maskKey(key: string) {
-  return key.startsWith("cp_live_") ? key : `cp_live_${"•".repeat(24)}${key.slice(-4)}`;
+  return key.startsWith("cp_live_") ? key : `cp_live_${"*".repeat(24)}${key.slice(-4)}`;
 }
 
 function slugify(value: string) {

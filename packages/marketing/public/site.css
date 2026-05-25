@@ -81,15 +81,25 @@ main,
 }
 
 .brand-mark {
-  width: 1.45rem;
-  height: 1.45rem;
+  width: 2.28rem;
+  height: 2.28rem;
   border-radius: 0.42rem;
   border: 1px solid var(--line);
-  background: var(--panel-2) url("/assets/clientpad-logo-only.png") center/78% no-repeat;
+  background: var(--panel-2) url("/assets/clientpad-logo-only.png") center/112% no-repeat;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  filter: saturate(1.08) contrast(1.04);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.brand:hover .brand-mark,
+.brand:focus-visible .brand-mark {
+  transform: scale(1.16);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 28%, transparent);
 }
 
 .brand strong {
-  font-size: 1rem;
+  font-size: 1.03rem;
 }
 
 .nav-links {
@@ -389,8 +399,42 @@ footer {
 }
 
 .footer-brand .brand-mark {
-  width: 1.2rem;
-  height: 1.2rem;
+  width: 2.12rem;
+  height: 2.12rem;
+  background-size: 112%;
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  flex-wrap: wrap;
+}
+
+.footer-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.24rem 0.58rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 580;
+}
+
+.footer-links a:hover,
+.footer-links a:focus-visible {
+  color: var(--ink);
+  background: var(--panel-2);
+  border-color: color-mix(in srgb, var(--brand) 28%, var(--line));
+  outline: none;
+}
+
+.footer-sep {
+  color: var(--muted);
+  opacity: 0.8;
 }
 
 body.mobile-nav-open .nav-links {
