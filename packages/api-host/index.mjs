@@ -20,6 +20,8 @@ const missingConfig = Object.entries(runtimeConfig)
   .map(([key]) => key);
 
 const hasRuntimeConfig = missingConfig.length === 0;
+const runtimeConfigNextAction =
+  "Set DATABASE_URL, API_KEY_PEPPER, and CLIENTPAD_CLOUD_ADMIN_TOKEN on the Render API service, then redeploy.";
 
 const cloudHandler = hasRuntimeConfig
   ? createClientPadCloudHandler({
@@ -55,9 +57,24 @@ async function checkReadiness(request) {
         configured: false,
         missing: missingConfig,
         checks: {
-          cloudHealth: { ok: false, status: 503, detail: "Runtime configuration missing" },
-          cloudAuthStatus: { ok: false, status: 503, detail: "Runtime configuration missing" },
-          publicGateway: { ok: false, status: 503, detail: "Runtime configuration missing" },
+          cloudHealth: {
+            ok: false,
+            status: 503,
+            detail: "Runtime configuration missing",
+            nextAction: runtimeConfigNextAction,
+          },
+          cloudAuthStatus: {
+            ok: false,
+            status: 503,
+            detail: "Runtime configuration missing",
+            nextAction: runtimeConfigNextAction,
+          },
+          publicGateway: {
+            ok: false,
+            status: 503,
+            detail: "Runtime configuration missing",
+            nextAction: runtimeConfigNextAction,
+          },
         },
         time: new Date().toISOString(),
       },
@@ -102,11 +119,17 @@ async function checkReadiness(request) {
           ok: cloudHealthOk,
           status: cloudHealthRes.status,
           detail: cloudHealthOk ? "Cloud API health endpoint responded" : "Cloud API health check failed",
+          nextAction: cloudHealthOk
+            ? undefined
+            : "Check DATABASE_URL connectivity and Render API logs for the Cloud API health route.",
         },
         cloudAuthStatus: {
           ok: cloudAuthOk,
           status: cloudAuthRes.status,
           detail: cloudAuthOk ? "Cloud auth status endpoint responded" : "Cloud auth status check failed",
+          nextAction: cloudAuthOk
+            ? undefined
+            : "Verify CLIENTPAD_CLOUD_ADMIN_TOKEN and confirm the auth tables exist in the production database.",
         },
         publicGateway: {
           ok: publicGatewayOk,
@@ -116,6 +139,9 @@ async function checkReadiness(request) {
               ? "Public API responded with authorization header"
               : "Public API correctly requires an API key"
             : "Public API usage route returned an unexpected response",
+          nextAction: publicGatewayOk
+            ? undefined
+            : "Check API_KEY_PEPPER and issue a fresh public API key from the dashboard.",
         },
       },
       time: new Date().toISOString(),

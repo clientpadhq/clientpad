@@ -1190,6 +1190,15 @@ td small {
   line-height: 1.45;
 }
 
+.launch-check em {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink);
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.45;
+}
+
 .launch-check small {
   margin-top: 3px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;

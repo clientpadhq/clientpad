@@ -198,6 +198,7 @@ type LaunchCheck = {
   url: string;
   status: LaunchCheckStatus;
   detail: string;
+  nextAction?: string;
 };
 
 type Plan = {
@@ -1662,35 +1663,59 @@ function LaunchReadiness({
 
     setRunning(true);
     setChecks(buildInitialLaunchChecks(cloudBaseUrl));
-    const next: LaunchCheck[] = [];
-
-    next.push(await checkJsonEndpoint("cloud-health", "Cloud API health", `${cloudBaseUrl}/health`, (response, body) => ({
-      ok: response.ok && body?.status === "ok",
-      detail: response.ok ? `Cloud API returned ${body?.status ?? response.status}` : `HTTP ${response.status}`,
-    })));
-
-    next.push(await checkJsonEndpoint("cloud-readiness", "Workspace readiness", `${cloudBaseUrl}/readiness?workspace_id=${encodeURIComponent(selectedWorkspace)}`, (response, body) => ({
-      ok: response.ok && (body?.status === "ok" || body?.status === "degraded"),
-      warning: body?.status === "degraded",
-      detail: body?.status === "degraded" ? "Cloud is reachable but readiness is degraded" : response.ok ? "Workspace readiness endpoint responded" : `HTTP ${response.status}`,
-    })));
-
-    next.push(await checkJsonEndpoint("auth-status", "Operator auth status", `${cloudBaseUrl}/auth/status`, (response, body) => ({
-      ok: response.ok && typeof body?.registration_open === "boolean",
-      detail: response.ok ? "Operator auth status is available" : `HTTP ${response.status}`,
-    })));
-
-    next.push(await checkJsonEndpoint("public-gateway", "Public API gateway", `${publicApiUrl}/usage`, (response) => ({
-      ok: publicApiKey.trim() ? response.status < 500 : response.status === 401 || response.status === 403,
-      warning: Boolean(publicApiKey.trim() && response.status === 401),
-      detail: publicApiKey.trim()
-        ? response.status < 500
-          ? `Gateway responded with HTTP ${response.status}`
-          : `Gateway error HTTP ${response.status}`
-        : response.status === 401 || response.status === 403
-          ? "Gateway correctly requires an API key"
-          : `Unexpected HTTP ${response.status}`,
-    }), publicApiKey.trim() ? { Authorization: `Bearer ${publicApiKey.trim()}` } : undefined));
+    const publicApiKeyValue = publicApiKey.trim();
+    const next = await Promise.all([
+      checkJsonEndpoint("api-host-readiness", "API host readiness", `${apiOrigin}/readiness`, (response, body) => ({
+        ok: response.ok && body?.status === "ok",
+        warning: body?.status === "degraded",
+        detail: body?.status === "configuration_required"
+          ? `Missing ${Array.isArray(body?.missing) ? body.missing.join(", ") : "runtime configuration"}`
+          : body?.status === "degraded"
+            ? "API host is reachable but one or more checks are degraded"
+            : response.ok
+              ? "API host readiness passed"
+              : `HTTP ${response.status}`,
+        nextAction: body?.status === "configuration_required"
+          ? "Set DATABASE_URL, API_KEY_PEPPER, and CLIENTPAD_CLOUD_ADMIN_TOKEN on the Render API service."
+          : body?.status === "degraded"
+            ? summarizeApiHostNextAction(body)
+            : undefined,
+      })),
+      checkJsonEndpoint("cloud-health", "Cloud API health", `${cloudBaseUrl}/health`, (response, body) => ({
+        ok: response.ok && body?.status === "ok",
+        detail: response.ok ? `Cloud API returned ${body?.status ?? response.status}` : `HTTP ${response.status}`,
+        nextAction: response.ok ? undefined : "Confirm the Render API service has a working database connection and current deployment.",
+      })),
+      checkJsonEndpoint("cloud-readiness", "Workspace readiness", `${cloudBaseUrl}/readiness?workspace_id=${encodeURIComponent(selectedWorkspace)}`, (response, body) => ({
+        ok: response.ok && (body?.status === "ok" || body?.status === "degraded"),
+        warning: body?.status === "degraded",
+        detail: body?.status === "degraded" ? "Cloud is reachable but readiness is degraded" : response.ok ? "Workspace readiness endpoint responded" : `HTTP ${response.status}`,
+        nextAction: body?.status === "degraded" && Array.isArray(body?.diagnostics)
+          ? body.diagnostics.find((item: CloudReadinessDiagnostic) => item.status === "missing")?.detail
+          : response.ok ? undefined : "Sign in again or create a workspace before checking launch readiness.",
+      })),
+      checkJsonEndpoint("auth-status", "Operator auth status", `${cloudBaseUrl}/auth/status`, (response, body) => ({
+        ok: response.ok && typeof body?.registration_open === "boolean",
+        detail: response.ok ? "Operator auth status is available" : `HTTP ${response.status}`,
+        nextAction: response.ok ? undefined : "Verify the Cloud API can read operator auth tables from the production database.",
+      })),
+      checkJsonEndpoint("public-gateway", "Public API gateway", `${publicApiUrl}/usage`, (response) => ({
+        ok: publicApiKeyValue ? response.status < 500 : response.status === 401 || response.status === 403,
+        warning: Boolean(publicApiKeyValue && response.status === 401),
+        detail: publicApiKeyValue
+          ? response.status < 500
+            ? `Gateway responded with HTTP ${response.status}`
+            : `Gateway error HTTP ${response.status}`
+          : response.status === 401 || response.status === 403
+            ? "Gateway correctly requires an API key"
+            : `Unexpected HTTP ${response.status}`,
+        nextAction: response.status >= 500
+          ? "Check DATABASE_URL and API_KEY_PEPPER on the API service, then redeploy."
+          : publicApiKeyValue && response.status === 401
+            ? "Create a fresh public API key and update dashboard settings."
+            : undefined,
+      }), publicApiKeyValue ? { Authorization: `Bearer ${publicApiKeyValue}` } : undefined),
+    ]);
 
     setChecks(next);
     setRunning(false);
@@ -1745,6 +1770,7 @@ function LaunchReadiness({
               <div>
                 <strong>{check.label}</strong>
                 <span>{check.detail}</span>
+                {check.nextAction ? <em>{check.nextAction}</em> : null}
                 <small>{check.url}</small>
               </div>
             </div>
@@ -3229,6 +3255,7 @@ function buildInitialLaunchChecks(baseUrl: string): LaunchCheck[] {
   const cloudBaseUrl = baseUrl.replace(/\/+$/, "");
   const apiOrigin = cloudBaseUrl.replace(/\/api\/cloud\/v1$/i, "");
   return [
+    { id: "api-host-readiness", label: "API host readiness", url: `${apiOrigin}/readiness`, status: "checking", detail: "Waiting for response" },
     { id: "cloud-health", label: "Cloud API health", url: `${cloudBaseUrl}/health`, status: "checking", detail: "Waiting for response" },
     { id: "cloud-readiness", label: "Workspace readiness", url: `${cloudBaseUrl}/readiness`, status: "checking", detail: "Waiting for response" },
     { id: "auth-status", label: "Operator auth status", url: `${cloudBaseUrl}/auth/status`, status: "checking", detail: "Waiting for response" },
@@ -3248,7 +3275,7 @@ async function checkJsonEndpoint(
   id: string,
   label: string,
   url: string,
-  evaluate: (response: Response, body: any) => { ok: boolean; warning?: boolean; detail: string },
+  evaluate: (response: Response, body: any) => { ok: boolean; warning?: boolean; detail: string; nextAction?: string },
   headers?: Record<string, string>
 ): Promise<LaunchCheck> {
   try {
@@ -3264,6 +3291,7 @@ async function checkJsonEndpoint(
       url,
       status: evaluated.ok ? (evaluated.warning ? "warning" : "ok") : "fail",
       detail: evaluated.detail,
+      nextAction: evaluated.nextAction,
     };
   } catch (error) {
     return {
@@ -3272,8 +3300,18 @@ async function checkJsonEndpoint(
       url,
       status: "fail",
       detail: error instanceof Error ? error.message : "Request failed",
+      nextAction: "Confirm the Render API service is live and the dashboard API URL points to the deployed host.",
     };
   }
+}
+
+function summarizeApiHostNextAction(body: any) {
+  const checks = body?.checks;
+  if (!checks || typeof checks !== "object") {
+    return "Open the Render API service logs and inspect the failed readiness check.";
+  }
+  const failedCheck = Object.values(checks).find((check: any) => check?.ok === false) as { detail?: string; nextAction?: string } | undefined;
+  return failedCheck?.nextAction ?? failedCheck?.detail ?? "Open the Render API service logs and inspect the failed readiness check.";
 }
 
 function launchStatusIcon(status: LaunchCheckStatus) {
