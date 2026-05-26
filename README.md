@@ -14,7 +14,7 @@ This repository ships installable packages instead of a hosted product with subs
 - `@clientpad/whatsapp`: WhatsApp automation, lead capture, booking flows, payments, and review prompts for service businesses.
 - `@clientpad/cloud`: hosted control plane for projects, plans, subscriptions, usage, API keys, and operator auth/session management.
 - `@clientpad/dashboard`: developer web dashboard for projects, API keys, usage, billing, docs, preview/live operator access, and WhatsApp operations.
-- `@clientpad/marketing`: public `clientpad.xyz` marketing/docs site and `docs.clientpad.xyz` foundation with static Netlify export plus `llms.txt` support.
+- `@clientpad/marketing`: public `clientpad.xyz` marketing/docs site and `docs.clientpad.xyz` foundation with static export plus `llms.txt` support.
 
 The dashboard opens in **Preview** mode for sample data or **Live** mode after an operator signs in to ClientPad Cloud with email and password. Live mode validates both `/health` and `/readiness` before it claims the cloud is connected. New operator signups create an operator account, workspace, starter project, and starter API key in one pass so the hosted dashboard can move from empty to usable quickly.
 
@@ -230,10 +230,17 @@ npm run marketing:build
 
 The marketing package exports static files to `packages/marketing/dist`, including public pages, docs pages, `docs.clientpad.xyz` rewrites, clean docs routes, `robots.txt`, `sitemap.xml`, `llms.txt`, and `llms-full.txt`.
 
-Deploy directly to Cloudflare (no GitHub auto-deploy required):
+Deploy directly to Render services:
 
 ```bash
-npm run cf:deploy:all
+npm run render:deploy:all
+```
+
+Verify production domains and API readiness:
+
+```bash
+npm run smoke:domains
+npm run verify:api:readiness
 ```
 
 ### CI parity
@@ -273,8 +280,8 @@ See [docs/PUBLISHING.md](docs/PUBLISHING.md) for the full release safety workflo
 - [ClientPad Cloud](docs/CLIENTPAD_CLOUD.md)
 - [npm package strategy](docs/NPM_PACKAGE_STRATEGY.md)
 - [Publishing checklist](docs/PUBLISHING.md)
-- [Cloudflare direct deployment](docs/CLOUDFLARE_DEPLOYMENT.md)
-- [Domain and Cloudflare deployment](docs/DOMAIN_DEPLOYMENT.md)
+- [Render deployment](docs/RENDER_DEPLOYMENT.md)
+- [Domain deployment](docs/DOMAIN_DEPLOYMENT.md)
 
 ## License
 

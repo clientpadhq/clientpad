@@ -2,7 +2,7 @@
   "name": "@clientpad/api-host",
   "private": true,
   "version": "0.2.0",
-  "description": "Netlify deploy target that serves ClientPad Cloud and public API routes from api.clientpad.xyz.",
+  "description": "Render deploy target that serves ClientPad Cloud and public API routes from api.clientpad.xyz.",
   "license": "MIT",
   "type": "module",
   "main": "index.mjs",

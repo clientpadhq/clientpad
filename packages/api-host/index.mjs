@@ -1,7 +1,13 @@
 import { createClientPadCloudHandler } from "@clientpad/cloud";
 import { createClientPadHandler } from "@clientpad/server";
 
-const getEnv = (name) => globalThis.Netlify?.env?.get?.(name) ?? "";
+const getEnv = (name) => {
+  const fromNetlify = globalThis.Netlify?.env?.get?.(name);
+  if (typeof fromNetlify === "string" && fromNetlify.trim()) return fromNetlify.trim();
+  const fromProcess = typeof process !== "undefined" ? process.env?.[name] : "";
+  if (typeof fromProcess === "string" && fromProcess.trim()) return fromProcess.trim();
+  return "";
+};
 
 const runtimeConfig = {
   databaseUrl: getEnv("DATABASE_URL"),
@@ -33,11 +39,90 @@ const publicHandler = hasRuntimeConfig
 const routes = [
   "/",
   "/health",
+  "/readiness",
   "/api/cloud/v1",
   "/api/cloud/v1/*",
   "/api/public/v1",
   "/api/public/v1/*",
 ];
+
+async function checkReadiness(request) {
+  if (!hasRuntimeConfig) {
+    return Response.json(
+      {
+        status: "configuration_required",
+        service: "@clientpad/api-host",
+        configured: false,
+        missing: missingConfig,
+        checks: {
+          cloudHealth: { ok: false, status: 503, detail: "Runtime configuration missing" },
+          cloudAuthStatus: { ok: false, status: 503, detail: "Runtime configuration missing" },
+          publicGateway: { ok: false, status: 503, detail: "Runtime configuration missing" },
+        },
+        time: new Date().toISOString(),
+      },
+      { status: 503 }
+    );
+  }
+
+  const url = new URL(request.url);
+  const origin = `${url.protocol}//${url.host}`;
+  const authHeader = request.headers.get("authorization");
+
+  const cloudHealthReq = new Request(`${origin}/api/cloud/v1/health`, { method: "GET" });
+  const cloudAuthReq = new Request(`${origin}/api/cloud/v1/auth/status`, { method: "GET" });
+  const publicHeaders = new Headers();
+  if (authHeader) publicHeaders.set("authorization", authHeader);
+  const publicUsageReq = new Request(`${origin}/api/public/v1/usage`, {
+    method: "GET",
+    headers: publicHeaders,
+  });
+
+  const [cloudHealthRes, cloudAuthRes, publicUsageRes] = await Promise.all([
+    cloudHandler(cloudHealthReq),
+    cloudHandler(cloudAuthReq),
+    publicHandler(publicUsageReq),
+  ]);
+
+  const cloudHealthOk = cloudHealthRes.status === 200;
+  const cloudAuthOk = cloudAuthRes.status === 200;
+  const publicGatewayOk = authHeader
+    ? publicUsageRes.status < 500
+    : publicUsageRes.status === 401 || publicUsageRes.status === 403;
+  const ready = cloudHealthOk && cloudAuthOk && publicGatewayOk;
+
+  return Response.json(
+    {
+      status: ready ? "ok" : "degraded",
+      service: "@clientpad/api-host",
+      configured: true,
+      missing: [],
+      checks: {
+        cloudHealth: {
+          ok: cloudHealthOk,
+          status: cloudHealthRes.status,
+          detail: cloudHealthOk ? "Cloud API health endpoint responded" : "Cloud API health check failed",
+        },
+        cloudAuthStatus: {
+          ok: cloudAuthOk,
+          status: cloudAuthRes.status,
+          detail: cloudAuthOk ? "Cloud auth status endpoint responded" : "Cloud auth status check failed",
+        },
+        publicGateway: {
+          ok: publicGatewayOk,
+          status: publicUsageRes.status,
+          detail: publicGatewayOk
+            ? authHeader
+              ? "Public API responded with authorization header"
+              : "Public API correctly requires an API key"
+            : "Public API usage route returned an unexpected response",
+        },
+      },
+      time: new Date().toISOString(),
+    },
+    { status: ready ? 200 : 503 }
+  );
+}
 
 export default async function handler(request) {
   const url = new URL(request.url);
@@ -54,6 +139,10 @@ export default async function handler(request) {
       },
       time: new Date().toISOString(),
     });
+  }
+
+  if (url.pathname === "/readiness") {
+    return checkReadiness(request);
   }
 
   if (url.pathname.startsWith("/api/cloud/v1")) {

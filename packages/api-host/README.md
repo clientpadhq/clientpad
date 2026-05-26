@@ -1,12 +1,12 @@
 # ClientPad API Host
 
-This package was originally used as a Netlify deploy target for `api.clientpad.xyz`.
+This package is the Render deploy target for `api.clientpad.xyz`.
 
-Current Cloudflare-first deployment uses:
+Production deploy flow:
 
-- Worker entrypoint: `deploy/cloudflare/api-pages/_worker.js`
-- Worker config: `deploy/cloudflare/api-pages/wrangler.toml`
-- Deploy command: `pnpm run cf:deploy:api`
+- Service name: `clientpad-api`
+- Start command: `node packages/api-host/render-server.mjs`
+- Deploy command: `pnpm run render:deploy:api`
 
 It combines:
 
@@ -21,4 +21,9 @@ Required runtime environment:
 - `API_KEY_PEPPER`
 - `CLIENTPAD_CLOUD_ADMIN_TOKEN`
 
-The root response returns a small JSON description of the available API surfaces.
+Health and readiness endpoints:
+
+- `/health`
+- `/readiness`
+
+The root response returns a JSON description of the available API surfaces.
