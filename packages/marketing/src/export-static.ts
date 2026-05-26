@@ -96,11 +96,7 @@ function buildRedirects() {
     .join("\n");
 
   const docsHostRoutes = pages
-    .filter((page) => page.path === "/docs" || page.path.startsWith("/docs/"))
-    .map((page) => {
-      const docsPath = page.path === "/docs" ? "/" : page.path.replace(/^\/docs/, "");
-      return `https://docs.clientpad.xyz${docsPath} /${page.html} 200!`;
-    })
+    .map((page) => `https://docs.clientpad.xyz${page.path} /${page.html} 200!`)
     .join("\n");
 
   return `${docsHostRoutes}\n${cleanRoutes}\n`;

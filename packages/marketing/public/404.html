@@ -9,15 +9,12 @@
   (function () {
     const path = window.location.pathname;
     const host = window.location.hostname;
-    if (host === "docs.clientpad.xyz") {
-      window.location.replace("/docs/");
+    const normalized = path === "/" ? "/index.html" : path === "/docs" ? "/docs/index.html" : `${path.replace(/\/+$/, "")}.html`;
+    if (host === "docs.clientpad.xyz" || path.startsWith("/docs")) {
+      window.location.replace(normalized);
       return;
     }
-    if (path.startsWith("/docs")) {
-      window.location.replace("/docs/");
-      return;
-    }
-    window.location.replace("/");
+    window.location.replace(normalized);
   })();
 </script>
 </head>
