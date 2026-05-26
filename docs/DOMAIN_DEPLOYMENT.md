@@ -1,101 +1,68 @@
-# ClientPad domain and Cloudflare deployment
+# ClientPad domain and Render deployment
 
-ClientPad uses four production hostnames:
+ClientPad production should run on Render services with Cloudflare DNS only.
 
-| Hostname | Purpose | Cloudflare target |
+## Production hostnames
+
+| Hostname | Purpose | Render target |
 | --- | --- | --- |
-| `clientpad.xyz` | Public marketing and docs site | Pages project (`clientpad-marketing`) |
-| `docs.clientpad.xyz` | Developer and operator docs | Pages project (`clientpad-marketing`) |
-| `app.clientpad.xyz` | Operator dashboard PWA | Pages project (`clientpad-dashboard`) |
-| `api.clientpad.xyz` | Cloud API and public API | Worker (`clientpad-api-pages`) |
+| `clientpad.xyz` | Public marketing site | `clientpad-frontend.onrender.com` |
+| `www.clientpad.xyz` | Public marketing alias | `clientpad-frontend.onrender.com` |
+| `docs.clientpad.xyz` | Developer/operator docs | `clientpad-docs.onrender.com` |
+| `app.clientpad.xyz` | Operator dashboard PWA | `clientpad-app.onrender.com` |
+| `api.clientpad.xyz` | Cloud API + public API | `clientpad-api.onrender.com` |
 
-## DNS
+## DNS (Cloudflare)
 
-Use Cloudflare DNS for `clientpad.xyz`.
-
-Recommended records:
+Use CNAME records pointing to Render targets:
 
 | Type | Name | Value |
 | --- | --- | --- |
-| CNAME | `www` | `clientpad-marketing.pages.dev` |
-| CNAME | `docs` | `clientpad-marketing.pages.dev` |
-| CNAME | `app` | `clientpad-dashboard.pages.dev` |
-| Route / Custom domain | `api` | `clientpad-api-pages` worker |
+| CNAME | `@` or `clientpad.xyz` (flattened) | `clientpad-frontend.onrender.com` |
+| CNAME | `www` | `clientpad-frontend.onrender.com` |
+| CNAME | `docs` | `clientpad-docs.onrender.com` |
+| CNAME | `app` | `clientpad-app.onrender.com` |
+| CNAME | `api` | `clientpad-api.onrender.com` |
 
-## Marketing site
+Important:
 
-The marketing package is the public homepage for `clientpad.xyz`.
+1. Remove old Pages/Worker custom-domain bindings from Cloudflare if they still own these hostnames.
+2. Use DNS-only mode while validating cutover.
+3. Purge Cloudflare cache after target changes.
 
-Build locally:
+## Deploy commands
 
-```bash
-pnpm --filter @clientpad/marketing build
-```
-
-Output:
-
-```text
-packages/marketing/dist
-```
-
-The build exports:
-
-- `index.html`
-- docs pages under `/docs/*`
-- host-aware docs rewrites for `docs.clientpad.xyz`
-- `_redirects` for clean docs routes
-- `_headers`
-- `robots.txt`
-- `sitemap.xml`
-- `llms.txt`
-- `llms-full.txt`
-
-Deploy directly to Cloudflare Pages:
+From repo root:
 
 ```bash
-pnpm run cf:deploy:marketing
+pnpm run render:deploy:api
+pnpm run render:deploy:frontend
+pnpm run render:deploy:docs
+pnpm run render:deploy:app
 ```
 
-## Dashboard site
-
-The dashboard remains the operator app and should use:
-
-```text
-app.clientpad.xyz
-```
-
-Deploy directly to Cloudflare Pages:
+Trigger all services:
 
 ```bash
-pnpm run cf:deploy:dashboard
+pnpm run render:deploy:all
 ```
 
-## Cloud API
-
-The dashboard defaults to the Cloud API root:
-
-```text
-https://api.clientpad.xyz/api/cloud/v1
-```
-
-The public SDK examples use:
-
-```text
-https://api.clientpad.xyz/api/public/v1
-```
-
-Set `api.clientpad.xyz` only after the Cloud API host is deployed and ready to answer `/health` and `/readiness`.
-
-Deploy API worker:
+List Render services available to your API key:
 
 ```bash
-pnpm run cf:deploy:api
+pnpm run render:services
 ```
 
-## GitHub auto-deploy
+## Post-deploy verification
 
-If your Pages projects are currently connected to GitHub, disable Git integration in Cloudflare Pages and use direct uploads only:
+Run smoke checks:
 
-1. Workers & Pages -> project -> Settings -> Builds & deployments
-2. Remove/disable Git repository connection
-3. Deploy with Wrangler (`cf:deploy:*` scripts)
+```bash
+pnpm run smoke:domains
+```
+
+Run API readiness verification:
+
+```bash
+pnpm run verify:api:readiness
+```

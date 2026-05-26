@@ -147,7 +147,7 @@ button { cursor: pointer; }
   height: 2.2rem;
   border-radius: 0.42rem;
   border: 1px solid var(--line);
-  background: var(--panel-2) url("/assets/clientpad-logo-only.png") center/112% no-repeat;
+  background: var(--panel-2) url("/assets/clientpad-logo-only.png") center/124% no-repeat;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
   filter: saturate(1.08) contrast(1.04);
@@ -239,6 +239,44 @@ button { cursor: pointer; }
   margin-top: 18px;
   color: #667386;
   font-size: 12px;
+}
+
+.sidebar-footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.sidebar-footer-brand .logo-mark {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 0.36rem;
+  background-size: 118%;
+}
+
+.sidebar-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebar-footer-links a {
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.sidebar-footer-links a:hover,
+.sidebar-footer-links a:focus-visible {
+  color: var(--ink);
+  background: var(--panel-2);
+  border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
+  outline: none;
 }
 
 .workspace { min-width: 0; background: #ffffff; }

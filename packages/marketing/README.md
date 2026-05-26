@@ -34,14 +34,15 @@ The build includes:
 - `llms-full.txt`
 - `_headers`
 
-## Cloudflare direct deploy
+## Render deploy
 
-Deploy this package directly to Cloudflare Pages from repository root:
+Deploy this package to Render from repository root:
 
 ```bash
-pnpm run cf:deploy:marketing
+pnpm run render:deploy:frontend
+pnpm run render:deploy:docs
 ```
 
-See `docs/CLOUDFLARE_DEPLOYMENT.md` for project setup, API token requirements, and direct-upload workflow details.
+See `docs/RENDER_DEPLOYMENT.md` for service setup, API token requirements, and deployment workflow details.
 
-The operator dashboard should stay on `app.clientpad.xyz`; the marketing site should use `clientpad.xyz` and optionally `www.clientpad.xyz`; documentation can use `docs.clientpad.xyz`.
+The operator dashboard should stay on `app.clientpad.xyz`; the marketing site should use `clientpad.xyz` and optionally `www.clientpad.xyz`; docs should use `docs.clientpad.xyz`.

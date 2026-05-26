@@ -1069,8 +1069,23 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
           </button>
         </div>
         <footer>
-          <span>{`(c) ${new Date().getFullYear()} ClientPad Cloud`}</span>
-          <span>Status | Privacy | Terms</span>
+          <span className="sidebar-footer-brand">
+            <span className="logo-mark" aria-hidden="true" />
+            {`© ${new Date().getFullYear()} ClientPad X`}
+          </span>
+          <span className="sidebar-footer-links">
+            <a href="https://docs.clientpad.xyz" target="_blank" rel="noopener noreferrer">Docs</a>
+            <span>·</span>
+            <a href="https://github.com/clientpadhq/clientpad" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <span>·</span>
+            <a href="https://github.com/Abdulmuiz44" target="_blank" rel="noopener noreferrer">Builder</a>
+            <span>·</span>
+            <a href="https://clientpad.xyz/privacy" target="_blank" rel="noopener noreferrer">Privacy</a>
+            <span>·</span>
+            <a href="https://clientpad.xyz/terms" target="_blank" rel="noopener noreferrer">Terms</a>
+            <span>·</span>
+            <a href="https://clientpad.xyz/llms.txt" target="_blank" rel="noopener noreferrer">llms.txt</a>
+          </span>
         </footer>
       </div>
     </aside>
