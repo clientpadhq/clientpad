@@ -187,9 +187,19 @@ type CloudReadiness = {
 
 type ConnectionState = "preview" | "checking" | "connected" | "misconfigured" | "unavailable";
 
-type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "docs" | "settings";
+type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "docs" | "settings";
 type QuickstartLanguage = "curl" | "python" | "node" | "go" | "ruby";
 type DashboardTheme = "light" | "dark";
+type LaunchCheckStatus = "checking" | "ok" | "warning" | "fail";
+
+type LaunchCheck = {
+  id: string;
+  label: string;
+  url: string;
+  status: LaunchCheckStatus;
+  detail: string;
+  nextAction?: string;
+};
 
 type Plan = {
   id: string;
@@ -269,7 +279,7 @@ const dashboardPageParamKey = "page";
 const defaultCloudBaseUrl = window.location.hostname.includes("localhost")
   ? "http://localhost:3000/api/cloud/v1"
   : "https://api.clientpad.xyz/api/cloud/v1";
-const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "docs", "settings"];
+const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "docs", "settings"];
 const dashboardPageSet = new Set<Page>(dashboardPages);
 
 function resolveDashboardTheme(): DashboardTheme {
@@ -996,6 +1006,15 @@ function Dashboard({
               billingAction={billingAction}
             />
           )}
+          {page === "launch" && (
+            <LaunchReadiness
+              session={currentSession}
+              mode={mode}
+              selectedWorkspace={selectedWorkspace}
+              publicApiKey={publicApiKey}
+              onGoToSettings={() => setPage("settings")}
+            />
+          )}
           {page === "docs" && (
             <Docs
               selectedProject={selectedProject}
@@ -1038,6 +1057,7 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
     ["billing", <CreditCard size={18} />, "Billing"],
     ["projects", <Building2 size={18} />, "Projects"],
     ["keys", <KeyRound size={18} />, "API Keys"],
+    ["launch", <ShieldCheck size={18} />, "Launch"],
     ["docs", <BookOpen size={18} />, "Docs"],
   ];
 
@@ -1616,6 +1636,167 @@ function Billing({
   );
 }
 
+function LaunchReadiness({
+  session,
+  mode,
+  selectedWorkspace,
+  publicApiKey,
+  onGoToSettings,
+}: {
+  session: Session;
+  mode: ConnectionMode;
+  selectedWorkspace: string;
+  publicApiKey: string;
+  onGoToSettings: () => void;
+}) {
+  const [checks, setChecks] = useState<LaunchCheck[]>(() => buildInitialLaunchChecks(session.baseUrl));
+  const [running, setRunning] = useState(false);
+  const cloudBaseUrl = session.baseUrl.replace(/\/+$/, "");
+  const apiOrigin = cloudBaseUrl.replace(/\/api\/cloud\/v1$/i, "");
+  const publicApiUrl = `${apiOrigin}/api/public/v1`;
+
+  async function runChecks() {
+    if (mode === "preview") {
+      setChecks(buildPreviewLaunchChecks(cloudBaseUrl));
+      return;
+    }
+
+    setRunning(true);
+    setChecks(buildInitialLaunchChecks(cloudBaseUrl));
+    const publicApiKeyValue = publicApiKey.trim();
+    const next = await Promise.all([
+      checkJsonEndpoint("api-host-readiness", "API host readiness", `${apiOrigin}/readiness`, (response, body) => ({
+        ok: response.ok && body?.status === "ok",
+        warning: body?.status === "degraded",
+        detail: body?.status === "configuration_required"
+          ? `Missing ${Array.isArray(body?.missing) ? body.missing.join(", ") : "runtime configuration"}`
+          : body?.status === "degraded"
+            ? "API host is reachable but one or more checks are degraded"
+            : response.ok
+              ? "API host readiness passed"
+              : `HTTP ${response.status}`,
+        nextAction: body?.status === "configuration_required"
+          ? "Set DATABASE_URL, API_KEY_PEPPER, and CLIENTPAD_CLOUD_ADMIN_TOKEN on the Render API service."
+          : body?.status === "degraded"
+            ? summarizeApiHostNextAction(body)
+            : undefined,
+      })),
+      checkJsonEndpoint("cloud-health", "Cloud API health", `${cloudBaseUrl}/health`, (response, body) => ({
+        ok: response.ok && body?.status === "ok",
+        detail: response.ok ? `Cloud API returned ${body?.status ?? response.status}` : `HTTP ${response.status}`,
+        nextAction: response.ok ? undefined : "Confirm the Render API service has a working database connection and current deployment.",
+      })),
+      checkJsonEndpoint("cloud-readiness", "Workspace readiness", `${cloudBaseUrl}/readiness?workspace_id=${encodeURIComponent(selectedWorkspace)}`, (response, body) => ({
+        ok: response.ok && (body?.status === "ok" || body?.status === "degraded"),
+        warning: body?.status === "degraded",
+        detail: body?.status === "degraded" ? "Cloud is reachable but readiness is degraded" : response.ok ? "Workspace readiness endpoint responded" : `HTTP ${response.status}`,
+        nextAction: body?.status === "degraded" && Array.isArray(body?.diagnostics)
+          ? body.diagnostics.find((item: CloudReadinessDiagnostic) => item.status === "missing")?.detail
+          : response.ok ? undefined : "Sign in again or create a workspace before checking launch readiness.",
+      })),
+      checkJsonEndpoint("auth-status", "Operator auth status", `${cloudBaseUrl}/auth/status`, (response, body) => ({
+        ok: response.ok && typeof body?.registration_open === "boolean",
+        detail: response.ok ? "Operator auth status is available" : `HTTP ${response.status}`,
+        nextAction: response.ok ? undefined : "Verify the Cloud API can read operator auth tables from the production database.",
+      })),
+      checkJsonEndpoint("public-gateway", "Public API gateway", `${publicApiUrl}/usage`, (response) => ({
+        ok: publicApiKeyValue ? response.status < 500 : response.status === 401 || response.status === 403,
+        warning: Boolean(publicApiKeyValue && response.status === 401),
+        detail: publicApiKeyValue
+          ? response.status < 500
+            ? `Gateway responded with HTTP ${response.status}`
+            : `Gateway error HTTP ${response.status}`
+          : response.status === 401 || response.status === 403
+            ? "Gateway correctly requires an API key"
+            : `Unexpected HTTP ${response.status}`,
+        nextAction: response.status >= 500
+          ? "Check DATABASE_URL and API_KEY_PEPPER on the API service, then redeploy."
+          : publicApiKeyValue && response.status === 401
+            ? "Create a fresh public API key and update dashboard settings."
+            : undefined,
+      }), publicApiKeyValue ? { Authorization: `Bearer ${publicApiKeyValue}` } : undefined),
+    ]);
+
+    setChecks(next);
+    setRunning(false);
+  }
+
+  useEffect(() => {
+    runChecks().catch(() => setRunning(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, session.baseUrl, selectedWorkspace, publicApiKey]);
+
+  const okCount = checks.filter((check) => check.status === "ok").length;
+  const warningCount = checks.filter((check) => check.status === "warning").length;
+  const failCount = checks.filter((check) => check.status === "fail").length;
+  const externalTargets = [
+    { label: "Marketing", url: "https://clientpad.xyz" },
+    { label: "Docs", url: "https://docs.clientpad.xyz" },
+    { label: "Dashboard", url: "https://app.clientpad.xyz" },
+    { label: "API health", url: "https://api.clientpad.xyz/health" },
+    { label: "llms.txt", url: "https://clientpad.xyz/llms.txt" },
+  ];
+
+  return (
+    <div className="launch-layout">
+      <Panel className="launch-summary">
+        <div className="panel-head">
+          <h2>Production readiness</h2>
+          <Badge tone={failCount ? "amber" : "green"}>{failCount ? "Action needed" : "Ready"}</Badge>
+        </div>
+        <div className="launch-score">
+          <strong>{okCount}/{checks.length}</strong>
+          <span>{warningCount} warnings | {failCount} failures</span>
+        </div>
+        <div className="status-banner-actions">
+          <button className="button primary blue" onClick={runChecks} disabled={running}>
+            <ShieldCheck size={16} /> {running ? "Checking..." : "Run checks"}
+          </button>
+          <button className="button outline" onClick={onGoToSettings}>
+            <Settings size={16} /> Cloud settings
+          </button>
+        </div>
+      </Panel>
+
+      <Panel className="launch-checks-panel">
+        <div className="panel-head bordered">
+          <h2>Live service checks</h2>
+          <span className="status-muted">{cloudBaseUrl}</span>
+        </div>
+        <div className="launch-checks">
+          {checks.map((check) => (
+            <div key={check.id} className={`launch-check ${check.status}`}>
+              {launchStatusIcon(check.status)}
+              <div>
+                <strong>{check.label}</strong>
+                <span>{check.detail}</span>
+                {check.nextAction ? <em>{check.nextAction}</em> : null}
+                <small>{check.url}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <Panel className="launch-links-panel">
+        <div className="panel-head bordered">
+          <h2>Public targets</h2>
+          <span className="status-muted">Open after deploy</span>
+        </div>
+        <div className="launch-targets">
+          {externalTargets.map((target) => (
+            <a key={target.url} className="launch-target" href={target.url} target="_blank" rel="noopener noreferrer">
+              <span>{target.label}</span>
+              <small>{target.url}</small>
+              <ExternalLink size={15} />
+            </a>
+          ))}
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
 function Docs({
   selectedProject,
   language,
@@ -2082,7 +2263,7 @@ function RowActions({ editable = false }: { editable?: boolean }) {
   );
 }
 
-function Badge({ children, tone }: { children: React.ReactNode; tone: "green" | "blue" | "gray" }) {
+function Badge({ children, tone }: { children: React.ReactNode; tone: "green" | "blue" | "gray" | "amber" }) {
   return <span className={`badge ${tone}`}>{children}</span>;
 }
 
@@ -3070,6 +3251,75 @@ function normalizeLookup(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+function buildInitialLaunchChecks(baseUrl: string): LaunchCheck[] {
+  const cloudBaseUrl = baseUrl.replace(/\/+$/, "");
+  const apiOrigin = cloudBaseUrl.replace(/\/api\/cloud\/v1$/i, "");
+  return [
+    { id: "api-host-readiness", label: "API host readiness", url: `${apiOrigin}/readiness`, status: "checking", detail: "Waiting for response" },
+    { id: "cloud-health", label: "Cloud API health", url: `${cloudBaseUrl}/health`, status: "checking", detail: "Waiting for response" },
+    { id: "cloud-readiness", label: "Workspace readiness", url: `${cloudBaseUrl}/readiness`, status: "checking", detail: "Waiting for response" },
+    { id: "auth-status", label: "Operator auth status", url: `${cloudBaseUrl}/auth/status`, status: "checking", detail: "Waiting for response" },
+    { id: "public-gateway", label: "Public API gateway", url: `${apiOrigin}/api/public/v1/usage`, status: "checking", detail: "Waiting for response" },
+  ];
+}
+
+function buildPreviewLaunchChecks(baseUrl: string): LaunchCheck[] {
+  return buildInitialLaunchChecks(baseUrl).map((check) => ({
+    ...check,
+    status: "warning",
+    detail: "Preview mode does not call production services",
+  }));
+}
+
+async function checkJsonEndpoint(
+  id: string,
+  label: string,
+  url: string,
+  evaluate: (response: Response, body: any) => { ok: boolean; warning?: boolean; detail: string; nextAction?: string },
+  headers?: Record<string, string>
+): Promise<LaunchCheck> {
+  try {
+    const response = await fetch(url, {
+      credentials: "include",
+      headers,
+    });
+    const body = await response.json().catch(() => null);
+    const evaluated = evaluate(response, body);
+    return {
+      id,
+      label,
+      url,
+      status: evaluated.ok ? (evaluated.warning ? "warning" : "ok") : "fail",
+      detail: evaluated.detail,
+      nextAction: evaluated.nextAction,
+    };
+  } catch (error) {
+    return {
+      id,
+      label,
+      url,
+      status: "fail",
+      detail: error instanceof Error ? error.message : "Request failed",
+      nextAction: "Confirm the Render API service is live and the dashboard API URL points to the deployed host.",
+    };
+  }
+}
+
+function summarizeApiHostNextAction(body: any) {
+  const checks = body?.checks;
+  if (!checks || typeof checks !== "object") {
+    return "Open the Render API service logs and inspect the failed readiness check.";
+  }
+  const failedCheck = Object.values(checks).find((check: any) => check?.ok === false) as { detail?: string; nextAction?: string } | undefined;
+  return failedCheck?.nextAction ?? failedCheck?.detail ?? "Open the Render API service logs and inspect the failed readiness check.";
+}
+
+function launchStatusIcon(status: LaunchCheckStatus) {
+  if (status === "ok") return <CheckCircle2 size={18} />;
+  if (status === "checking") return <Clock size={18} />;
+  return <AlertCircle size={18} />;
+}
+
 function titleForPage(page: Page) {
   return {
     overview: "Overview",
@@ -3082,6 +3332,7 @@ function titleForPage(page: Page) {
     billing: "Usage & Billing",
     projects: "Projects",
     keys: "API Keys",
+    launch: "Launch",
     docs: "Docs",
     settings: "Settings",
   }[page];
@@ -3099,6 +3350,7 @@ function subtitleForPage(page: Page, project?: Project) {
     billing: "Cloud quotas, plan limits, billing period, and upgrade controls",
     projects: "Create, inspect, and manage hosted workspaces",
     keys: "Issue, copy, and inspect developer access keys",
+    launch: "Verify production services before sending customers traffic",
     docs: "SDK and API snippets developers can copy into apps",
     settings: "Cloud connection and operator settings",
   }[page];
