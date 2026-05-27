@@ -149,7 +149,7 @@ export class ClientPadServer {
 
     this.db = config.db ?? new Pool({
       connectionString: config.databaseUrl,
-      connectionTimeoutMillis: 10000,
+      connectionTimeoutMillis: 60000,
       idleTimeoutMillis: 30000,
       max: 5,
       ssl: { rejectUnauthorized: false },
