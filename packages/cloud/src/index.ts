@@ -192,7 +192,13 @@ export class ClientPadCloud {
     if (!config.adminToken.trim()) throw new Error("adminToken is required.");
     if (!config.db && !config.databaseUrl?.trim()) throw new Error("databaseUrl or db is required.");
 
-    this.db = config.db ?? new Pool({ connectionString: config.databaseUrl });
+    this.db = config.db ?? new Pool({
+      connectionString: config.databaseUrl,
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      max: 5,
+      ssl: { rejectUnauthorized: false },
+    });
     this.apiKeyPepper = config.apiKeyPepper;
     this.adminToken = config.adminToken;
     this.lemonSqueezyApiKey = optionalString(config.lemonSqueezyApiKey) ?? null;

@@ -147,7 +147,13 @@ export class ClientPadServer {
       throw new Error("databaseUrl or db is required.");
     }
 
-    this.db = config.db ?? new Pool({ connectionString: config.databaseUrl });
+    this.db = config.db ?? new Pool({
+      connectionString: config.databaseUrl,
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000,
+      max: 5,
+      ssl: { rejectUnauthorized: false },
+    });
     this.apiKeyPepper = config.apiKeyPepper;
     this.whatsapp = config.whatsapp;
     this.payments = config.payments ?? {};
