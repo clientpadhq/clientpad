@@ -429,7 +429,8 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [workspaceName, setWorkspaceName] = useState("My Workspace");
-  const [authMode, setAuthMode] = useState<"signin" | "register">("signin");
+  const [authMode, setAuthMode] = useState<"signin" | "register">("register");
+  const [registrationKey, setRegistrationKey] = useState<string | null>(null);
   const [authStatus, setAuthStatus] = useState<CloudAuthStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -453,6 +454,9 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
       cancelled = true;
     };
   }, [baseUrl, mode]);
+  if (registrationKey) {
+    return <KeyReveal registrationKey={registrationKey} onLogin={onLogin} />;
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -487,6 +491,7 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
         throw new Error(authBody?.error?.message ?? "Operator sign in failed.");
       }
 
+      const apiKey = authBody.bootstrap?.api_key.key ?? "";
       const next: Session = {
         baseUrl: normalized,
         mode: "live" as const,
@@ -495,11 +500,15 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
         workspaces: authBody.auth.workspaces,
         selectedWorkspaceId: authBody.auth.selected_workspace_id ?? authBody.auth.workspaces?.[0]?.id ?? "",
         sessionExpiresAt: authBody.auth.session_expires_at,
-        publicApiKey: authBody.bootstrap?.api_key.key ?? "",
+        publicApiKey: apiKey,
         usageSummary: authBody.bootstrap?.usage,
       };
       persistSession(next);
-      onLogin(next);
+      if (authMode === "register" && apiKey) {
+        setRegistrationKey(apiKey);
+      } else {
+        onLogin(next);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not connect to ClientPad Cloud.");
     } finally {
@@ -616,6 +625,56 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
   );
 }
 
+
+
+function KeyReveal({ registrationKey, onLogin }: { registrationKey: string; onLogin: (session: Session) => void }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <main className="login-shell">
+      <section className="login-panel">
+        <svg className="logo-svg" viewBox="0 0 32 32" width="32" height="32" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="2" width="12" height="12" rx="2" />
+          <rect x="18" y="2" width="12" height="12" rx="2" />
+          <rect x="2" y="18" width="12" height="12" rx="2" />
+          <rect x="18" y="18" width="12" height="12" rx="2" />
+        </svg>
+        <h1>Your starter API key is ready</h1>
+        <p style={{ maxWidth: 480 }}>This key boots up your workspace, project, and usage tracking. Copy it now &mdash; it will never be shown again.</p>
+        <div className="key-reveal-box">
+          <code style={{ userSelect: "all", wordBreak: "break-all", fontSize: "0.85rem" }}>{registrationKey}</code>
+        </div>
+        <div className="inline-actions" style={{ marginTop: "1.5rem" }}>
+          <button className="button outline" onClick={async () => {
+            await navigator.clipboard.writeText(registrationKey);
+            setCopied(true);
+          }}>
+            {copied ? "Copied!" : "Copy key"}
+          </button>
+          <button className="button primary" onClick={() => {
+            const saved = loadSession();
+            if (saved) onLogin(saved);
+          }}>
+            Open dashboard
+          </button>
+        </div>
+      </section>
+      <aside className="login-aside">
+        <div className="preview-card">
+          <div className="preview-card-head">
+            <span>Starter bundle created</span>
+            <strong>Workspace &mdash; Project &mdash; API key</strong>
+          </div>
+          <div style={{ padding: "1rem", fontSize: "0.85rem", color: "var(--muted)" }}>
+            <p>Your account, workspace, project, and API key were created together. Use the SDK or curl with this key to call the public API at <code style={{ fontSize: "0.75rem" }}>https://api.clientpad.xyz/api/public/v1</code>.</p>
+          </div>
+          <div className="mini-toolbar" />
+          <div className="mini-chart" />
+          <div className="mini-rows" />
+        </div>
+      </aside>
+    </main>
+  );
+}
 function Dashboard({
   session,
   onLogout,
@@ -906,6 +965,7 @@ function Dashboard({
           lastSyncedAt={lastSyncedAt}
           onLogout={onLogout}
           theme={theme}
+          onGoHome={() => setPage("overview")}
           onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
         />
         <section className="content">
@@ -1089,21 +1149,21 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
           </button>
         </div>
         <footer>
-          <span className="sidebar-footer-brand">
-            <span className="logo-mark" aria-hidden="true" />
-            {`© ${new Date().getFullYear()} ClientPad X`}
-          </span>
+          <div className="sidebar-footer-brand">
+            <Logo compact />
+            <span>Copyright 2026 ClientPad X</span>
+          </div>
           <span className="sidebar-footer-links">
             <a href="https://docs.clientpad.xyz" target="_blank" rel="noopener noreferrer">Docs</a>
-            <span>·</span>
+            <span>|</span>
             <a href="https://github.com/clientpadhq/clientpad" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <span>·</span>
+            <span>|</span>
             <a href="https://github.com/Abdulmuiz44" target="_blank" rel="noopener noreferrer">Builder</a>
-            <span>·</span>
+            <span>|</span>
             <a href="https://clientpad.xyz/privacy" target="_blank" rel="noopener noreferrer">Privacy</a>
-            <span>·</span>
+            <span>|</span>
             <a href="https://clientpad.xyz/terms" target="_blank" rel="noopener noreferrer">Terms</a>
-            <span>·</span>
+            <span>|</span>
             <a href="https://clientpad.xyz/llms.txt" target="_blank" rel="noopener noreferrer">llms.txt</a>
           </span>
         </footer>
@@ -1127,6 +1187,7 @@ function Topbar({
   lastSyncedAt,
   onLogout,
   theme,
+  onGoHome,
   onToggleTheme,
 }: {
   projects: Project[];
@@ -1143,6 +1204,7 @@ function Topbar({
   lastSyncedAt: string | null;
   onLogout: () => void;
   theme: DashboardTheme;
+  onGoHome: () => void;
   onToggleTheme: () => void;
 }) {
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -1172,21 +1234,26 @@ function Topbar({
 
   return (
     <header className="topbar">
-      <label className="workspace-picker">
-        <span>Workspace</span>
-        <div>
-          <Building2 size={16} />
-          <select value={selectedWorkspace} onChange={(event) => onWorkspaceChange(event.target.value)}>
-            {!workspaces.length ? <option value="">No workspace yet</option> : null}
-            {workspaces.map((workspace) => (
-              <option key={workspace.id} value={workspace.id}>
-                {workspace.name}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={16} />
-        </div>
-      </label>
+      <div className="topbar-brand-stack">
+        <button className="topbar-brand" type="button" onClick={onGoHome} aria-label="Go to dashboard overview">
+          <Logo compact />
+        </button>
+        <label className="workspace-picker">
+          <span>Workspace</span>
+          <div>
+            <Building2 size={16} />
+            <select value={selectedWorkspace} onChange={(event) => onWorkspaceChange(event.target.value)}>
+              {!workspaces.length ? <option value="">No workspace yet</option> : null}
+              {workspaces.map((workspace) => (
+                <option key={workspace.id} value={workspace.id}>
+                  {workspace.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={16} />
+          </div>
+        </label>
+      </div>
       <label className="searchbox">
         <Search size={18} />
         <input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search clients by phone/name, projects, keys..." />
@@ -2039,11 +2106,14 @@ function Panel({ children, className = "" }: { children: React.ReactNode; classN
   return <section className={`panel ${className}`}>{children}</section>;
 }
 
-function Logo() {
+function Logo({ compact = false }: { compact?: boolean } = {}) {
   return (
-    <div className="logo">
+    <div className={`logo${compact ? " compact" : ""}`}>
       <span className="logo-mark" aria-hidden="true" />
-      <strong>ClientPad Cloud</strong>
+      <div className="logo-copy">
+        <strong>ClientPad Cloud</strong>
+        {compact ? null : <span>API-first CRM control plane</span>}
+      </div>
     </div>
   );
 }
@@ -3398,3 +3468,5 @@ function registerServiceWorker() {
 
 createRoot(document.getElementById("root")!).render(<App />);
 registerServiceWorker();
+
+
