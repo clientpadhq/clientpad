@@ -73,11 +73,11 @@ export function subtitleForPage(page: Page, project?: Project) {
 export function quickstartSnippet(language: QuickstartLanguage, selectedProject?: Project) {
   const resource = selectedProject?.slug ?? "resource";
   const snippets: Record<QuickstartLanguage, string> = {
-    curl: `curl https://api.clientpad.cloud/v1/resources \\\n  -H "Authorization: Bearer cp_live_your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d '{"name":"${resource}"}'`,
-    python: `import requests\n\nrequests.post(\n  "https://api.clientpad.cloud/v1/resources",\n  headers={"Authorization": "Bearer cp_live_your_api_key_here"},\n  json={"name": "${resource}"},\n)`,
-    node: `import { ClientPad } from "@clientpad/sdk";\n\nconst clientpad = new ClientPad({\n  baseUrl: "https://api.clientpad.cloud/v1",\n  apiKey: process.env.CLIENTPAD_API_KEY!,\n});\n\nawait clientpad.leads.create({ name: "${resource}" });`,
-    go: `req, _ := http.NewRequest("POST", "https://api.clientpad.cloud/v1/resources", body)\nreq.Header.Set("Authorization", "Bearer cp_live_your_api_key_here")`,
-    ruby: `Net::HTTP.post(\n  URI("https://api.clientpad.cloud/v1/resources"),\n  { name: "${resource}" }.to_json,\n  "Authorization" => "Bearer cp_live_your_api_key_here"\n)`,
+    curl: `curl https://api.clientpad.xyz/api/public/v1/resources \\\n  -H "Authorization: Bearer cp_live_your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d '{"name":"${resource}"}'`,
+    python: `import requests\n\nrequests.post(\n  "https://api.clientpad.xyz/api/public/v1/resources",\n  headers={"Authorization": "Bearer cp_live_your_api_key_here"},\n  json={"name": "${resource}"},\n)`,
+    node: `import { ClientPad } from "@clientpad/sdk";\n\nconst clientpad = new ClientPad({\n  baseUrl: "https://api.clientpad.xyz/api/public/v1",\n  apiKey: process.env.CLIENTPAD_API_KEY!,\n});\n\nawait clientpad.leads.create({ name: "${resource}" });`,
+    go: `req, _ := http.NewRequest("POST", "https://api.clientpad.xyz/api/public/v1/resources", body)\nreq.Header.Set("Authorization", "Bearer cp_live_your_api_key_here")`,
+    ruby: `Net::HTTP.post(\n  URI("https://api.clientpad.xyz/api/public/v1/resources"),\n  { name: "${resource}" }.to_json,\n  "Authorization" => "Bearer cp_live_your_api_key_here"\n)`,
   };
   return snippets[language];
 }
@@ -86,3 +86,4 @@ export async function copyText(text: string, setNotice: (notice: string) => void
   await navigator.clipboard.writeText(text);
   setNotice("Copied to clipboard.");
 }
+

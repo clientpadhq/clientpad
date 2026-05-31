@@ -349,7 +349,7 @@ function LoadingShell({ message }: { message: string }) {
     <main className="login-shell">
       <section className="login-panel">
         <Logo />
-        <h1>ClientPad Cloud</h1>
+        <h1>ClientPad App</h1>
         <p>{message}</p>
       </section>
     </main>
@@ -510,7 +510,7 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
         onLogin(next);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not connect to ClientPad Cloud.");
+      setError(err instanceof Error ? err.message : "Could not connect to ClientPad API.");
     } finally {
       setLoading(false);
     }
@@ -527,7 +527,7 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
             </button>
           ))}
         </div>
-        <h1>{mode === "preview" ? "Preview workspace" : authMode === "register" ? "Create operator account" : "ClientPad Cloud"}</h1>
+        <h1>{mode === "preview" ? "Preview workspace" : authMode === "register" ? "Create operator account" : "ClientPad App"}</h1>
         <p>
           {mode === "preview"
             ? "Open a sample workspace to understand the dashboard layout before connecting a real Cloud API."
@@ -570,7 +570,7 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
                   </label>
                   <label>
                     Workspace name
-                    <input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} placeholder="ClientPad Cloud" />
+                    <input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} placeholder="ClientPad Workspace" />
                   </label>
                 </>
               ) : null}
@@ -771,7 +771,7 @@ function Dashboard({
       }
       setLastSyncedAt(new Date().toISOString());
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not refresh ClientPad Cloud.";
+      const message = error instanceof Error ? error.message : "Could not refresh ClientPad API.";
       setNotice(message);
       if (message.toLowerCase().includes("token")) {
         setConnectionState("misconfigured");
@@ -2111,7 +2111,7 @@ function Logo({ compact = false }: { compact?: boolean } = {}) {
     <div className={`logo${compact ? " compact" : ""}`}>
       <span className="logo-mark" aria-hidden="true" />
       <div className="logo-copy">
-        <strong>ClientPad Cloud</strong>
+        <strong>ClientPad App</strong>
         {compact ? null : <span>API-first CRM control plane</span>}
       </div>
     </div>
@@ -2196,7 +2196,7 @@ function StatusBanner({
           {mode === "preview"
             ? "This workspace uses generated data so operators can learn the flow without risking production access."
             : connectionState === "connected"
-              ? "This workspace is connected to a real ClientPad Cloud API. Use the readiness, WhatsApp, project, and key states below to confirm the system is usable."
+              ? "This workspace is connected to a real ClientPad API. Use the readiness, WhatsApp, project, and key states below to confirm the system is usable."
               : "The Cloud API is reachable, but at least one live dependency still needs attention before the workspace is fully operational."}
         </p>
       </div>

@@ -1,7 +1,7 @@
 {
   "name": "@clientpad/dashboard",
   "version": "0.2.0",
-  "description": "ClientPad Cloud developer dashboard for projects, API keys, usage, billing, and docs.",
+  "description": "ClientPad App developer dashboard for projects, API keys, usage, billing, and docs.",
   "license": "MIT",
   "private": false,
   "type": "module",
