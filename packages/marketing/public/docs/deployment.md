@@ -4,7 +4,7 @@
 
 - `clientpad.xyz`: public marketing site from `@clientpad/marketing`.
 - `docs.clientpad.xyz`: docs host backed by the same marketing package docs routes.
-- `app.clientpad.xyz`: operator dashboard PWA.
+- `platform.clientpad.xyz`: operator dashboard PWA.
 - `api.clientpad.xyz`: Cloud API and public API host.
 
 ## Render services

@@ -173,7 +173,7 @@ ClientPad remains fully open source. Self-hosted API keys can be free and unlimi
 Production domain layout:
 
 - `clientpad.xyz` for the public site
-- `app.clientpad.xyz` for the dashboard
+- `platform.clientpad.xyz` for the dashboard
 - `api.clientpad.xyz` for the public API and Cloud control plane
 
 Revenue comes from an optional hosted ClientPad Cloud gateway:

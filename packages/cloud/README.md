@@ -2,7 +2,7 @@
 
 Hosted control plane for ClientPad projects, plans, subscriptions, API keys, usage, operator auth/session management, and operational health.
 
-In production, this service should live at `api.clientpad.xyz/api/cloud/v1`, while the dashboard lives at `app.clientpad.xyz`.
+In production, this service should live at `api.clientpad.xyz/api/cloud/v1`, while the dashboard lives at `platform.clientpad.xyz`.
 
 ```bash
 pnpm add @clientpad/cloud

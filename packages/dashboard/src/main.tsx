@@ -1222,7 +1222,7 @@ function Topbar({
         : connectionState === "checking" || health?.status === "degraded"
           ? "amber"
           : "gray";
-  const topbarStatus = `${connectionLabel} · ${apiLabel}`;
+  const topbarStatus = `${connectionLabel} Â· ${apiLabel}`;
 
   useEffect(() => {
     const handleGlobalSearchShortcut = (event: KeyboardEvent) => {
@@ -1433,12 +1433,12 @@ function Overview({
           <div className="hero-metric">
             <span>API keys</span>
             <strong>{hasPublicApiKey ? "Ready" : "Missing"}</strong>
-            <small>{keys.length} tracked keys · {usageSummary?.active_api_key_count ?? keys.length} active</small>
+            <small>{keys.length} tracked keys Â· {usageSummary?.active_api_key_count ?? keys.length} active</small>
           </div>
           <div className="hero-metric">
             <span>Usage</span>
             <strong>{formatNumber(requestTotal)}</strong>
-            <small>{formatNumber(rejectedTotal)} rejected · {selectedPlan?.name ?? "Pro"} plan</small>
+            <small>{formatNumber(rejectedTotal)} rejected Â· {selectedPlan?.name ?? "Pro"} plan</small>
           </div>
         </div>
       </Panel>
@@ -1854,7 +1854,7 @@ function LaunchReadiness({
   const externalTargets = [
     { label: "Marketing", url: "https://clientpad.xyz" },
     { label: "Docs", url: "https://docs.clientpad.xyz" },
-    { label: "Dashboard", url: "https://app.clientpad.xyz" },
+    { label: "Dashboard", url: "https://platform.clientpad.xyz" },
     { label: "API health", url: "https://api.clientpad.xyz/health" },
     { label: "llms.txt", url: "https://clientpad.xyz/llms.txt" },
   ];

@@ -16,6 +16,6 @@ Cloud adds operator auth, workspace bootstrap, API key management, usage trackin
 
 ## Domains
 
-- Dashboard: `https://app.clientpad.xyz`
+- Dashboard: `https://platform.clientpad.xyz`
 - Cloud API: `https://api.clientpad.xyz/api/cloud/v1`
 - Public API: `https://api.clientpad.xyz/api/public/v1`

@@ -66,7 +66,7 @@ function buildLlmsTxt() {
 
 ## Links
 
-- [Dashboard](https://app.clientpad.xyz)
+- [Dashboard](https://platform.clientpad.xyz)
 - [Docs](https://docs.clientpad.xyz)
 - [GitHub](https://github.com/clientpadhq/clientpad)
 - [npm packages](https://www.npmjs.com/search?q=%40clientpad)

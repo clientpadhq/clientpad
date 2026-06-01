@@ -34,7 +34,7 @@ Open the Vite URL, usually `http://localhost:5173`. Use **Preview dashboard** fo
 http://localhost:3000/api/cloud/v1
 ```
 
-In production, the dashboard expects `app.clientpad.xyz` to point at the static dashboard and `api.clientpad.xyz` to point at the Cloud API.
+In production, the dashboard expects `platform.clientpad.xyz` to point at the static dashboard and `api.clientpad.xyz` to point at the Cloud API.
 
 The dashboard expects the Cloud API health endpoint at `/health` and the operator readiness endpoint at `/readiness`. Both are used to validate live mode before the dashboard claims it is connected.
 

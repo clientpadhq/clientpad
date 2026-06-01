@@ -47,4 +47,4 @@ See `docs/RENDER_DEPLOYMENT.md` for service setup, API token requirements, and d
 
 The docs static service sets `CLIENTPAD_SITE_VARIANT=docs` and `MARKETING_BASE_URL=https://docs.clientpad.xyz` so `docs.clientpad.xyz/` serves the docs home page from the shared marketing bundle while keeping the rest of the docs routes intact and generating docs-host canonical metadata.
 
-The operator dashboard should stay on `app.clientpad.xyz`; the marketing site should use `clientpad.xyz` and optionally `www.clientpad.xyz`; docs should use `docs.clientpad.xyz`.
+The operator dashboard should stay on `platform.clientpad.xyz`; the marketing site should use `clientpad.xyz` and optionally `www.clientpad.xyz`; docs should use `docs.clientpad.xyz`.
