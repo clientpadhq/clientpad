@@ -1121,9 +1121,9 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
       <Logo />
       <nav className="nav-list">
         {items.map(([id, icon, label]) => (
-          <button key={id} className={page === id ? "active" : ""} onClick={() => setPage(id)}>
+          <button key={id} className={page === id ? "active" : ""} onClick={() => setPage(id)} aria-label={label}>
             {icon}
-            {label}
+            <span className="nav-label">{label}</span>
           </button>
         ))}
       </nav>
