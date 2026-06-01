@@ -16,6 +16,22 @@ services:
         sync: false
 
   - type: web
+    name: clientpad-docs
+    runtime: static
+    plan: free
+    rootDir: .
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @clientpad/marketing build
+    staticPublishPath: packages/marketing/dist
+
+  - type: web
+    name: clientpad-app
+    runtime: static
+    plan: free
+    rootDir: .
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @clientpad/dashboard build
+    staticPublishPath: packages/dashboard/dist
+
+  - type: web
     name: clientpad-frontend
     runtime: node
     plan: free

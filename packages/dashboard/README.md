@@ -1,11 +1,11 @@
-# ClientPad Dashboard
+# ClientPad App Dashboard
 
-Installable developer and operations web interface for ClientPad Cloud. The dashboard now includes PWA support, WhatsApp onboarding, a service pipeline, phone/name client search, team inbox, revenue reporting, usage, billing, docs, and settings.
+Installable developer and operations web interface for ClientPad. The dashboard now includes PWA support, WhatsApp onboarding, a service pipeline, phone/name client search, team inbox, revenue reporting, usage, billing, docs, and settings.
 
 The dashboard has two entry modes:
 
 - **Preview mode** uses sample data so operators can explore the UI without connecting a live Cloud API.
-- **Live mode** connects to a real ClientPad Cloud endpoint after an operator signs in with email and password. The session is cookie-backed and restored on refresh.
+- **Live mode** connects to a real ClientPad API endpoint after an operator signs in with email and password. The session is cookie-backed and restored on refresh.
 
 On first run, the dashboard highlights the activation steps for:
 
@@ -28,7 +28,7 @@ pnpm install
 pnpm --filter @clientpad/dashboard dev
 ```
 
-Open the Vite URL, usually `http://localhost:5173`. Use **Preview dashboard** for sample data, or connect to a local/deployed ClientPad Cloud API such as:
+Open the Vite URL, usually `http://localhost:5173`. Use **Preview dashboard** for sample data, or connect to a local/deployed ClientPad API such as:
 
 ```text
 http://localhost:3000/api/cloud/v1
@@ -40,7 +40,7 @@ The dashboard expects the Cloud API health endpoint at `/health` and the operato
 
 Live mode uses an operator account, not a raw token prompt. The dashboard does not treat an entered URL as "connected" until the operator signs in and both the health check and readiness check pass.
 
-Preview mode does not require the Cloud API URL or operator credentials. Live mode should only be used by operators who manage the ClientPad Cloud control plane.
+Preview mode does not require the API URL or operator credentials. Live mode should only be used by operators who manage the ClientPad control plane.
 
 ### Live bootstrap flow
 
