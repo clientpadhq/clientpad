@@ -7,6 +7,13 @@
 - `app.clientpad.xyz`: operator dashboard PWA.
 - `api.clientpad.xyz`: Cloud API and public API host.
 
+## Render services
+
+- `clientpad-frontend`: `clientpad-frontend.onrender.com`
+- `clientpad-docs`: `clientpad-docs.onrender.com`
+- `clientpad-app`: `clientpad-app.onrender.com`
+- `clientpad-api`: `clientpad-api.onrender.com`
+
 ## Render checks
 
 - Marketing build: `pnpm --filter @clientpad/marketing build`.
