@@ -121,7 +121,7 @@ button { cursor: pointer; }
   min-height: 100vh;
   display: grid;
   grid-template-columns: 216px minmax(0, 1fr);
-  background: #ffffff;
+  background: #f4f6f9;
 }
 
 .sidebar {
@@ -130,8 +130,10 @@ button { cursor: pointer; }
   height: 100vh;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #dbe2ea;
-  background: #ffffff;
+  border-right: 1px solid #1d2533;
+  background:
+    radial-gradient(circle at top, rgba(96, 165, 250, 0.16), transparent 42%),
+    linear-gradient(180deg, #0b0f17 0%, #0d1320 100%);
 }
 
 .logo {
@@ -146,6 +148,14 @@ button { cursor: pointer; }
   min-height: 76px;
 }
 
+.sidebar .logo strong {
+  color: #ffffff;
+}
+
+.sidebar .logo-copy span {
+  color: #9fb0c4;
+}
+
 .logo-mark {
   width: 2.8rem;
   height: 2.8rem;
@@ -158,6 +168,11 @@ button { cursor: pointer; }
   background: var(--panel-2);
   filter: saturate(1.08) contrast(1.08);
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.sidebar .logo-mark {
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.38);
 }
 
 .logo.compact {
@@ -205,23 +220,23 @@ button { cursor: pointer; }
   border-radius: 6px;
   padding: 0 13px;
   background: transparent;
-  color: #182230;
+  color: #d5deea;
   font-size: 14px;
   font-weight: 520;
   text-align: left;
 }
 
-.nav-list button svg { color: #2d3a49; stroke-width: 1.9; }
+.nav-list button svg { color: #8ea0b7; stroke-width: 1.9; }
 .nav-list button.active {
-  background: #f0f4f8;
-  color: #0b8d4d;
-  box-shadow: inset 3px 0 0 #0b8d4d;
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.18), rgba(37, 99, 235, 0.06));
+  color: #ffffff;
+  box-shadow: inset 3px 0 0 #60a5fa;
 }
-.nav-list button.active svg { color: #0b8d4d; }
+.nav-list button.active svg { color: #93c5fd; }
 
 .sidebar-bottom {
   margin-top: auto;
-  border-top: 1px solid #dbe2ea;
+  border-top: 1px solid #1d2533;
   padding: 14px;
 }
 
@@ -233,7 +248,7 @@ button { cursor: pointer; }
   gap: 10px;
   border: 0;
   background: transparent;
-  color: #273546;
+  color: #d5deea;
   font-size: 13px;
   text-align: left;
 }
@@ -248,14 +263,15 @@ button { cursor: pointer; }
 
 .help-card {
   margin-top: 12px;
-  border: 1px solid #dbe2ea;
+  border: 1px solid #1d2533;
   border-radius: 7px;
   padding: 16px;
-  background: #fbfcfd;
+  background: rgba(12, 17, 28, 0.94);
+  box-shadow: 0 18px 38px rgba(2, 6, 23, 0.28);
 }
 
-.help-card strong { font-size: 14px; }
-.help-card p { margin: 8px 0 12px; color: #5d6978; font-size: 13px; line-height: 1.45; }
+.help-card strong { font-size: 14px; color: #ffffff; }
+.help-card p { margin: 8px 0 12px; color: #91a3b7; font-size: 13px; line-height: 1.45; }
 .help-card button {
   display: flex;
   align-items: center;
@@ -263,7 +279,7 @@ button { cursor: pointer; }
   border: 0;
   padding: 0;
   background: transparent;
-  color: #005ed8;
+  color: #93c5fd;
   font-size: 13px;
   line-height: 1.9;
 }
@@ -272,14 +288,14 @@ button { cursor: pointer; }
   display: grid;
   gap: 10px;
   margin-top: 18px;
-  color: #667386;
+  color: #8fa1b7;
   font-size: 12px;
 }
 
 .sidebar-footer-brand {
   display: grid;
   gap: 8px;
-  color: var(--ink);
+  color: #ffffff;
   font-weight: 700;
 }
 
@@ -296,7 +312,7 @@ button { cursor: pointer; }
 
 .sidebar-footer-brand span {
   font-size: 12px;
-  color: var(--muted);
+  color: #9fb0c4;
 }
 
 .sidebar-footer-links {
@@ -307,7 +323,7 @@ button { cursor: pointer; }
 }
 
 .sidebar-footer-links a {
-  color: var(--muted);
+  color: #9fb0c4;
   text-decoration: none;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -316,13 +332,13 @@ button { cursor: pointer; }
 
 .sidebar-footer-links a:hover,
 .sidebar-footer-links a:focus-visible {
-  color: var(--ink);
-  background: var(--panel-2);
-  border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(96, 165, 250, 0.28);
   outline: none;
 }
 
-.workspace { min-width: 0; background: #ffffff; }
+.workspace { min-width: 0; background: #f4f6f9; }
 
 .topbar {
   display: grid;
@@ -332,7 +348,8 @@ button { cursor: pointer; }
   border-bottom: 1px solid #dbe2ea;
   min-height: 92px;
   padding: 14px 26px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(14px);
 }
 
 .topbar-brand-stack {
