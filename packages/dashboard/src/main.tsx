@@ -1260,27 +1260,13 @@ function Topbar({
           tone={health?.status === "ok" ? "green" : health?.status === "degraded" ? "amber" : "gray"}
           label={health?.status === "ok" ? "API healthy" : health?.status === "degraded" ? "API degraded" : "API pending"}
         />
-        <StatusChip
-          tone={readiness?.summary?.has_public_api_key ? "green" : "amber"}
-          label={readiness?.summary?.has_public_api_key ? "Public API key ready" : "Public API key missing"}
-        />
-        <StatusChip tone={projects.length > 0 ? "green" : "amber"} label={projects.length > 0 ? `${projects.length} projects` : "No project selected"} />
-        <StatusChip tone={lastSyncedAt ? "green" : "gray"} label={lastSyncedAt ? `Synced ${timeAgo(lastSyncedAt)}` : "Waiting for sync"} />
+        <span className="topbar-sync">{lastSyncedAt ? `Synced ${timeAgo(lastSyncedAt)}` : "Waiting for sync"}</span>
         <button className="theme-toggle" onClick={onToggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
           {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           <span>{theme === "dark" ? "Light" : "Dark"}</span>
         </button>
-        <button aria-label="Notifications">
-          <Bell size={18} />
-        </button>
-        <button aria-label="Help">
-          <CircleHelp size={18} />
-        </button>
         <button className="avatar" onClick={onLogout} title="Sign out">
           {user ? userInitials(user) : "AD"}
-        </button>
-        <button className="developer-menu" onClick={onLogout}>
-          {user?.full_name || user?.email || "Operator"} <ChevronDown size={15} />
         </button>
       </div>
     </header>

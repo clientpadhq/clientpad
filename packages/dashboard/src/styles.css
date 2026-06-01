@@ -428,6 +428,20 @@ button { cursor: pointer; }
   padding: 0;
 }
 
+.topbar-sync {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
 .theme-toggle {
   min-height: 34px;
   display: inline-flex;
@@ -455,13 +469,6 @@ button { cursor: pointer; }
   background: #20a35a !important;
   color: #ffffff !important;
   font-weight: 760;
-}
-
-.developer-menu {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
 }
 
 .content {
