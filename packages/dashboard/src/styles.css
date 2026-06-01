@@ -47,7 +47,7 @@ button { cursor: pointer; }
 .login-panel {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 58px;
   background: #ffffff;
   border-right: 1px solid #d9e0e8;
@@ -98,7 +98,7 @@ button { cursor: pointer; }
 
 .login-aside {
   display: grid;
-  place-items: center;
+  place-items: start center;
   padding: 64px;
   background: linear-gradient(135deg, #f5fbf8 0%, #f8fbff 100%);
 }
@@ -1530,6 +1530,14 @@ td small {
   padding: 18px;
 }
 
+.activation-panel summary {
+  list-style: none;
+}
+
+.activation-panel summary::-webkit-details-marker {
+  display: none;
+}
+
 .status-banner {
   grid-template-columns: minmax(0, 1.3fr) minmax(240px, 0.9fr) auto;
   align-items: center;
@@ -1628,6 +1636,30 @@ td small {
   gap: 14px;
   padding-top: 2px;
   border-top: 1px solid #dbe2ea;
+}
+
+.bootstrap-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.bootstrap-summary strong {
+  display: block;
+  color: #111827;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.bootstrap-summary .helper-text {
+  margin-top: 3px;
+}
+
+.bootstrap-body {
+  display: grid;
+  gap: 14px;
 }
 
 .bootstrap-grid,
