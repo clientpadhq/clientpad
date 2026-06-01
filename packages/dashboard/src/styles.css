@@ -1778,3 +1778,229 @@ td a,
 .link-button {
   color: var(--brand);
 }
+
+.console,
+.workspace,
+.content,
+.sidebar,
+.topbar,
+.panel,
+.preview-card,
+.help-card,
+.status-banner,
+.activation-panel,
+.status-callout,
+.empty-state-panel,
+.empty-state-panel.compact,
+.key-banner,
+.status-banner-metrics div,
+.activation-item,
+.status-item,
+.usage-summary-item,
+.pipeline-metric,
+.conversation,
+.client-card,
+.table-wrap table,
+.webhook-box,
+.qr-card,
+.launch-target,
+.login-form input,
+.field input,
+.field select,
+.workspace-picker div,
+.date-select,
+.searchbox,
+.lookup-input,
+.mention-field input,
+.reply-chip,
+.status-chip,
+.badge,
+.range-tabs,
+.period-row div,
+.progress,
+.pipeline-metric,
+.status-banner-actions .button,
+.button.outline,
+.button.secondary {
+  background: var(--panel);
+  border-color: var(--line);
+}
+
+.sidebar,
+.topbar,
+.panel,
+.preview-card,
+.help-card,
+.status-banner,
+.activation-panel,
+.status-callout,
+.key-banner,
+.status-banner-metrics div,
+.activation-item,
+.status-item,
+.usage-summary-item,
+.pipeline-metric,
+.conversation,
+.client-card,
+.table-wrap table,
+.webhook-box,
+.qr-card,
+.launch-target {
+  box-shadow: var(--shadow);
+}
+
+.table-wrap table,
+th,
+td {
+  background: transparent;
+}
+
+th {
+  color: var(--muted);
+  background: var(--panel-2);
+}
+
+td {
+  color: var(--ink);
+}
+
+.range-tabs button,
+.button.outline,
+.button.secondary,
+.date-select,
+.searchbox,
+.workspace-picker div,
+.login-form input,
+.field input,
+.field select,
+.lookup-input,
+.mention-field input,
+.reply-chip {
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.range-tabs button.selected,
+.active-filter,
+.status-chip.blue,
+.badge.blue {
+  background: color-mix(in srgb, var(--brand) 12%, var(--panel));
+  color: var(--brand);
+}
+
+.status-chip.green,
+.badge.green,
+.badge.amber,
+.status-chip.amber {
+  background: color-mix(in srgb, var(--muted) 12%, var(--panel));
+}
+
+.status-chip.gray,
+.badge.gray {
+  background: var(--panel-2);
+}
+
+.line-chart svg,
+.mini-toolbar,
+.mini-chart,
+.mini-rows {
+  background-color: var(--panel-2);
+  border-color: var(--line);
+}
+
+.page-header h1,
+.panel h2,
+.panel h3,
+.login-panel h1,
+.logo strong,
+.empty-state-panel h3,
+.client-card b,
+.workspace-picker select,
+.searchbox input,
+.searchbox kbd,
+.theme-toggle,
+.sidebar-footer-brand span {
+  color: var(--ink);
+}
+
+.page-header p,
+.preview-note,
+.status-muted,
+.status-banner-copy p,
+.activation-panel p,
+.empty-state-panel p,
+.table-foot,
+.helper-text,
+.client-card span,
+.client-card small,
+.conversation span,
+.conversation small,
+.y-axis,
+.x-axis,
+.quota-meta span,
+.workspace-picker,
+.searchbox kbd,
+.logo-copy span,
+.pipeline-metric span {
+  color: var(--muted);
+}
+
+.button.primary,
+.button.primary.blue,
+.avatar,
+.status-row span,
+.dot.good,
+.status-dot,
+.progress i,
+.period-row i,
+.bubble.outbound {
+  background: var(--brand);
+}
+
+.status-row span,
+.dot.good,
+.status-dot,
+.progress i,
+.period-row i {
+  box-shadow: none;
+}
+
+.button.primary,
+.button.primary.blue,
+.theme-toggle,
+.button.outline,
+.button.secondary {
+  border-color: var(--line);
+}
+
+.button.primary,
+.button.primary.blue,
+.bubble.outbound {
+  color: #f8fafc;
+}
+
+.nav-list button.active {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--brand) 8%, var(--panel));
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+
+.nav-list button.active svg {
+  color: var(--brand);
+}
+
+.link-button,
+.help-card button,
+a,
+td a {
+  color: var(--brand);
+}
+
+.dashboard,
+.detail-layout,
+.overview-layout,
+.connect-layout,
+.pipeline-layout,
+.launch-layout {
+  background: transparent;
+}
