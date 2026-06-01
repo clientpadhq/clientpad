@@ -276,7 +276,7 @@ function buildLlmsTxt(): string {
         { title: "Open-Source Architecture", href: `${mdBase}/docs/open-source.md`, description: "Package structure, database design, and auth architecture" },
         { title: "ClientPad Cloud", href: `${mdBase}/docs/clientpad-cloud.md`, description: "Hosted gateway, operator dashboard, usage tracking, and Lemon Squeezy checkout" },
         { title: "Environment Variables", href: `${mdBase}/docs/environment.md`, description: "Configuration reference" },
-        { title: "Deployment", href: `${mdBase}/docs/deployment.md`, description: "Domain and Netlify deployment guide" },
+        { title: "Deployment", href: `${mdBase}/docs/deployment.md`, description: "Domain and Render deployment guide" },
         { title: "Troubleshooting", href: `${mdBase}/docs/troubleshooting.md`, description: "Common live-mode, DNS, API key, and webhook fixes" },
       ],
     },

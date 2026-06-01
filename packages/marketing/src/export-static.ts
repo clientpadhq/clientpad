@@ -53,7 +53,7 @@ function buildLlmsTxt() {
 - [Public API](${BASE_URL}/docs/public-api.md): REST API and TypeScript SDK usage
 - [Self-hosting](${BASE_URL}/docs/self-hosting.md): Run ClientPad with your own PostgreSQL and deployment
 - [Open-Source Architecture](${BASE_URL}/docs/open-source.md): Packages, database approach, auth, and deployment model
-- [Deployment](${BASE_URL}/docs/deployment.md): Domain and Netlify deployment guide
+- [Deployment](${BASE_URL}/docs/deployment.md): Domain and Render deployment guide
 - [Troubleshooting](${BASE_URL}/docs/troubleshooting.md): Common live-mode, DNS, API key, and webhook fixes
 
 ## Links

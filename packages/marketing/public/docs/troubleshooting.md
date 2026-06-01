@@ -10,7 +10,7 @@ Check that the key is workspace-scoped, stored server-side, and sent as `Authori
 
 ## DNS still pending
 
-Wait for Netlify certificate provisioning and nameserver propagation before changing primary domains.
+Wait for DNS propagation and Render certificate provisioning before changing primary domains.
 
 ## WhatsApp not receiving
 
