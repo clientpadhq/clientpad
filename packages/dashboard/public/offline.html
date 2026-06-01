@@ -7,11 +7,23 @@
     <style>
       :root{--bg:#f4f6f8;--ink:#0f172a;--muted:#475569;--line:#d8dee6;--panel:#ffffff;--panel-2:#f8fafc;--brand:#2563eb;--shadow:0 16px 38px rgba(15,23,42,.08)}
       body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:radial-gradient(circle at 0% 0%,color-mix(in srgb,var(--brand) 10%,transparent),transparent 45%),var(--bg);color:var(--ink);display:grid;min-height:100vh;place-items:center;padding:24px}
-      main{max-width:460px;border:1px solid var(--line);border-radius:14px;padding:24px;background:linear-gradient(180deg,var(--panel),var(--panel-2));box-shadow:var(--shadow)}
-      h1{margin:0 0 10px;font-size:24px;display:flex;align-items:center;gap:10px}
+      main{width:min(100%,460px);border:1px solid var(--line);border-radius:18px;padding:28px;background:linear-gradient(180deg,var(--panel),var(--panel-2));box-shadow:var(--shadow)}
+      .brand{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+      .brand img{width:3rem;height:3rem;border-radius:12px;object-fit:cover;border:1px solid var(--line);box-shadow:0 10px 24px rgba(15,23,42,.08)}
+      h1{margin:0;font-size:24px;line-height:1.1}
       p{margin:0;color:var(--muted);line-height:1.5}
-      .logo{width:1.3rem;height:1.3rem;border-radius:.35rem;border:1px solid var(--line);background:var(--panel-2) url("/assets/clientpad-logo-only.png") center/78% no-repeat;display:inline-block;flex:0 0 auto}
+      .stack{display:grid;gap:10px}
     </style>
   </head>
-  <body><main><h1><span class="logo"></span>ClientPad is offline</h1><p>The app shell is cached. Reconnect to sync WhatsApp messages, payments, usage, and billing data.</p></main></body>
+  <body>
+    <main>
+      <div class="stack">
+        <div class="brand">
+          <img src="/assets/clientpad-logo-only.png" alt="ClientPad" />
+          <h1>ClientPad is offline</h1>
+        </div>
+        <p>The app shell is cached. Reconnect to sync WhatsApp messages, payments, usage, and billing data.</p>
+      </div>
+    </main>
+  </body>
 </html>
