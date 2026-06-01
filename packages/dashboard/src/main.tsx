@@ -473,7 +473,7 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
     setLoading(true);
     try {
       const healthResponse = await fetch(`${normalized}/health`, { credentials: "include" });
-      if (!healthResponse.ok) throw new Error("Cloud API health check failed.");
+      if (!healthResponse.ok) throw new Error("API health check failed.");
 
       const path = authMode === "register" ? "/auth/register" : "/auth/login";
       const authResponse = await fetch(`${normalized}${path}`, {
@@ -530,7 +530,7 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
         <h1>{mode === "preview" ? "Preview workspace" : authMode === "register" ? "Create operator account" : "ClientPad App"}</h1>
         <p>
           {mode === "preview"
-            ? "Open a sample workspace to understand the dashboard layout before connecting a real Cloud API."
+            ? "Open a sample workspace to understand the dashboard layout before connecting a real ClientPad API."
           : authMode === "register"
               ? "Create your operator account, workspace, first project, and starter API key in one step."
               : "Sign in with an operator account to manage projects, keys, usage, billing, and WhatsApp activity."}
@@ -539,7 +539,7 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
           {mode === "live" ? (
             <>
               <label>
-                Cloud API URL
+                API base URL
                 <input value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} />
               </label>
               <label>
@@ -599,7 +599,7 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
             </>
           ) : (
             <div className="preview-note">
-              Preview mode uses generated sample data, no Cloud API credentials, and no live WhatsApp traffic.
+              Preview mode uses generated sample data, no API credentials, and no live WhatsApp traffic.
             </div>
           )}
           {notice ? <div className="preview-note">{notice}</div> : null}
@@ -614,7 +614,7 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
         <div className="preview-card">
           <div className="preview-card-head">
             <span>{mode === "preview" ? "Sample data" : authMode === "register" ? "First operator setup" : "Live operator view"}</span>
-            <strong>{mode === "preview" ? "Safe to explore" : authMode === "register" ? "Claim this cloud deployment" : "Connected to a real Cloud API"}</strong>
+            <strong>{mode === "preview" ? "Safe to explore" : authMode === "register" ? "Claim this deployment" : "Connected to a real ClientPad API"}</strong>
           </div>
           <div className="mini-toolbar" />
           <div className="mini-chart" />
@@ -1263,7 +1263,7 @@ function Topbar({
         <StatusChip tone={mode === "preview" ? "blue" : connectionState === "connected" ? "green" : connectionState === "checking" ? "amber" : "gray"} label={connectionLabel} />
         <StatusChip
           tone={health?.status === "ok" ? "green" : health?.status === "degraded" ? "amber" : "gray"}
-          label={health?.status === "ok" ? "Cloud healthy" : health?.status === "degraded" ? "Cloud degraded" : "Cloud pending"}
+          label={health?.status === "ok" ? "API healthy" : health?.status === "degraded" ? "API degraded" : "API pending"}
         />
         <StatusChip
           tone={readiness?.summary?.has_public_api_key ? "green" : "amber"}
@@ -1698,7 +1698,7 @@ function Billing({
             )}
           </div>
         </Panel>
-      )) : <Panel className="empty-state-panel compact"><h3>No plans loaded</h3><p>Connect the Cloud API to show available plans and current limits.</p></Panel>}
+      )) : <Panel className="empty-state-panel compact"><h3>No plans loaded</h3><p>Connect the ClientPad API to show available plans and current limits.</p></Panel>}
     </div>
   );
 }
@@ -1748,9 +1748,9 @@ function LaunchReadiness({
             ? summarizeApiHostNextAction(body)
             : undefined,
       })),
-      checkJsonEndpoint("cloud-health", "Cloud API health", `${cloudBaseUrl}/health`, (response, body) => ({
+      checkJsonEndpoint("cloud-health", "API health", `${cloudBaseUrl}/health`, (response, body) => ({
         ok: response.ok && body?.status === "ok",
-        detail: response.ok ? `Cloud API returned ${body?.status ?? response.status}` : `HTTP ${response.status}`,
+        detail: response.ok ? `API returned ${body?.status ?? response.status}` : `HTTP ${response.status}`,
         nextAction: response.ok ? undefined : "Confirm the Render API service has a working database connection and current deployment.",
       })),
       checkJsonEndpoint("cloud-readiness", "Workspace readiness", `${cloudBaseUrl}/readiness?workspace_id=${encodeURIComponent(selectedWorkspace)}`, (response, body) => ({
@@ -1933,11 +1933,11 @@ function SettingsPage({
             <ShieldCheck size={16} /> Sign out
           </button>
         </div>
-        <h2 style={{ marginTop: "2rem" }}>Cloud connection</h2>
-        <FormField label="Cloud API URL" value={baseUrl} onChange={setBaseUrl} />
+        <h2 style={{ marginTop: "2rem" }}>API connection</h2>
+        <FormField label="API base URL" value={baseUrl} onChange={setBaseUrl} />
         <div className="status-callout compact">
           <strong>{mode === "preview" ? "Preview mode" : "Live mode"}</strong>
-          <p>{mode === "preview" ? "Preview mode uses generated sample data. No live backend access is required." : "Live mode points the dashboard at your Cloud API and uses a cookie-backed operator session."}</p>
+          <p>{mode === "preview" ? "Preview mode uses generated sample data. No live backend access is required." : "Live mode points the dashboard at your ClientPad API and uses a cookie-backed operator session."}</p>
         </div>
 
         <h2 style={{ marginTop: "2rem" }}>Workspace Preview</h2>
@@ -2197,7 +2197,7 @@ function StatusBanner({
             ? "This workspace uses generated data so operators can learn the flow without risking production access."
             : connectionState === "connected"
               ? "This workspace is connected to a real ClientPad API. Use the readiness, WhatsApp, project, and key states below to confirm the system is usable."
-              : "The Cloud API is reachable, but at least one live dependency still needs attention before the workspace is fully operational."}
+              : "The API is reachable, but at least one live dependency still needs attention before the workspace is fully operational."}
         </p>
       </div>
       <div className="status-banner-metrics">
@@ -2256,7 +2256,7 @@ function ActivationPanel({
 }) {
   const summary = readiness?.summary;
   const items = [
-    { label: "Cloud connection", state: mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Connected" : readiness ? "Needs attention" : "Checking", done: mode === "preview" || Boolean(readiness) },
+    { label: "API connection", state: mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Connected" : readiness ? "Needs attention" : "Checking", done: mode === "preview" || Boolean(readiness) },
     { label: "Project / workspace", state: summary?.workspace_count ? `${summary.workspace_count} workspaces` : "Missing", done: Boolean(summary?.workspace_count) },
     { label: "API key", state: summary?.has_public_api_key ? "Ready" : keyCount > 0 ? "Issued" : "Missing", done: Boolean(summary?.has_public_api_key || keyCount > 0) },
     { label: "WhatsApp", state: summary?.has_whatsapp_configuration ? "Configured" : "Missing", done: Boolean(summary?.has_whatsapp_configuration) },
@@ -2402,7 +2402,7 @@ function ConnectWhatsApp({
         </p>
         <div className="status-stack">
           {[
-            { label: "Cloud API", value: readiness ? "Reachable" : "Not checked yet", ok: Boolean(readiness) },
+            { label: "API", value: readiness ? "Reachable" : "Not checked yet", ok: Boolean(readiness) },
             { label: "Operator session", value: readiness?.auth?.user ? "Accepted" : "Pending", ok: Boolean(readiness?.auth?.user) },
             { label: "Workspace", value: workspace ? workspace.name : selectedWorkspace || "Missing", ok: Boolean(workspace || selectedWorkspace) },
             { label: "Public API key", value: summary?.has_public_api_key ? "Ready" : "Missing", ok: Boolean(summary?.has_public_api_key) },
@@ -3326,7 +3326,7 @@ function buildInitialLaunchChecks(baseUrl: string): LaunchCheck[] {
   const apiOrigin = cloudBaseUrl.replace(/\/api\/cloud\/v1$/i, "");
   return [
     { id: "api-host-readiness", label: "API host readiness", url: `${apiOrigin}/readiness`, status: "checking", detail: "Waiting for response" },
-    { id: "cloud-health", label: "Cloud API health", url: `${cloudBaseUrl}/health`, status: "checking", detail: "Waiting for response" },
+    { id: "cloud-health", label: "API health", url: `${cloudBaseUrl}/health`, status: "checking", detail: "Waiting for response" },
     { id: "cloud-readiness", label: "Workspace readiness", url: `${cloudBaseUrl}/readiness`, status: "checking", detail: "Waiting for response" },
     { id: "auth-status", label: "Operator auth status", url: `${cloudBaseUrl}/auth/status`, status: "checking", detail: "Waiting for response" },
     { id: "public-gateway", label: "Public API gateway", url: `${apiOrigin}/api/public/v1/usage`, status: "checking", detail: "Waiting for response" },
@@ -3422,7 +3422,7 @@ function subtitleForPage(page: Page, project?: Project) {
     keys: "Issue, copy, and inspect developer access keys",
     launch: "Verify production services before sending customers traffic",
     docs: "SDK and API snippets developers can copy into apps",
-    settings: "Cloud connection and operator settings",
+    settings: "API connection and operator settings",
   }[page];
 }
 
