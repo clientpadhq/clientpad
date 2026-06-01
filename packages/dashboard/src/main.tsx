@@ -1213,6 +1213,16 @@ function Topbar({
           : connectionState === "misconfigured"
             ? "Live misconfigured"
             : "Live unavailable";
+  const apiLabel = health?.status === "ok" ? "API healthy" : health?.status === "degraded" ? "API degraded" : "API pending";
+  const topbarTone =
+    mode === "preview"
+      ? "blue"
+      : connectionState === "connected" && health?.status === "ok"
+        ? "green"
+        : connectionState === "checking" || health?.status === "degraded"
+          ? "amber"
+          : "gray";
+  const topbarStatus = `${connectionLabel} · ${apiLabel}`;
 
   useEffect(() => {
     const handleGlobalSearchShortcut = (event: KeyboardEvent) => {
@@ -1255,11 +1265,7 @@ function Topbar({
         <kbd>Ctrl K</kbd>
       </label>
       <div className="top-actions">
-        <StatusChip tone={mode === "preview" ? "blue" : connectionState === "connected" ? "green" : connectionState === "checking" ? "amber" : "gray"} label={connectionLabel} />
-        <StatusChip
-          tone={health?.status === "ok" ? "green" : health?.status === "degraded" ? "amber" : "gray"}
-          label={health?.status === "ok" ? "API healthy" : health?.status === "degraded" ? "API degraded" : "API pending"}
-        />
+        <StatusChip tone={topbarTone} label={topbarStatus} />
         <span className="topbar-sync">{lastSyncedAt ? `Synced ${timeAgo(lastSyncedAt)}` : "Waiting for sync"}</span>
         <button className="theme-toggle" onClick={onToggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
           {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
