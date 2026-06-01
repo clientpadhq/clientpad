@@ -1387,10 +1387,10 @@ function Overview({
     <div className="overview-stack">
       <Panel className="overview-hero">
         <div className="overview-hero-copy">
-          <div className="overview-hero-kicker">ClientPad Dashboard</div>
-          <h2>API-first CRM infrastructure for developer teams and service businesses.</h2>
+          <div className="overview-hero-kicker">API control plane</div>
+          <h2>Build CRM infrastructure around one public API, one dashboard, and one operator workflow.</h2>
           <p>
-            Keep your public API, WhatsApp workflows, billing, and operator state in one place. Launch with a clean workspace bundle, then use the dashboard to monitor the real system instead of a placeholder.
+            Keep projects, API keys, WhatsApp, billing, and operator state in one place. Launch a workspace bundle, then use the dashboard to monitor the real system instead of a placeholder.
           </p>
           <div className="overview-hero-actions">
             <button className="button primary blue" onClick={() => setPage("projects")}>
@@ -3513,5 +3513,3 @@ function registerServiceWorker() {
 
 createRoot(document.getElementById("root")!).render(<App />);
 registerServiceWorker();
-
-
