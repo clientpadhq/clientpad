@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ClientPad SDK</title><meta name="description" content="Use @clientpad/sdk to list and create leads and clients and inspect usage."><link rel="stylesheet" href="/site.css"><link rel="alternate" type="text/markdown" href="/docs/sdk.md"></head>
-<body><nav><div class="nav-inner"><a class="brand" href="/docs">ClientPad Docs</a><div class="nav-links"><a href="/docs/public-api">Public API</a><a href="/developers">Developers</a></div></div></nav><main>
+<body><nav><div class="nav-inner"><a class="brand" href="/docs"><span class="brand-mark" aria-hidden="true"></span><span>ClientPad Docs</span></a><div class="nav-links"><a href="/docs/public-api">Public API</a><a href="/developers">Developers</a></div></div></nav><main>
 <section class="band"><h1>TypeScript SDK</h1><p>`@clientpad/sdk` is the dependency-light client for apps, workers, scripts, and backend integrations.</p><pre><code>pnpm add @clientpad/sdk</code></pre></section>
 <section class="split"><div class="band"><h2>Leads</h2><pre><code>const leads = await clientpad.leads.list({ limit: 20 });
 const created = await clientpad.leads.create({
@@ -12,3 +12,4 @@ const created = await clientpad.leads.create({
 const usage = await clientpad.usage.retrieve();</code></pre></div></section>
 </main><script type="module" src="/site.js"></script>
 </body></html>
+

@@ -1121,9 +1121,9 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
       <Logo />
       <nav className="nav-list">
         {items.map(([id, icon, label]) => (
-          <button key={id} className={page === id ? "active" : ""} onClick={() => setPage(id)}>
+          <button key={id} className={page === id ? "active" : ""} onClick={() => setPage(id)} aria-label={label}>
             {icon}
-            {label}
+            <span className="nav-label">{label}</span>
           </button>
         ))}
       </nav>
@@ -1260,27 +1260,13 @@ function Topbar({
           tone={health?.status === "ok" ? "green" : health?.status === "degraded" ? "amber" : "gray"}
           label={health?.status === "ok" ? "API healthy" : health?.status === "degraded" ? "API degraded" : "API pending"}
         />
-        <StatusChip
-          tone={readiness?.summary?.has_public_api_key ? "green" : "amber"}
-          label={readiness?.summary?.has_public_api_key ? "Public API key ready" : "Public API key missing"}
-        />
-        <StatusChip tone={projects.length > 0 ? "green" : "amber"} label={projects.length > 0 ? `${projects.length} projects` : "No project selected"} />
-        <StatusChip tone={lastSyncedAt ? "green" : "gray"} label={lastSyncedAt ? `Synced ${timeAgo(lastSyncedAt)}` : "Waiting for sync"} />
+        <span className="topbar-sync">{lastSyncedAt ? `Synced ${timeAgo(lastSyncedAt)}` : "Waiting for sync"}</span>
         <button className="theme-toggle" onClick={onToggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
           {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
           <span>{theme === "dark" ? "Light" : "Dark"}</span>
         </button>
-        <button aria-label="Notifications">
-          <Bell size={18} />
-        </button>
-        <button aria-label="Help">
-          <CircleHelp size={18} />
-        </button>
         <button className="avatar" onClick={onLogout} title="Sign out">
           {user ? userInitials(user) : "AD"}
-        </button>
-        <button className="developer-menu" onClick={onLogout}>
-          {user?.full_name || user?.email || "Operator"} <ChevronDown size={15} />
         </button>
       </div>
     </header>
@@ -1382,131 +1368,199 @@ function Overview({
   const requestTotal = usageSummary?.request_count ?? totalRequests;
   const rejectedTotal = usageSummary?.rejected_count ?? rejectedRequests;
   const usedPercent = Math.min((requestTotal / requestLimit) * 100, 100);
+  const heroConnectionLabel =
+    mode === "preview"
+      ? "Preview dataset"
+      : readiness?.status === "ok"
+        ? "Live connected"
+        : readiness
+          ? "Live needs attention"
+          : "Checking live status";
+  const heroWorkspaceLabel = readiness?.workspace?.name ?? selectedProject?.name ?? "No workspace selected";
+  const heroSyncLabel = readiness?.time
+    ? `Readiness synced ${timeAgo(readiness.time)}`
+    : health?.time
+      ? `Health checked ${timeAgo(health.time)}`
+      : "Awaiting backend sync";
 
   return (
-    <div className="overview-layout">
-      <ActivationPanel
-        mode={mode}
-        health={health}
-        readiness={readiness}
-        projectCount={projects.length}
-        keyCount={keys.length}
-        hasPublicApiKey={hasPublicApiKey}
-        bootstrapWorkspaceName={bootstrapWorkspaceName}
-        setBootstrapWorkspaceName={setBootstrapWorkspaceName}
-        bootstrapProjectName={bootstrapProjectName}
-        setBootstrapProjectName={setBootstrapProjectName}
-        bootstrapKeyName={bootstrapKeyName}
-        setBootstrapKeyName={setBootstrapKeyName}
-        onBootstrap={onBootstrap}
-        bootstrapping={bootstrapping}
-        onGoToConnect={() => setPage("connect")}
-        onGoToProjects={() => setPage("projects")}
-        onGoToKeys={() => setPage("keys")}
-        onGoToDocs={() => setPage("docs")}
-      />
-      <Panel className="api-requests">
-        <div className="panel-head">
-          <h2>
-            API Requests <CircleHelp size={15} />
-          </h2>
-          <div className="range-tabs">
-            {["1H", "1D", "7D", "30D"].map((tab) => (
-              <button key={tab} className={tab === "7D" ? "selected" : ""}>
-                {tab}
-              </button>
-            ))}
+    <div className="overview-stack">
+      <Panel className="overview-hero">
+        <div className="overview-hero-copy">
+          <div className="overview-hero-kicker">API control plane</div>
+          <div className="overview-hero-note">
+            <strong>Developer contract</strong>
+            <span>
+              Build against <code>CLIENTPAD_API_KEY</code> server-side. Operators sign into this dashboard.
+            </span>
           </div>
-        </div>
-        <div className="chart-summary">
-          <span>Total requests</span>
-          <strong>{loading ? "..." : formatNumber(totalRequests || 2_560_812)}</strong>
-          <em>
-            <TrendingUp size={16} /> 18.7%
-          </em>
-          <small>vs May 5 - May 11, 2025</small>
-        </div>
-        <LineChart />
-      </Panel>
-
-      <Panel className="quota-panel">
-        <h2>Quota & Usage</h2>
-        <Quota label="Requests" value={requestTotal || 2_560_812} limit={requestLimit} suffix="" />
-        <Quota label="Rejected" value={rejectedTotal || 73} limit={Math.max(rejectedTotal || 73, 100)} suffix="" />
-        <Quota label="Data Transfer" value={82.1} limit={500} suffix="GB" />
-        <button className="link-button" onClick={() => setPage("usage")}>
-          View full usage <ChevronRight size={15} />
-        </button>
-      </Panel>
-
-      <Panel className="active-projects table-panel">
-        <div className="panel-head bordered">
-          <h2>
-            Active Projects <span>{projects.length}</span>
-          </h2>
-          <button className="button outline" onClick={() => setPage("projects")}>
-            View all projects
-          </button>
-        </div>
-        <ProjectsTable projects={projects} usage={usage} compact />
-      </Panel>
-
-      <Panel className="billing-panel">
-        <div className="panel-head">
-          <h2>Billing Plan</h2>
-          <span className="price-mini">{selectedPlan ? priceForPlan(selectedPlan) : "$199 / month"}</span>
-        </div>
-        <strong className="plan-title">{selectedPlan?.name ?? "Pro Plan"}</strong>
-        <ul className="plan-list">
-          <li>{usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M"} API requests / month</li>
-          <li>{usageSummary?.rate_limit_per_minute ?? 500} requests / minute</li>
-          <li>{usageSummary?.active_api_key_count ?? keys.length} active API keys</li>
-          <li>{usageSummary?.remaining_requests?.toLocaleString() ?? "Unlimited"} remaining</li>
-        </ul>
-        <div className="period-row">
-          <span>Current month: {usageSummary?.month ?? "May 2026"}</span>
-          <div><i style={{ width: `${Math.max(usedPercent, 8)}%` }} /></div>
-        </div>
-        <div className="split-actions">
-          <button className="button outline" onClick={() => setPage("billing")}>
-            View billing
-          </button>
-          <button className="button primary blue" onClick={() => setPage("billing")}>
-            Upgrade plan
-          </button>
-        </div>
-      </Panel>
-
-      <Panel className="api-keys table-panel">
-        <div className="panel-head bordered">
-          <h2>
-            API Keys <span>{keys.length}</span>
-          </h2>
-          <div className="inline-actions">
+          <h2>One API, one dashboard, one operator workflow.</h2>
+          <p>
+            Keep projects, API keys, WhatsApp, billing, and operator state together. Launch a workspace bundle, then use the dashboard to monitor the real system instead of a placeholder.
+          </p>
+          <div className="overview-hero-actions">
+            <button className="button primary blue" onClick={() => setPage("projects")}>
+              <Plus size={15} /> Create project
+            </button>
             <button className="button outline" onClick={() => setPage("keys")}>
-              View all keys
+              Create API key
             </button>
-            <button className="button primary blue" onClick={() => setPage("keys")}>
-              <Plus size={15} /> Create API Key
+            <button className="button outline" onClick={() => setPage("connect")}>
+              Connect WhatsApp
+            </button>
+            <button className="button outline" onClick={() => setPage("docs")}>
+              Read docs
             </button>
           </div>
         </div>
-        <KeysTable keys={keys} />
-        <p className="table-foot">Showing {keys.length} of {keys.length} API keys</p>
+        <div className="overview-hero-metrics">
+          <div className="hero-metric">
+            <span>Connection</span>
+            <strong>{heroConnectionLabel}</strong>
+            <small>{mode === "preview" ? "Sample data only" : readiness?.auth?.user ? `Signed in as ${readiness.auth.user.email}` : "Waiting for live validation"}</small>
+          </div>
+          <div className="hero-metric">
+            <span>Workspace</span>
+            <strong>{heroWorkspaceLabel}</strong>
+            <small>{heroSyncLabel}</small>
+          </div>
+          <div className="hero-metric">
+            <span>API keys</span>
+            <strong>{hasPublicApiKey ? "Ready" : "Missing"}</strong>
+            <small>{keys.length} tracked keys · {usageSummary?.active_api_key_count ?? keys.length} active</small>
+          </div>
+          <div className="hero-metric">
+            <span>Usage</span>
+            <strong>{formatNumber(requestTotal)}</strong>
+            <small>{formatNumber(rejectedTotal)} rejected · {selectedPlan?.name ?? "Pro"} plan</small>
+          </div>
+        </div>
       </Panel>
 
-      <Panel className="quickstart-panel">
-        <h2>Quickstart</h2>
-        <Quickstart
-          language={quickstartLanguage}
-          setLanguage={setQuickstartLanguage}
-          selectedProject={selectedProject}
-          compact
+      <div className="overview-layout">
+        <ActivationPanel
+          mode={mode}
+          health={health}
+          readiness={readiness}
+          projectCount={projects.length}
+          keyCount={keys.length}
+          hasPublicApiKey={hasPublicApiKey}
+          bootstrapWorkspaceName={bootstrapWorkspaceName}
+          setBootstrapWorkspaceName={setBootstrapWorkspaceName}
+          bootstrapProjectName={bootstrapProjectName}
+          setBootstrapProjectName={setBootstrapProjectName}
+          bootstrapKeyName={bootstrapKeyName}
+          setBootstrapKeyName={setBootstrapKeyName}
+          onBootstrap={onBootstrap}
+          bootstrapping={bootstrapping}
+          onGoToConnect={() => setPage("connect")}
+          onGoToProjects={() => setPage("projects")}
+          onGoToKeys={() => setPage("keys")}
+          onGoToDocs={() => setPage("docs")}
         />
-        <button className="link-button" onClick={() => setPage("docs")}>
-          View full documentation <ExternalLink size={14} />
-        </button>
-      </Panel>
+        <Panel className="api-requests">
+          <div className="panel-head">
+            <h2>
+              API Requests <CircleHelp size={15} />
+            </h2>
+            <div className="range-tabs">
+              {["1H", "1D", "7D", "30D"].map((tab) => (
+                <button key={tab} className={tab === "7D" ? "selected" : ""}>
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="chart-summary">
+            <span>Total requests</span>
+            <strong>{loading ? "..." : formatNumber(totalRequests || 2_560_812)}</strong>
+            <em>
+              <TrendingUp size={16} /> 18.7%
+            </em>
+            <small>vs May 5 - May 11, 2025</small>
+          </div>
+          <LineChart />
+        </Panel>
+
+        <Panel className="quota-panel">
+          <h2>Quota & Usage</h2>
+          <Quota label="Requests" value={requestTotal || 2_560_812} limit={requestLimit} suffix="" />
+          <Quota label="Rejected" value={rejectedTotal || 73} limit={Math.max(rejectedTotal || 73, 100)} suffix="" />
+          <Quota label="Data Transfer" value={82.1} limit={500} suffix="GB" />
+          <button className="link-button" onClick={() => setPage("usage")}>
+            View full usage <ChevronRight size={15} />
+          </button>
+        </Panel>
+
+        <Panel className="active-projects table-panel">
+          <div className="panel-head bordered">
+            <h2>
+              Active Projects <span>{projects.length}</span>
+            </h2>
+            <button className="button outline" onClick={() => setPage("projects")}>
+              View all projects
+            </button>
+          </div>
+          <ProjectsTable projects={projects} usage={usage} compact />
+        </Panel>
+
+        <Panel className="billing-panel">
+          <div className="panel-head">
+            <h2>Billing Plan</h2>
+            <span className="price-mini">{selectedPlan ? priceForPlan(selectedPlan) : "$199 / month"}</span>
+          </div>
+          <strong className="plan-title">{selectedPlan?.name ?? "Pro Plan"}</strong>
+          <ul className="plan-list">
+            <li>{usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M"} API requests / month</li>
+            <li>{usageSummary?.rate_limit_per_minute ?? 500} requests / minute</li>
+            <li>{usageSummary?.active_api_key_count ?? keys.length} active API keys</li>
+            <li>{usageSummary?.remaining_requests?.toLocaleString() ?? "Unlimited"} remaining</li>
+          </ul>
+          <div className="period-row">
+            <span>Current month: {usageSummary?.month ?? "May 2026"}</span>
+            <div><i style={{ width: `${Math.max(usedPercent, 8)}%` }} /></div>
+          </div>
+          <div className="split-actions">
+            <button className="button outline" onClick={() => setPage("billing")}>
+              View billing
+            </button>
+            <button className="button primary blue" onClick={() => setPage("billing")}>
+              Upgrade plan
+            </button>
+          </div>
+        </Panel>
+
+        <Panel className="api-keys table-panel">
+          <div className="panel-head bordered">
+            <h2>
+              API Keys <span>{keys.length}</span>
+            </h2>
+            <div className="inline-actions">
+              <button className="button outline" onClick={() => setPage("keys")}>
+                View all keys
+              </button>
+              <button className="button primary blue" onClick={() => setPage("keys")}>
+                <Plus size={15} /> Create API Key
+              </button>
+            </div>
+          </div>
+          <KeysTable keys={keys} />
+          <p className="table-foot">Showing {keys.length} of {keys.length} API keys</p>
+        </Panel>
+
+        <Panel className="quickstart-panel">
+          <h2>Quickstart</h2>
+          <Quickstart
+            language={quickstartLanguage}
+            setLanguage={setQuickstartLanguage}
+            selectedProject={selectedProject}
+            compact
+          />
+          <button className="link-button" onClick={() => setPage("docs")}>
+            View full documentation <ExternalLink size={14} />
+          </button>
+        </Panel>
+      </div>
     </div>
   );
 }
@@ -2262,8 +2316,8 @@ function ActivationPanel({
     <Panel className="activation-panel">
       <div className="panel-head bordered">
         <div>
-          <h2>First-run activation</h2>
-          <p className="helper-text">Complete these steps to move from a shell to a live operator workspace.</p>
+          <h2>Launch checklist</h2>
+          <p className="helper-text">The shortest path from a fresh shell to a live operator workspace.</p>
         </div>
         <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Live connected" : "Live needs attention"} />
       </div>
@@ -2284,25 +2338,27 @@ function ActivationPanel({
         <button className="button outline" onClick={onGoToConnect}>Connect WhatsApp</button>
         <button className="button outline" onClick={onGoToDocs}>Read setup docs</button>
       </div>
-      <div className="bootstrap-panel">
-        <div className="panel-head bordered compact-head">
+      <details className="bootstrap-panel">
+        <summary className="bootstrap-summary">
           <div>
-            <h3>Bootstrap a live workspace</h3>
+            <strong>Bootstrap a live workspace</strong>
             <p className="helper-text">Create the workspace, first project, and starter API key in one pass.</p>
           </div>
-          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={bootstrapping ? "Creating..." : "Ready"} />
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={bootstrapping ? "Creating..." : "Optional"} />
+        </summary>
+        <div className="bootstrap-body">
+          <div className="bootstrap-grid">
+            <FormField label="Workspace name" value={bootstrapWorkspaceName} onChange={setBootstrapWorkspaceName} />
+            <FormField label="Project name" value={bootstrapProjectName} onChange={setBootstrapProjectName} />
+            <FormField label="API key name" value={bootstrapKeyName} onChange={setBootstrapKeyName} />
+          </div>
+          <div className="status-banner-actions">
+            <button className="button primary blue" onClick={onBootstrap} disabled={bootstrapping || mode === "preview"}>
+              <Plus size={15} /> {bootstrapping ? "Bootstrapping..." : "Create workspace bundle"}
+            </button>
+          </div>
         </div>
-        <div className="bootstrap-grid">
-          <FormField label="Workspace name" value={bootstrapWorkspaceName} onChange={setBootstrapWorkspaceName} />
-          <FormField label="Project name" value={bootstrapProjectName} onChange={setBootstrapProjectName} />
-          <FormField label="API key name" value={bootstrapKeyName} onChange={setBootstrapKeyName} />
-        </div>
-        <div className="status-banner-actions">
-          <button className="button primary blue" onClick={onBootstrap} disabled={bootstrapping || mode === "preview"}>
-            <Plus size={15} /> {bootstrapping ? "Bootstrapping..." : "Create workspace bundle"}
-          </button>
-        </div>
-      </div>
+      </details>
     </Panel>
   );
 }
@@ -3463,5 +3519,3 @@ function registerServiceWorker() {
 
 createRoot(document.getElementById("root")!).render(<App />);
 registerServiceWorker();
-
-
