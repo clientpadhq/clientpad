@@ -152,9 +152,12 @@ button { cursor: pointer; }
   flex: 0 0 auto;
   border-radius: 0.6rem;
   border: 1px solid var(--line);
-  background: var(--panel-2) url("/assets/clientpad-logo-only.png") center/154% no-repeat;
-  image-rendering: auto;
-  filter: saturate(1.05) contrast(1.04);
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  background: var(--panel-2);
+  filter: saturate(1.08) contrast(1.08);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
 }
 
 .logo.compact {
@@ -163,10 +166,10 @@ button { cursor: pointer; }
 }
 
 .logo.compact .logo-mark {
-  width: 2rem;
-  height: 2rem;
+  width: 2.2rem;
+  height: 2.2rem;
   border-radius: 0.5rem;
-  background-size: 168%;
+  transform: scale(1.06);
 }
 
 .logo.compact strong {
@@ -285,10 +288,10 @@ button { cursor: pointer; }
 }
 
 .sidebar-footer-brand .logo-mark {
-  width: 1.9rem;
-  height: 1.9rem;
-  border-radius: 0.45rem;
-  background-size: 170%;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 0.5rem;
+  transform: scale(1.04);
 }
 
 .sidebar-footer-brand span {

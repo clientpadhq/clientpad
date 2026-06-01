@@ -66,7 +66,7 @@ export function subtitleForPage(page: Page, project?: Project) {
     projects: "Create, inspect, and manage hosted workspaces",
     keys: "Issue, copy, and inspect developer access keys",
     docs: "SDK and API snippets developers can copy into apps",
-    settings: "Cloud connection and operator settings",
+    settings: "API connection and operator settings",
   }[page];
 }
 

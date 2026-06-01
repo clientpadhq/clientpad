@@ -632,12 +632,7 @@ function KeyReveal({ registrationKey, onLogin }: { registrationKey: string; onLo
   return (
     <main className="login-shell">
       <section className="login-panel">
-        <svg className="logo-svg" viewBox="0 0 32 32" width="32" height="32" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="2" width="12" height="12" rx="2" />
-          <rect x="18" y="2" width="12" height="12" rx="2" />
-          <rect x="2" y="18" width="12" height="12" rx="2" />
-          <rect x="18" y="18" width="12" height="12" rx="2" />
-        </svg>
+        <Logo />
         <h1>Your starter API key is ready</h1>
         <p style={{ maxWidth: 480 }}>This key boots up your workspace, project, and usage tracking. Copy it now &mdash; it will never be shown again.</p>
         <div className="key-reveal-box">
@@ -1756,7 +1751,7 @@ function LaunchReadiness({
       checkJsonEndpoint("cloud-readiness", "Workspace readiness", `${cloudBaseUrl}/readiness?workspace_id=${encodeURIComponent(selectedWorkspace)}`, (response, body) => ({
         ok: response.ok && (body?.status === "ok" || body?.status === "degraded"),
         warning: body?.status === "degraded",
-        detail: body?.status === "degraded" ? "Cloud is reachable but readiness is degraded" : response.ok ? "Workspace readiness endpoint responded" : `HTTP ${response.status}`,
+        detail: body?.status === "degraded" ? "API is reachable but readiness is degraded" : response.ok ? "Workspace readiness endpoint responded" : `HTTP ${response.status}`,
         nextAction: body?.status === "degraded" && Array.isArray(body?.diagnostics)
           ? body.diagnostics.find((item: CloudReadinessDiagnostic) => item.status === "missing")?.detail
           : response.ok ? undefined : "Sign in again or create a workspace before checking launch readiness.",
@@ -1764,7 +1759,7 @@ function LaunchReadiness({
       checkJsonEndpoint("auth-status", "Operator auth status", `${cloudBaseUrl}/auth/status`, (response, body) => ({
         ok: response.ok && typeof body?.registration_open === "boolean",
         detail: response.ok ? "Operator auth status is available" : `HTTP ${response.status}`,
-        nextAction: response.ok ? undefined : "Verify the Cloud API can read operator auth tables from the production database.",
+        nextAction: response.ok ? undefined : "Verify the API can read operator auth tables from the production database.",
       })),
       checkJsonEndpoint("public-gateway", "Public API gateway", `${publicApiUrl}/usage`, (response) => ({
         ok: publicApiKeyValue ? response.status < 500 : response.status === 401 || response.status === 403,
@@ -1820,7 +1815,7 @@ function LaunchReadiness({
             <ShieldCheck size={16} /> {running ? "Checking..." : "Run checks"}
           </button>
           <button className="button outline" onClick={onGoToSettings}>
-            <Settings size={16} /> Cloud settings
+            <Settings size={16} /> Connection settings
           </button>
         </div>
       </Panel>
@@ -2109,7 +2104,7 @@ function Panel({ children, className = "" }: { children: React.ReactNode; classN
 function Logo({ compact = false }: { compact?: boolean } = {}) {
   return (
     <div className={`logo${compact ? " compact" : ""}`}>
-      <span className="logo-mark" aria-hidden="true" />
+      <img className="logo-mark" src="/assets/clientpad-logo-only.png" alt="" aria-hidden="true" />
       <div className="logo-copy">
         <strong>ClientPad App</strong>
         {compact ? null : <span>API-first CRM control plane</span>}
