@@ -349,7 +349,7 @@ function LoadingShell({ message }: { message: string }) {
     <main className="login-shell">
       <section className="login-panel">
         <Logo />
-        <h1>ClientPad App</h1>
+        <h1>ClientPad Dashboard</h1>
         <p>{message}</p>
       </section>
     </main>
@@ -527,7 +527,7 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
             </button>
           ))}
         </div>
-        <h1>{mode === "preview" ? "Preview workspace" : authMode === "register" ? "Create operator account" : "ClientPad App"}</h1>
+        <h1>{mode === "preview" ? "Preview workspace" : authMode === "register" ? "Create operator account" : "ClientPad Dashboard"}</h1>
         <p>
           {mode === "preview"
             ? "Open a sample workspace to understand the dashboard layout before connecting a real ClientPad API."
@@ -2160,7 +2160,7 @@ function Logo({ compact = false }: { compact?: boolean } = {}) {
     <div className={`logo${compact ? " compact" : ""}`}>
       <img className="logo-mark" src="/assets/clientpad-logo-only.png" alt="" aria-hidden="true" />
       <div className="logo-copy">
-        <strong>ClientPad App</strong>
+        <strong>ClientPad Dashboard</strong>
         {compact ? null : <span>API-first CRM control plane</span>}
       </div>
     </div>
