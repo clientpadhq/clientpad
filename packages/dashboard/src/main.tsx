@@ -1388,9 +1388,15 @@ function Overview({
       <Panel className="overview-hero">
         <div className="overview-hero-copy">
           <div className="overview-hero-kicker">API control plane</div>
-          <h2>Build CRM infrastructure around one public API, one dashboard, and one operator workflow.</h2>
+          <div className="overview-hero-note">
+            <strong>Developer contract</strong>
+            <span>
+              Build against <code>CLIENTPAD_API_KEY</code> server-side. Operators sign into this dashboard.
+            </span>
+          </div>
+          <h2>One API, one dashboard, one operator workflow.</h2>
           <p>
-            Keep projects, API keys, WhatsApp, billing, and operator state in one place. Launch a workspace bundle, then use the dashboard to monitor the real system instead of a placeholder.
+            Keep projects, API keys, WhatsApp, billing, and operator state together. Launch a workspace bundle, then use the dashboard to monitor the real system instead of a placeholder.
           </p>
           <div className="overview-hero-actions">
             <button className="button primary blue" onClick={() => setPage("projects")}>
