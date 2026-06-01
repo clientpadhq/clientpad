@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ClientPad Quickstart</title><meta name="description" content="Install ClientPad and create your first lead with the TypeScript SDK."><link rel="stylesheet" href="/site.css"><link rel="alternate" type="text/markdown" href="/docs/quickstart.md"></head>
-<body><nav><div class="nav-inner"><a class="brand" href="/docs">ClientPad Docs</a><div class="nav-links"><a href="/developers">Developers</a><a href="/docs/sdk">SDK</a><a href="/docs/self-hosting">Self-hosting</a></div></div></nav><main>
+<body><nav><div class="nav-inner"><a class="brand" href="/docs"><span class="brand-mark" aria-hidden="true"></span><span>ClientPad Docs</span></a><div class="nav-links"><a href="/developers">Developers</a><a href="/docs/sdk">SDK</a><a href="/docs/self-hosting">Self-hosting</a></div></div></nav><main>
 <section class="band"><h1>Quickstart</h1><p>Use the SDK against hosted Cloud or a self-hosted public API.</p><pre><code>pnpm add @clientpad/sdk</code></pre><pre><code>import { ClientPad } from "@clientpad/sdk";
 
 const clientpad = new ClientPad({
@@ -17,3 +17,4 @@ await clientpad.leads.create({
 <section class="grid"><div class="card"><h3>Hosted path</h3><p>Create a workspace in the dashboard, copy a server-side API key, and point the SDK at `api.clientpad.xyz`.</p></div><div class="card"><h3>Self-hosted path</h3><p>Run PostgreSQL, apply migrations, create an API key with the CLI, and point the SDK at your own public API route.</p></div><div class="card"><h3>Next</h3><p>Read the SDK, public API, and self-hosting docs for deeper setup.</p></div></section>
 </main><script type="module" src="/site.js"></script>
 </body></html>
+

@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ClientPad Troubleshooting</title><meta name="description" content="Troubleshoot ClientPad live mode, DNS, API keys, Cloud readiness, and WhatsApp webhooks."><link rel="stylesheet" href="/site.css"><link rel="alternate" type="text/markdown" href="/docs/troubleshooting.md"></head>
-<body><nav><div class="nav-inner"><a class="brand" href="/docs">ClientPad Docs</a><div class="nav-links"><a href="/docs/deployment">Deployment</a><a href="/docs/environment">Environment</a></div></div></nav><main>
+<body><nav><div class="nav-inner"><a class="brand" href="/docs"><span class="brand-mark" aria-hidden="true"></span><span>ClientPad Docs</span></a><div class="nav-links"><a href="/docs/deployment">Deployment</a><a href="/docs/environment">Environment</a></div></div></nav><main>
 <h1>Troubleshooting</h1>
 <section class="grid"><div class="card"><h3>Dashboard says disconnected</h3><p>Confirm the Cloud API URL, `/health`, `/readiness`, and operator session are valid.</p></div><div class="card"><h3>API key rejected</h3><p>Check that the key is workspace-scoped, stored server-side, and sent as `Authorization: Bearer ...`.</p></div><div class="card"><h3>DNS still pending</h3><p>Wait for Netlify certificate provisioning and nameserver propagation before changing primary domains.</p></div><div class="card"><h3>WhatsApp not receiving</h3><p>Verify phone number ID, verify token, app secret, access token, webhook URL, and default workspace ID.</p></div><div class="card"><h3>Billing checkout missing</h3><p>Confirm Lemon Squeezy API key, store ID, webhook secret, and variant IDs are configured in the Cloud host.</p></div><div class="card"><h3>Preview vs live confusion</h3><p>Preview data is simulated. Live mode requires Cloud connectivity, auth, workspace access, and readiness checks.</p></div></section>
 </main><script type="module" src="/site.js"></script>
 </body></html>
+
