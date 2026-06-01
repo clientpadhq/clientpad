@@ -545,6 +545,106 @@ button { cursor: pointer; }
   background: #effaf4;
 }
 
+.overview-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.overview-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 18px;
+  align-items: stretch;
+  padding: 24px;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--brand) 14%, transparent), transparent 38%),
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, var(--bg)), color-mix(in srgb, var(--panel-2) 88%, var(--panel)));
+  border-color: color-mix(in srgb, var(--brand) 14%, var(--line));
+  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.06);
+}
+
+.overview-hero-copy {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.overview-hero-kicker {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brand) 20%, var(--line));
+  background: color-mix(in srgb, var(--brand) 8%, var(--panel));
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.overview-hero h2 {
+  margin: 0;
+  max-width: 16ch;
+  color: var(--ink);
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.03;
+  letter-spacing: -0.04em;
+}
+
+.overview-hero p {
+  margin: 0;
+  max-width: 58ch;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.overview-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 6px;
+}
+
+.overview-hero-metrics {
+  display: grid;
+  gap: 10px;
+  align-self: stretch;
+}
+
+.hero-metric {
+  display: grid;
+  gap: 4px;
+  padding: 14px 15px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+}
+
+.hero-metric span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hero-metric strong {
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.hero-metric small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .overview-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(340px, 1fr);
@@ -1011,6 +1111,7 @@ td small {
   .topbar { grid-template-columns: minmax(220px, 300px) minmax(260px, 1fr); }
   .top-actions { grid-column: 1 / -1; justify-self: start; padding-bottom: 10px; }
   .topbar { height: auto; padding: 14px 22px; }
+  .overview-hero { grid-template-columns: 1fr; }
   .overview-layout, .detail-layout { grid-template-columns: 1fr; }
   .billing-panel, .quickstart-panel, .active-projects, .api-keys { grid-column: auto; }
   .billing-grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); }

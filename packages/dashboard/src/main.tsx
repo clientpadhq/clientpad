@@ -1382,131 +1382,193 @@ function Overview({
   const requestTotal = usageSummary?.request_count ?? totalRequests;
   const rejectedTotal = usageSummary?.rejected_count ?? rejectedRequests;
   const usedPercent = Math.min((requestTotal / requestLimit) * 100, 100);
+  const heroConnectionLabel =
+    mode === "preview"
+      ? "Preview dataset"
+      : readiness?.status === "ok"
+        ? "Live connected"
+        : readiness
+          ? "Live needs attention"
+          : "Checking live status";
+  const heroWorkspaceLabel = readiness?.workspace?.name ?? selectedProject?.name ?? "No workspace selected";
+  const heroSyncLabel = readiness?.time
+    ? `Readiness synced ${timeAgo(readiness.time)}`
+    : health?.time
+      ? `Health checked ${timeAgo(health.time)}`
+      : "Awaiting backend sync";
 
   return (
-    <div className="overview-layout">
-      <ActivationPanel
-        mode={mode}
-        health={health}
-        readiness={readiness}
-        projectCount={projects.length}
-        keyCount={keys.length}
-        hasPublicApiKey={hasPublicApiKey}
-        bootstrapWorkspaceName={bootstrapWorkspaceName}
-        setBootstrapWorkspaceName={setBootstrapWorkspaceName}
-        bootstrapProjectName={bootstrapProjectName}
-        setBootstrapProjectName={setBootstrapProjectName}
-        bootstrapKeyName={bootstrapKeyName}
-        setBootstrapKeyName={setBootstrapKeyName}
-        onBootstrap={onBootstrap}
-        bootstrapping={bootstrapping}
-        onGoToConnect={() => setPage("connect")}
-        onGoToProjects={() => setPage("projects")}
-        onGoToKeys={() => setPage("keys")}
-        onGoToDocs={() => setPage("docs")}
-      />
-      <Panel className="api-requests">
-        <div className="panel-head">
-          <h2>
-            API Requests <CircleHelp size={15} />
-          </h2>
-          <div className="range-tabs">
-            {["1H", "1D", "7D", "30D"].map((tab) => (
-              <button key={tab} className={tab === "7D" ? "selected" : ""}>
-                {tab}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="chart-summary">
-          <span>Total requests</span>
-          <strong>{loading ? "..." : formatNumber(totalRequests || 2_560_812)}</strong>
-          <em>
-            <TrendingUp size={16} /> 18.7%
-          </em>
-          <small>vs May 5 - May 11, 2025</small>
-        </div>
-        <LineChart />
-      </Panel>
-
-      <Panel className="quota-panel">
-        <h2>Quota & Usage</h2>
-        <Quota label="Requests" value={requestTotal || 2_560_812} limit={requestLimit} suffix="" />
-        <Quota label="Rejected" value={rejectedTotal || 73} limit={Math.max(rejectedTotal || 73, 100)} suffix="" />
-        <Quota label="Data Transfer" value={82.1} limit={500} suffix="GB" />
-        <button className="link-button" onClick={() => setPage("usage")}>
-          View full usage <ChevronRight size={15} />
-        </button>
-      </Panel>
-
-      <Panel className="active-projects table-panel">
-        <div className="panel-head bordered">
-          <h2>
-            Active Projects <span>{projects.length}</span>
-          </h2>
-          <button className="button outline" onClick={() => setPage("projects")}>
-            View all projects
-          </button>
-        </div>
-        <ProjectsTable projects={projects} usage={usage} compact />
-      </Panel>
-
-      <Panel className="billing-panel">
-        <div className="panel-head">
-          <h2>Billing Plan</h2>
-          <span className="price-mini">{selectedPlan ? priceForPlan(selectedPlan) : "$199 / month"}</span>
-        </div>
-        <strong className="plan-title">{selectedPlan?.name ?? "Pro Plan"}</strong>
-        <ul className="plan-list">
-          <li>{usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M"} API requests / month</li>
-          <li>{usageSummary?.rate_limit_per_minute ?? 500} requests / minute</li>
-          <li>{usageSummary?.active_api_key_count ?? keys.length} active API keys</li>
-          <li>{usageSummary?.remaining_requests?.toLocaleString() ?? "Unlimited"} remaining</li>
-        </ul>
-        <div className="period-row">
-          <span>Current month: {usageSummary?.month ?? "May 2026"}</span>
-          <div><i style={{ width: `${Math.max(usedPercent, 8)}%` }} /></div>
-        </div>
-        <div className="split-actions">
-          <button className="button outline" onClick={() => setPage("billing")}>
-            View billing
-          </button>
-          <button className="button primary blue" onClick={() => setPage("billing")}>
-            Upgrade plan
-          </button>
-        </div>
-      </Panel>
-
-      <Panel className="api-keys table-panel">
-        <div className="panel-head bordered">
-          <h2>
-            API Keys <span>{keys.length}</span>
-          </h2>
-          <div className="inline-actions">
+    <div className="overview-stack">
+      <Panel className="overview-hero">
+        <div className="overview-hero-copy">
+          <div className="overview-hero-kicker">ClientPad Dashboard</div>
+          <h2>API-first CRM infrastructure for developer teams and service businesses.</h2>
+          <p>
+            Keep your public API, WhatsApp workflows, billing, and operator state in one place. Launch with a clean workspace bundle, then use the dashboard to monitor the real system instead of a placeholder.
+          </p>
+          <div className="overview-hero-actions">
+            <button className="button primary blue" onClick={() => setPage("projects")}>
+              <Plus size={15} /> Create project
+            </button>
             <button className="button outline" onClick={() => setPage("keys")}>
-              View all keys
+              Create API key
             </button>
-            <button className="button primary blue" onClick={() => setPage("keys")}>
-              <Plus size={15} /> Create API Key
+            <button className="button outline" onClick={() => setPage("connect")}>
+              Connect WhatsApp
+            </button>
+            <button className="button outline" onClick={() => setPage("docs")}>
+              Read docs
             </button>
           </div>
         </div>
-        <KeysTable keys={keys} />
-        <p className="table-foot">Showing {keys.length} of {keys.length} API keys</p>
+        <div className="overview-hero-metrics">
+          <div className="hero-metric">
+            <span>Connection</span>
+            <strong>{heroConnectionLabel}</strong>
+            <small>{mode === "preview" ? "Sample data only" : readiness?.auth?.user ? `Signed in as ${readiness.auth.user.email}` : "Waiting for live validation"}</small>
+          </div>
+          <div className="hero-metric">
+            <span>Workspace</span>
+            <strong>{heroWorkspaceLabel}</strong>
+            <small>{heroSyncLabel}</small>
+          </div>
+          <div className="hero-metric">
+            <span>API keys</span>
+            <strong>{hasPublicApiKey ? "Ready" : "Missing"}</strong>
+            <small>{keys.length} tracked keys · {usageSummary?.active_api_key_count ?? keys.length} active</small>
+          </div>
+          <div className="hero-metric">
+            <span>Usage</span>
+            <strong>{formatNumber(requestTotal)}</strong>
+            <small>{formatNumber(rejectedTotal)} rejected · {selectedPlan?.name ?? "Pro"} plan</small>
+          </div>
+        </div>
       </Panel>
 
-      <Panel className="quickstart-panel">
-        <h2>Quickstart</h2>
-        <Quickstart
-          language={quickstartLanguage}
-          setLanguage={setQuickstartLanguage}
-          selectedProject={selectedProject}
-          compact
+      <div className="overview-layout">
+        <ActivationPanel
+          mode={mode}
+          health={health}
+          readiness={readiness}
+          projectCount={projects.length}
+          keyCount={keys.length}
+          hasPublicApiKey={hasPublicApiKey}
+          bootstrapWorkspaceName={bootstrapWorkspaceName}
+          setBootstrapWorkspaceName={setBootstrapWorkspaceName}
+          bootstrapProjectName={bootstrapProjectName}
+          setBootstrapProjectName={setBootstrapProjectName}
+          bootstrapKeyName={bootstrapKeyName}
+          setBootstrapKeyName={setBootstrapKeyName}
+          onBootstrap={onBootstrap}
+          bootstrapping={bootstrapping}
+          onGoToConnect={() => setPage("connect")}
+          onGoToProjects={() => setPage("projects")}
+          onGoToKeys={() => setPage("keys")}
+          onGoToDocs={() => setPage("docs")}
         />
-        <button className="link-button" onClick={() => setPage("docs")}>
-          View full documentation <ExternalLink size={14} />
-        </button>
-      </Panel>
+        <Panel className="api-requests">
+          <div className="panel-head">
+            <h2>
+              API Requests <CircleHelp size={15} />
+            </h2>
+            <div className="range-tabs">
+              {["1H", "1D", "7D", "30D"].map((tab) => (
+                <button key={tab} className={tab === "7D" ? "selected" : ""}>
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="chart-summary">
+            <span>Total requests</span>
+            <strong>{loading ? "..." : formatNumber(totalRequests || 2_560_812)}</strong>
+            <em>
+              <TrendingUp size={16} /> 18.7%
+            </em>
+            <small>vs May 5 - May 11, 2025</small>
+          </div>
+          <LineChart />
+        </Panel>
+
+        <Panel className="quota-panel">
+          <h2>Quota & Usage</h2>
+          <Quota label="Requests" value={requestTotal || 2_560_812} limit={requestLimit} suffix="" />
+          <Quota label="Rejected" value={rejectedTotal || 73} limit={Math.max(rejectedTotal || 73, 100)} suffix="" />
+          <Quota label="Data Transfer" value={82.1} limit={500} suffix="GB" />
+          <button className="link-button" onClick={() => setPage("usage")}>
+            View full usage <ChevronRight size={15} />
+          </button>
+        </Panel>
+
+        <Panel className="active-projects table-panel">
+          <div className="panel-head bordered">
+            <h2>
+              Active Projects <span>{projects.length}</span>
+            </h2>
+            <button className="button outline" onClick={() => setPage("projects")}>
+              View all projects
+            </button>
+          </div>
+          <ProjectsTable projects={projects} usage={usage} compact />
+        </Panel>
+
+        <Panel className="billing-panel">
+          <div className="panel-head">
+            <h2>Billing Plan</h2>
+            <span className="price-mini">{selectedPlan ? priceForPlan(selectedPlan) : "$199 / month"}</span>
+          </div>
+          <strong className="plan-title">{selectedPlan?.name ?? "Pro Plan"}</strong>
+          <ul className="plan-list">
+            <li>{usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M"} API requests / month</li>
+            <li>{usageSummary?.rate_limit_per_minute ?? 500} requests / minute</li>
+            <li>{usageSummary?.active_api_key_count ?? keys.length} active API keys</li>
+            <li>{usageSummary?.remaining_requests?.toLocaleString() ?? "Unlimited"} remaining</li>
+          </ul>
+          <div className="period-row">
+            <span>Current month: {usageSummary?.month ?? "May 2026"}</span>
+            <div><i style={{ width: `${Math.max(usedPercent, 8)}%` }} /></div>
+          </div>
+          <div className="split-actions">
+            <button className="button outline" onClick={() => setPage("billing")}>
+              View billing
+            </button>
+            <button className="button primary blue" onClick={() => setPage("billing")}>
+              Upgrade plan
+            </button>
+          </div>
+        </Panel>
+
+        <Panel className="api-keys table-panel">
+          <div className="panel-head bordered">
+            <h2>
+              API Keys <span>{keys.length}</span>
+            </h2>
+            <div className="inline-actions">
+              <button className="button outline" onClick={() => setPage("keys")}>
+                View all keys
+              </button>
+              <button className="button primary blue" onClick={() => setPage("keys")}>
+                <Plus size={15} /> Create API Key
+              </button>
+            </div>
+          </div>
+          <KeysTable keys={keys} />
+          <p className="table-foot">Showing {keys.length} of {keys.length} API keys</p>
+        </Panel>
+
+        <Panel className="quickstart-panel">
+          <h2>Quickstart</h2>
+          <Quickstart
+            language={quickstartLanguage}
+            setLanguage={setQuickstartLanguage}
+            selectedProject={selectedProject}
+            compact
+          />
+          <button className="link-button" onClick={() => setPage("docs")}>
+            View full documentation <ExternalLink size={14} />
+          </button>
+        </Panel>
+      </div>
     </div>
   );
 }
