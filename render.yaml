@@ -22,6 +22,11 @@ services:
     rootDir: .
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @clientpad/marketing build
     staticPublishPath: packages/marketing/dist
+    envVars:
+      - key: CLIENTPAD_SITE_VARIANT
+        value: docs
+      - key: MARKETING_BASE_URL
+        value: https://docs.clientpad.xyz
 
   - type: web
     name: clientpad-app
