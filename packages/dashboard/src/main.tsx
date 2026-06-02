@@ -1373,6 +1373,11 @@ function Overview({
   const latestWhatsAppActivity = readiness?.summary?.latest_whatsapp_activity_at ? timeAgo(readiness.summary.latest_whatsapp_activity_at) : "No WhatsApp traffic yet";
   const latestPaymentEvent = readiness?.summary?.latest_payment_event_at ? timeAgo(readiness.summary.latest_payment_event_at) : "No payment events yet";
   const recentWebhooks = readiness?.summary?.recent_webhook_count ?? 0;
+  const projectName = selectedProject?.name ?? "No project selected";
+  const projectSlug = selectedProject?.slug ?? "clientpad-api";
+  const projectOwner = selectedProject?.owner_email ?? "No owner email";
+  const projectEnv = selectedProject?.environment ? selectedProject.environment.toUpperCase() : "No environment";
+  const projectCreated = selectedProject?.created_at ? timeAgo(selectedProject.created_at) : "Create your first project";
 
   return (
     <div className="overview-stack">
@@ -1425,10 +1430,12 @@ function Overview({
             <small>{heroSyncLabel}</small>
             <CopyButton text={publicApiUrl} />
           </div>
-          <div className="hero-metric">
-            <span>Connection</span>
-            <strong>{heroConnectionLabel}</strong>
-            <small>{mode === "preview" ? "Sample data only" : readiness?.auth?.user ? `Signed in as ${readiness.auth.user.email}` : "Waiting for live validation"}</small>
+          <div className="hero-project">
+            <span>Selected project</span>
+            <strong>{projectName}</strong>
+            <small>{projectSlug} | {projectEnv}</small>
+            <small>Owner {projectOwner}</small>
+            <small>{projectCreated} | {heroConnectionLabel}</small>
           </div>
           <div className="hero-metric">
             <span>Usage</span>
