@@ -39,6 +39,7 @@ import {
   Clock,
   Archive,
   CheckCircle2,
+  Server,
 } from "lucide-react";
 import "./styles.css";
 
@@ -187,7 +188,7 @@ type CloudReadiness = {
 
 type ConnectionState = "preview" | "checking" | "connected" | "misconfigured" | "unavailable";
 
-type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "docs" | "settings";
+type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "docs" | "settings";
 type QuickstartLanguage = "curl" | "python" | "node" | "go" | "ruby";
 type DashboardTheme = "light" | "dark";
 type LaunchCheckStatus = "checking" | "ok" | "warning" | "fail";
@@ -279,7 +280,7 @@ const dashboardPageParamKey = "page";
 const defaultCloudBaseUrl = window.location.hostname.includes("localhost")
   ? "http://localhost:3000/api/cloud/v1"
   : "https://api.clientpad.xyz/api/cloud/v1";
-const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "docs", "settings"];
+const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "docs", "settings"];
 const dashboardPageSet = new Set<Page>(dashboardPages);
 
 function resolveDashboardTheme(): DashboardTheme {
@@ -1063,6 +1064,22 @@ function Dashboard({
               onGoToSettings={() => setPage("settings")}
             />
           )}
+          {page === "infrastructure" && (
+            <Infrastructure
+              mode={mode}
+              readiness={readiness}
+              health={health}
+              selectedWorkspace={selectedWorkspace}
+              publicApiKey={publicApiKey}
+              usageSummary={usageSummary}
+              onGoToLaunch={() => setPage("launch")}
+              onGoToDocs={() => setPage("docs")}
+              onGoToProjects={() => setPage("projects")}
+              onGoToKeys={() => setPage("keys")}
+              onGoToConnect={() => setPage("connect")}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
           {page === "docs" && (
             <Docs
               selectedProject={selectedProject}
@@ -1106,6 +1123,7 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
     ["projects", <Building2 size={18} />, "Projects"],
     ["keys", <KeyRound size={18} />, "API Keys"],
     ["launch", <ShieldCheck size={18} />, "Launch"],
+    ["infrastructure", <Server size={18} />, "Infrastructure"],
     ["docs", <BookOpen size={18} />, "Docs"],
   ];
 
@@ -2362,6 +2380,178 @@ function ActivationPanel({
   );
 }
 
+function Infrastructure({
+  mode,
+  readiness,
+  health,
+  selectedWorkspace,
+  publicApiKey,
+  usageSummary,
+  onGoToLaunch,
+  onGoToDocs,
+  onGoToProjects,
+  onGoToKeys,
+  onGoToConnect,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  readiness: CloudReadiness | null;
+  health: CloudHealth | null;
+  selectedWorkspace: string;
+  publicApiKey: string;
+  usageSummary: UsageSummary | null;
+  onGoToLaunch: () => void;
+  onGoToDocs: () => void;
+  onGoToProjects: () => void;
+  onGoToKeys: () => void;
+  onGoToConnect: () => void;
+  onCopy: (text: string) => void;
+}) {
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedWorkspace ?? "No workspace selected";
+  const apiUrl = "https://api.clientpad.xyz/api/public/v1";
+  const platformUrl = "https://platform.clientpad.xyz";
+  const services = [
+    {
+      name: "Dashboard",
+      host: "platform.clientpad.xyz",
+      target: "clientpad-app.onrender.com",
+      state: mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Live" : readiness ? "Needs attention" : "Checking",
+      detail: "Operator dashboard, projects, keys, inbox, and launch actions.",
+    },
+    {
+      name: "Public API",
+      host: "api.clientpad.xyz",
+      target: "clientpad-api.onrender.com",
+      state: readiness?.summary?.has_public_api_key ? "Ready" : "Needs key",
+      detail: "API contract used by developers with `CLIENTPAD_API_KEY`.",
+    },
+    {
+      name: "Docs",
+      host: "docs.clientpad.xyz",
+      target: "clientpad-docs.onrender.com",
+      state: "Live",
+      detail: "Docs host with the docs-root rewrite and static export.",
+    },
+    {
+      name: "Marketing",
+      host: "clientpad.xyz",
+      target: "clientpad-frontend.onrender.com",
+      state: "Live",
+      detail: "Public site, pricing, and developer-facing landing pages.",
+    },
+  ];
+  const checkpoints = [
+    { label: "Operator session", value: readiness?.auth?.user ? "Signed in" : "Pending", ok: Boolean(readiness?.auth?.user) },
+    { label: "Workspace", value: workspaceName, ok: Boolean(workspaceName) },
+    { label: "Public API key", value: publicApiKey.trim() ? "Configured" : "Missing", ok: Boolean(publicApiKey.trim()) },
+    { label: "WhatsApp", value: readiness?.summary?.has_whatsapp_configuration ? "Configured" : "Missing", ok: Boolean(readiness?.summary?.has_whatsapp_configuration) },
+    { label: "Webhooks", value: readiness?.summary?.recent_webhook_count ? `${readiness.summary.recent_webhook_count} recent` : "Idle", ok: Boolean(readiness?.summary?.recent_webhook_count) },
+  ];
+  const readinessLabel =
+    mode === "preview"
+      ? "Preview mode"
+      : readiness?.status === "ok"
+        ? "Infrastructure healthy"
+        : readiness
+          ? "Infrastructure needs attention"
+          : "Waiting for live checks";
+
+  return (
+    <div className="infrastructure-layout">
+      <Panel className="infra-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Infrastructure</h2>
+            <p className="helper-text">One view for the dashboard, docs, API, and public site hosts.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={readinessLabel} />
+        </div>
+        <div className="infra-hero-grid">
+          <div className="infra-summary">
+            <span>Platform</span>
+            <strong>platform.clientpad.xyz</strong>
+            <small>Dashboard entrypoint for operators and service teams.</small>
+          </div>
+          <div className="infra-summary">
+            <span>Public API</span>
+            <strong>{apiUrl}</strong>
+            <small>Developer surface powered by `CLIENTPAD_API_KEY`.</small>
+            <CopyButton text={apiUrl} />
+          </div>
+          <div className="infra-summary">
+            <span>Docs</span>
+            <strong>docs.clientpad.xyz</strong>
+            <small>Static docs export with the docs root rewrite.</small>
+          </div>
+          <div className="infra-summary">
+            <span>Marketing</span>
+            <strong>clientpad.xyz</strong>
+            <small>Public site and conversion path for developers and operators.</small>
+          </div>
+        </div>
+      </Panel>
+
+      <div className="infra-grid">
+        <Panel className="infra-services">
+          <div className="panel-head bordered">
+            <h2>Deployment map</h2>
+            <button className="button outline" onClick={onGoToLaunch}>
+              Open launch
+            </button>
+          </div>
+          <div className="infra-service-list">
+            {services.map((service) => (
+              <article key={service.name} className="infra-service-card">
+                <div className="infra-service-head">
+                  <div>
+                    <strong>{service.name}</strong>
+                    <span>{service.host}</span>
+                  </div>
+                  <StatusChip tone={service.state === "Live" || service.state === "Ready" ? "green" : service.state === "Preview" ? "blue" : "amber"} label={service.state} />
+                </div>
+                <small>{service.detail}</small>
+                <code>{service.target}</code>
+              </article>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel className="infra-checks">
+          <div className="panel-head bordered">
+            <h2>Live checks</h2>
+            <StatusChip tone={health?.status === "ok" ? "green" : health ? "amber" : "gray"} label={health ? `${health.service} ${health.status}` : "Health pending"} />
+          </div>
+          <div className="status-stack compact">
+            {checkpoints.map((item) => (
+              <div key={item.label} className="status-item">
+                <span className={item.ok ? "dot good" : "dot warn"} />
+                <div>
+                  <strong>{item.label}</strong>
+                  <small>{item.value}</small>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="infra-actions">
+            <button className="button primary blue" onClick={onGoToKeys}>Create API key</button>
+            <button className="button outline" onClick={onGoToProjects}>Projects</button>
+            <button className="button outline" onClick={onGoToDocs}>Docs</button>
+            <button className="button outline" onClick={onGoToConnect}>WhatsApp</button>
+          </div>
+          <div className="infra-footnote">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M"} monthly requests | {usageSummary?.active_api_key_count ?? 0} active keys</small>
+            <button className="link-button" onClick={() => onCopy(platformUrl)}>
+              Copy platform URL <ChevronRight size={15} />
+            </button>
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
 function timeAgo(value: string) {
   const diff = Date.now() - new Date(value).getTime();
   const minutes = Math.max(Math.floor(diff / 60000), 0);
@@ -3453,6 +3643,7 @@ function titleForPage(page: Page) {
     projects: "Projects",
     keys: "API Keys",
     launch: "Launch",
+    infrastructure: "Infrastructure",
     docs: "Docs",
     settings: "Settings",
   }[page];
@@ -3471,6 +3662,7 @@ function subtitleForPage(page: Page, project?: Project) {
     projects: "Create, inspect, and manage hosted workspaces",
     keys: "Issue, copy, and inspect developer access keys",
     launch: "Verify production services before sending customers traffic",
+    infrastructure: "Platform, API, docs, and public host mapping",
     docs: "SDK and API snippets developers can copy into apps",
     settings: "API connection and operator settings",
   }[page];
