@@ -1031,15 +1031,6 @@ function Dashboard({
               mode={mode}
               health={health}
               readiness={readiness}
-              hasPublicApiKey={Boolean(publicApiKey.trim())}
-              bootstrapWorkspaceName={bootstrapWorkspaceName}
-              setBootstrapWorkspaceName={setBootstrapWorkspaceName}
-              bootstrapProjectName={bootstrapProjectName}
-              setBootstrapProjectName={setBootstrapProjectName}
-              bootstrapKeyName={bootstrapKeyName}
-              setBootstrapKeyName={setBootstrapKeyName}
-              onBootstrap={bootstrapWorkspace}
-              bootstrapping={bootstrapping}
             />
           )}
           {page === "projects" && <Projects projects={filteredProjects} onCreate={createProject} setPage={setPage} />}
@@ -1335,15 +1326,6 @@ function Overview({
   mode,
   health,
   readiness,
-  hasPublicApiKey,
-  bootstrapWorkspaceName,
-  setBootstrapWorkspaceName,
-  bootstrapProjectName,
-  setBootstrapProjectName,
-  bootstrapKeyName,
-  setBootstrapKeyName,
-  onBootstrap,
-  bootstrapping,
 }: {
   loading: boolean;
   totalRequests: number;
@@ -1360,15 +1342,6 @@ function Overview({
   mode: ConnectionMode;
   health: CloudHealth | null;
   readiness: CloudReadiness | null;
-  hasPublicApiKey: boolean;
-  bootstrapWorkspaceName: string;
-  setBootstrapWorkspaceName: (value: string) => void;
-  bootstrapProjectName: string;
-  setBootstrapProjectName: (value: string) => void;
-  bootstrapKeyName: string;
-  setBootstrapKeyName: (value: string) => void;
-  onBootstrap: () => Promise<void> | void;
-  bootstrapping: boolean;
 }) {
   const requestLimit = selectedPlan?.monthly_request_limit ?? 10_000_000;
   const requestTotal = usageSummary?.request_count ?? totalRequests;
@@ -1466,26 +1439,6 @@ function Overview({
       </Panel>
 
       <div className="overview-layout">
-        <ActivationPanel
-          mode={mode}
-          health={health}
-          readiness={readiness}
-          projectCount={projects.length}
-          keyCount={keys.length}
-          hasPublicApiKey={hasPublicApiKey}
-          bootstrapWorkspaceName={bootstrapWorkspaceName}
-          setBootstrapWorkspaceName={setBootstrapWorkspaceName}
-          bootstrapProjectName={bootstrapProjectName}
-          setBootstrapProjectName={setBootstrapProjectName}
-          bootstrapKeyName={bootstrapKeyName}
-          setBootstrapKeyName={setBootstrapKeyName}
-          onBootstrap={onBootstrap}
-          bootstrapping={bootstrapping}
-          onGoToConnect={() => setPage("connect")}
-          onGoToProjects={() => setPage("projects")}
-          onGoToKeys={() => setPage("keys")}
-          onGoToDocs={() => setPage("docs")}
-        />
         <Panel className="api-requests">
           <div className="panel-head">
             <h2>
