@@ -2303,49 +2303,58 @@ function ActivationPanel({
     { label: "WhatsApp", state: summary?.has_whatsapp_configuration ? "Configured" : "Missing", done: Boolean(summary?.has_whatsapp_configuration) },
     { label: "Webhooks", state: summary?.recent_webhook_count ? `${summary.recent_webhook_count} recent` : "Idle", done: Boolean(summary?.recent_webhook_count) },
   ];
+  const readyCount = items.filter((item) => item.done).length;
 
   return (
-    <Panel className="activation-panel">
-      <div className="panel-head bordered">
-        <div>
-          <h2>Launch checklist</h2>
-          <p className="helper-text">Open this only when you need setup actions or the bootstrap flow.</p>
+    <details className="activation-panel">
+      <summary className="activation-summary">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Launch checklist</h2>
+            <p className="helper-text">Collapsed by default so the dashboard opens on the operating surface first.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Live connected" : "Live needs attention"} />
         </div>
-        <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Live connected" : "Live needs attention"} />
-      </div>
-      <div className="activation-grid">
-        {items.map((item) => (
-          <div key={item.label} className={`activation-item ${item.done ? "done" : ""}`}>
-            <span className={`dot ${item.done ? "good" : "warn"}`} />
+        <div className="activation-summary-row">
+          <strong>{readyCount}/{items.length} ready</strong>
+          <span>{mode === "preview" ? "Sample data" : summary?.workspace_count ? `${summary.workspace_count} workspaces` : "Launch setup pending"}</span>
+        </div>
+      </summary>
+      <div className="activation-body">
+        <div className="activation-grid">
+          {items.map((item) => (
+            <div key={item.label} className={`activation-item ${item.done ? "done" : ""}`}>
+              <span className={`dot ${item.done ? "good" : "warn"}`} />
+              <div>
+                <strong>{item.label}</strong>
+                <small>{item.state}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+        <details className="bootstrap-panel">
+          <summary className="bootstrap-summary">
             <div>
-              <strong>{item.label}</strong>
-              <small>{item.state}</small>
+              <strong>Bootstrap a live workspace</strong>
+              <p className="helper-text">Create the workspace, first project, and starter API key in one pass.</p>
+            </div>
+            <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={bootstrapping ? "Creating..." : "Optional"} />
+          </summary>
+          <div className="bootstrap-body">
+            <div className="bootstrap-grid">
+              <FormField label="Workspace name" value={bootstrapWorkspaceName} onChange={setBootstrapWorkspaceName} />
+              <FormField label="Project name" value={bootstrapProjectName} onChange={setBootstrapProjectName} />
+              <FormField label="API key name" value={bootstrapKeyName} onChange={setBootstrapKeyName} />
+            </div>
+            <div className="status-banner-actions">
+              <button className="button primary blue" onClick={onBootstrap} disabled={bootstrapping || mode === "preview"}>
+                <Plus size={15} /> {bootstrapping ? "Bootstrapping..." : "Create workspace bundle"}
+              </button>
             </div>
           </div>
-        ))}
+        </details>
       </div>
-      <details className="bootstrap-panel">
-        <summary className="bootstrap-summary">
-          <div>
-            <strong>Bootstrap a live workspace</strong>
-            <p className="helper-text">Create the workspace, first project, and starter API key in one pass.</p>
-          </div>
-          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={bootstrapping ? "Creating..." : "Optional"} />
-        </summary>
-        <div className="bootstrap-body">
-          <div className="bootstrap-grid">
-            <FormField label="Workspace name" value={bootstrapWorkspaceName} onChange={setBootstrapWorkspaceName} />
-            <FormField label="Project name" value={bootstrapProjectName} onChange={setBootstrapProjectName} />
-            <FormField label="API key name" value={bootstrapKeyName} onChange={setBootstrapKeyName} />
-          </div>
-          <div className="status-banner-actions">
-            <button className="button primary blue" onClick={onBootstrap} disabled={bootstrapping || mode === "preview"}>
-              <Plus size={15} /> {bootstrapping ? "Bootstrapping..." : "Create workspace bundle"}
-            </button>
-          </div>
-        </div>
-      </details>
-    </Panel>
+    </details>
   );
 }
 

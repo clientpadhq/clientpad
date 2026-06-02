@@ -1583,10 +1583,49 @@ td small {
 
 .activation-panel summary {
   list-style: none;
+  cursor: pointer;
 }
 
 .activation-panel summary::-webkit-details-marker {
   display: none;
+}
+
+.activation-summary {
+  display: grid;
+  gap: 12px;
+}
+
+.activation-summary .panel-head {
+  margin: 0;
+}
+
+.activation-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel-2) 88%, var(--panel));
+}
+
+.activation-summary-row strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 720;
+  letter-spacing: -0.01em;
+}
+
+.activation-summary-row span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.activation-body {
+  display: grid;
+  gap: 14px;
 }
 
 .status-banner {
