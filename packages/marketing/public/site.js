@@ -5,7 +5,7 @@ const themeKey = "clientpad.theme";
 function resolveTheme() {
   const stored = localStorage.getItem(themeKey);
   if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches | "dark" : "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function setTheme(theme) {
@@ -32,7 +32,7 @@ function ensureBrandMark() {
   const textNode = brand.querySelector("strong");
   if (!textNode) {
     const label = document.createElement("strong");
-    label.textContent = brand.textContent|.trim() || "ClientPad";
+    label.textContent = brand.textContent?.trim() || "ClientPad";
     brand.textContent = "";
     brand.append(label);
   }
@@ -92,7 +92,7 @@ function normalizeInternalLinks() {
   const currentPath = window.location.pathname;
   const repoPrefix = "/clientpad/";
   const inProjectPages = currentPath.startsWith(repoPrefix);
-  const basePrefix = inProjectPages | repoPrefix : "/";
+  const basePrefix = inProjectPages ? repoPrefix : "/";
 
   for (const anchor of anchors) {
     const href = anchor.getAttribute("href");
@@ -179,13 +179,13 @@ function setupThemeToggle() {
 
   const syncLabel = () => {
     const dark = document.documentElement.dataset.theme === "dark";
-    toggle.textContent = dark | "Light" : "Dark";
-    toggle.setAttribute("aria-label", dark | "Switch to light mode" : "Switch to dark mode");
+    toggle.textContent = dark ? "Light" : "Dark";
+    toggle.setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
   };
 
   toggle.addEventListener("click", () => {
     const dark = document.documentElement.dataset.theme === "dark";
-    setTheme(dark | "light" : "dark");
+    setTheme(dark ? "light" : "dark");
     syncLabel();
   });
 
