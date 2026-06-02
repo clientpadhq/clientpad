@@ -1382,7 +1382,6 @@ function Overview({
         : readiness
           ? "Live needs attention"
           : "Checking live status";
-  const heroWorkspaceLabel = readiness?.workspace?.name ?? selectedProject?.name ?? "No workspace selected";
   const heroSyncLabel = readiness?.time
     ? `Readiness synced ${timeAgo(readiness.time)}`
     : health?.time
@@ -1421,11 +1420,6 @@ function Overview({
             <span>Connection</span>
             <strong>{heroConnectionLabel}</strong>
             <small>{mode === "preview" ? "Sample data only" : readiness?.auth?.user ? `Signed in as ${readiness.auth.user.email}` : "Waiting for live validation"}</small>
-          </div>
-          <div className="hero-metric">
-            <span>Workspace</span>
-            <strong>{heroWorkspaceLabel}</strong>
-            <small>{heroSyncLabel}</small>
           </div>
           <div className="hero-metric">
             <span>Usage</span>
