@@ -1387,6 +1387,7 @@ function Overview({
     : health?.time
       ? `Health checked ${timeAgo(health.time)}`
       : "Awaiting backend sync";
+  const publicApiUrl = "https://api.clientpad.xyz/api/public/v1";
 
   return (
     <div className="overview-stack">
@@ -1416,6 +1417,12 @@ function Overview({
           </div>
         </div>
         <div className="overview-hero-metrics">
+          <div className="hero-contract">
+            <span>Public API</span>
+            <strong>{publicApiUrl}</strong>
+            <small>Build against <code>CLIENTPAD_API_KEY</code> server-side.</small>
+            <CopyButton text={publicApiUrl} />
+          </div>
           <div className="hero-metric">
             <span>Connection</span>
             <strong>{heroConnectionLabel}</strong>
