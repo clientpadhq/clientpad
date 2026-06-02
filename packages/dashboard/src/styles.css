@@ -1420,6 +1420,25 @@ td small {
   min-width: 0;
 }
 
+.launch-bootstrap {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel-2) 86%, var(--panel));
+}
+
+.launch-bootstrap strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 720;
+}
+
+.launch-bootstrap .helper-text {
+  margin-top: 4px;
+}
+
 .launch-checks {
   display: grid;
   gap: 10px;

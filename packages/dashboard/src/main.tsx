@@ -1411,6 +1411,9 @@ function Overview({
             <button className="button outline" onClick={() => setPage("keys")}>
               Create API key
             </button>
+            <button className="button outline" onClick={() => setPage("launch")}>
+              Launch checklist
+            </button>
             <button className="button outline" onClick={() => setPage("docs")}>
               Read docs
             </button>
@@ -2319,7 +2322,7 @@ function ActivationPanel({
         <div className="panel-head bordered">
           <div>
             <h2>Launch checklist</h2>
-            <p className="helper-text">Collapsed by default so the dashboard opens on the operating surface first.</p>
+            <p className="helper-text">Open when you need launch actions, readiness checks, or bootstrap.</p>
           </div>
           <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Live connected" : "Live needs attention"} />
         </div>
@@ -2340,27 +2343,22 @@ function ActivationPanel({
             </div>
           ))}
         </div>
-        <details className="bootstrap-panel">
-          <summary className="bootstrap-summary">
-            <div>
-              <strong>Bootstrap a live workspace</strong>
-              <p className="helper-text">Create the workspace, first project, and starter API key in one pass.</p>
-            </div>
-            <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={bootstrapping ? "Creating..." : "Optional"} />
-          </summary>
-          <div className="bootstrap-body">
-            <div className="bootstrap-grid">
-              <FormField label="Workspace name" value={bootstrapWorkspaceName} onChange={setBootstrapWorkspaceName} />
-              <FormField label="Project name" value={bootstrapProjectName} onChange={setBootstrapProjectName} />
-              <FormField label="API key name" value={bootstrapKeyName} onChange={setBootstrapKeyName} />
-            </div>
-            <div className="status-banner-actions">
-              <button className="button primary blue" onClick={onBootstrap} disabled={bootstrapping || mode === "preview"}>
-                <Plus size={15} /> {bootstrapping ? "Bootstrapping..." : "Create workspace bundle"}
-              </button>
-            </div>
+        <div className="launch-bootstrap">
+          <div>
+            <strong>Bootstrap a live workspace</strong>
+            <p className="helper-text">Create the workspace, first project, and starter API key in one pass.</p>
           </div>
-        </details>
+          <div className="bootstrap-grid">
+            <FormField label="Workspace name" value={bootstrapWorkspaceName} onChange={setBootstrapWorkspaceName} />
+            <FormField label="Project name" value={bootstrapProjectName} onChange={setBootstrapProjectName} />
+            <FormField label="API key name" value={bootstrapKeyName} onChange={setBootstrapKeyName} />
+          </div>
+          <div className="status-banner-actions">
+            <button className="button primary blue" onClick={onBootstrap} disabled={bootstrapping || mode === "preview"}>
+              <Plus size={15} /> {bootstrapping ? "Bootstrapping..." : "Create workspace bundle"}
+            </button>
+          </div>
+        </div>
       </div>
     </details>
   );
