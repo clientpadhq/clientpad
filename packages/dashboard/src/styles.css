@@ -1053,6 +1053,174 @@ button { cursor: pointer; }
   letter-spacing: -0.01em;
 }
 
+.deployments-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.deployments-hero {
+  display: grid;
+  gap: 16px;
+}
+
+.deployment-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.deployment-summary {
+  display: grid;
+  gap: 6px;
+  padding: 15px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--line));
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 95%, var(--bg)), color-mix(in srgb, var(--panel-2) 90%, var(--panel)));
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.deployment-summary span,
+.deployment-service-card strong,
+.deployment-next-action span,
+.deployment-footer-note span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.deployment-summary strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+.deployment-summary small,
+.deployment-service-card small,
+.deployment-meta span,
+.deployment-footer-note small,
+.deployment-next-action strong {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.deployment-summary .copy-button {
+  justify-self: start;
+}
+
+.deployments-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 16px;
+}
+
+.deployment-services-panel,
+.deployment-ops-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.deployment-service-list {
+  display: grid;
+  gap: 10px;
+}
+
+.deployment-service-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
+.deployment-service-card.live {
+  border-color: color-mix(in srgb, #20a35a 22%, var(--line));
+}
+
+.deployment-service-card.warning {
+  border-color: color-mix(in srgb, #dc8c00 26%, var(--line));
+}
+
+.deployment-service-card.deploying {
+  border-color: color-mix(in srgb, var(--brand) 26%, var(--line));
+}
+
+.deployment-service-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: start;
+}
+
+.deployment-service-head strong {
+  display: block;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 740;
+}
+
+.deployment-service-head span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.deployment-service-card code {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel-2) 90%, var(--panel));
+  color: var(--ink);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.deployment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.deployment-meta span {
+  font-size: 12px;
+}
+
+.deployment-next-action {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--brand) 5%, var(--panel));
+}
+
+.deployment-next-action strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.deployment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.deployment-footer-note {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
 .overview-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(340px, 1fr);
@@ -1522,6 +1690,8 @@ td small {
   .overview-hero { grid-template-columns: 1fr; }
   .infra-hero-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .infra-grid { grid-template-columns: 1fr; }
+  .deployment-hero-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .deployments-grid { grid-template-columns: 1fr; }
   .overview-layout, .detail-layout { grid-template-columns: 1fr; }
   .billing-panel, .quickstart-panel, .active-projects, .api-keys { grid-column: auto; }
   .billing-grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
@@ -1558,7 +1728,9 @@ td small {
     gap: 0;
   }
   .infra-hero-grid { grid-template-columns: 1fr; }
+  .deployment-hero-grid { grid-template-columns: 1fr; }
   .infra-actions { flex-direction: column; }
+  .deployment-actions { flex-direction: column; }
   .nav-label {
     display: none;
   }

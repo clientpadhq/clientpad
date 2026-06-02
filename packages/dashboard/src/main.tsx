@@ -172,6 +172,17 @@ type CloudReadinessWorkspace = {
   has_payment_provider_configuration: boolean;
 };
 
+type DeploymentRecord = {
+  service: string;
+  host: string;
+  target: string;
+  status: "live" | "deploying" | "warning";
+  deployed_at: string;
+  commit: string;
+  trigger: string;
+  note: string;
+};
+
 type CloudReadiness = {
   status: "ok" | "degraded";
   service: string;
@@ -188,7 +199,7 @@ type CloudReadiness = {
 
 type ConnectionState = "preview" | "checking" | "connected" | "misconfigured" | "unavailable";
 
-type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "docs" | "settings";
+type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "docs" | "settings";
 type QuickstartLanguage = "curl" | "python" | "node" | "go" | "ruby";
 type DashboardTheme = "light" | "dark";
 type LaunchCheckStatus = "checking" | "ok" | "warning" | "fail";
@@ -280,7 +291,7 @@ const dashboardPageParamKey = "page";
 const defaultCloudBaseUrl = window.location.hostname.includes("localhost")
   ? "http://localhost:3000/api/cloud/v1"
   : "https://api.clientpad.xyz/api/cloud/v1";
-const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "docs", "settings"];
+const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "docs", "settings"];
 const dashboardPageSet = new Set<Page>(dashboardPages);
 
 function resolveDashboardTheme(): DashboardTheme {
@@ -1072,11 +1083,27 @@ function Dashboard({
               selectedWorkspace={selectedWorkspace}
               publicApiKey={publicApiKey}
               usageSummary={usageSummary}
+              onGoToDeployments={() => setPage("deployments")}
               onGoToLaunch={() => setPage("launch")}
               onGoToDocs={() => setPage("docs")}
               onGoToProjects={() => setPage("projects")}
               onGoToKeys={() => setPage("keys")}
               onGoToConnect={() => setPage("connect")}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
+          {page === "deployments" && (
+            <Deployments
+              mode={mode}
+              readiness={readiness}
+              health={health}
+              selectedWorkspace={selectedWorkspace}
+              usageSummary={usageSummary}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToLaunch={() => setPage("launch")}
+              onGoToDocs={() => setPage("docs")}
+              onGoToProjects={() => setPage("projects")}
+              onGoToKeys={() => setPage("keys")}
               onCopy={(text) => copyText(text, setNotice)}
             />
           )}
@@ -1124,6 +1151,7 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
     ["keys", <KeyRound size={18} />, "API Keys"],
     ["launch", <ShieldCheck size={18} />, "Launch"],
     ["infrastructure", <Server size={18} />, "Infrastructure"],
+    ["deployments", <Archive size={18} />, "Deployments"],
     ["docs", <BookOpen size={18} />, "Docs"],
   ];
 
@@ -2387,6 +2415,7 @@ function Infrastructure({
   selectedWorkspace,
   publicApiKey,
   usageSummary,
+  onGoToDeployments,
   onGoToLaunch,
   onGoToDocs,
   onGoToProjects,
@@ -2400,6 +2429,7 @@ function Infrastructure({
   selectedWorkspace: string;
   publicApiKey: string;
   usageSummary: UsageSummary | null;
+  onGoToDeployments: () => void;
   onGoToLaunch: () => void;
   onGoToDocs: () => void;
   onGoToProjects: () => void;
@@ -2556,6 +2586,7 @@ function Infrastructure({
           <div className="infra-actions">
             <button className="button primary blue" onClick={onGoToKeys}>Create API key</button>
             <button className="button outline" onClick={onGoToProjects}>Projects</button>
+            <button className="button outline" onClick={onGoToDeployments}>Deployments</button>
             <button className="button outline" onClick={onGoToDocs}>Docs</button>
             <button className="button outline" onClick={onGoToConnect}>WhatsApp</button>
           </div>
@@ -2566,6 +2597,177 @@ function Infrastructure({
             <button className="link-button" onClick={() => onCopy(platformUrl)}>
               Copy platform URL <ChevronRight size={15} />
             </button>
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+function Deployments({
+  mode,
+  readiness,
+  health,
+  selectedWorkspace,
+  usageSummary,
+  onGoToInfrastructure,
+  onGoToLaunch,
+  onGoToDocs,
+  onGoToProjects,
+  onGoToKeys,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  readiness: CloudReadiness | null;
+  health: CloudHealth | null;
+  selectedWorkspace: string;
+  usageSummary: UsageSummary | null;
+  onGoToInfrastructure: () => void;
+  onGoToLaunch: () => void;
+  onGoToDocs: () => void;
+  onGoToProjects: () => void;
+  onGoToKeys: () => void;
+  onCopy: (text: string) => void;
+}) {
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedWorkspace ?? "No workspace selected";
+  const apiStatus = health?.status === "ok" ? "Healthy" : health ? "Attention" : "Pending";
+  const deployStatus =
+    mode === "preview"
+      ? "Preview deployment"
+      : readiness?.status === "ok"
+        ? "Live deployment"
+        : readiness
+          ? "Needs release attention"
+          : "Waiting on deploy checks";
+  const deployUrl = "https://platform.clientpad.xyz";
+  const deployHealthLabel = health ? `${health.service} ${health.status}` : "Health pending";
+  const diagnostics = readiness?.diagnostics ?? [];
+  const deploymentRecords: DeploymentRecord[] = demoDeployments.map((deployment, index) => ({
+    ...deployment,
+    deployed_at: new Date(Date.now() - index * 43 * 60 * 1000).toISOString(),
+  }));
+  const releaseCount = deploymentRecords.length;
+  const healthyCount = deploymentRecords.filter((deployment) => deployment.status === "live").length;
+  const warningCount = deploymentRecords.filter((deployment) => deployment.status !== "live").length;
+  const latestDeployment = deploymentRecords[0];
+  const nextAction =
+    diagnostics.find((item) => item.status === "missing")?.detail
+    ?? (mode === "preview"
+      ? "Preview mode mirrors the deploy flow without hitting production services."
+      : readiness?.status === "ok"
+        ? "Deployment pipeline is stable."
+        : "Open Infrastructure or Launch to resolve live service checks.");
+
+  return (
+    <div className="deployments-layout">
+      <Panel className="deployments-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Deployments</h2>
+            <p className="helper-text">GitHub pushes, Render releases, and the state of each public service.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={deployStatus} />
+        </div>
+        <div className="deployment-hero-grid">
+          <div className="deployment-summary">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{usageSummary?.plan_name ?? "Pro"} plan | {usageSummary?.active_api_key_count ?? 0} active keys</small>
+          </div>
+          <div className="deployment-summary">
+            <span>Latest release</span>
+            <strong>{latestDeployment.service}</strong>
+            <small>{latestDeployment.commit} | {latestDeployment.trigger}</small>
+            <small>Deployed {timeAgo(latestDeployment.deployed_at)}</small>
+          </div>
+          <div className="deployment-summary">
+            <span>Rollout health</span>
+            <strong>{healthyCount}/{releaseCount} live</strong>
+            <small>{warningCount} require attention | {deployHealthLabel}</small>
+          </div>
+          <div className="deployment-summary">
+            <span>Public platform</span>
+            <strong>{deployUrl}</strong>
+            <small>Dashboard, docs, and infrastructure all route from the same GitHub deployment flow.</small>
+            <button className="button outline" onClick={() => onCopy(deployUrl)}>
+              Copy platform URL
+            </button>
+          </div>
+        </div>
+      </Panel>
+
+      <div className="deployments-grid">
+        <Panel className="deployment-services-panel">
+          <div className="panel-head bordered">
+            <h2>Service rollout</h2>
+            <button className="button outline" onClick={onGoToInfrastructure}>
+              View infrastructure
+            </button>
+          </div>
+          <div className="deployment-service-list">
+            {deploymentRecords.map((deployment) => (
+              <article key={deployment.target} className={`deployment-service-card ${deployment.status}`}>
+                <div className="deployment-service-head">
+                  <div>
+                    <strong>{deployment.service}</strong>
+                    <span>{deployment.host}</span>
+                  </div>
+                  <StatusChip tone={deployment.status === "live" ? "green" : deployment.status === "deploying" ? "blue" : "amber"} label={deployment.status === "live" ? "Live" : deployment.status === "deploying" ? "Deploying" : "Needs review"} />
+                </div>
+                <small>{deployment.note}</small>
+                <code>{deployment.target}</code>
+                <div className="deployment-meta">
+                  <span>{deployment.commit}</span>
+                  <span>{deployment.trigger}</span>
+                  <span>{timeAgo(deployment.deployed_at)}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel className="deployment-ops-panel">
+          <div className="panel-head bordered">
+            <h2>Release operations</h2>
+            <StatusChip tone={health?.status === "ok" ? "green" : health ? "amber" : "gray"} label={deployHealthLabel} />
+          </div>
+          <div className="status-stack compact">
+            <div className="status-item">
+              <span className={mode === "preview" ? "dot good" : "dot warn"} />
+              <div>
+                <strong>Deploy mode</strong>
+                <small>{mode === "preview" ? "Preview deployment" : "Production deployment"}</small>
+              </div>
+            </div>
+            <div className="status-item">
+              <span className={readiness?.status === "ok" ? "dot good" : "dot warn"} />
+              <div>
+                <strong>Readiness</strong>
+                <small>{readiness?.status === "ok" ? "All checks passed" : readiness ? "One or more checks need attention" : "No checks loaded yet"}</small>
+              </div>
+            </div>
+            <div className="status-item">
+              <span className={health?.status === "ok" ? "dot good" : "dot warn"} />
+              <div>
+                <strong>API health</strong>
+                <small>{health ? `${health.service} checked ${timeAgo(health.time)}` : "Health not checked yet"}</small>
+              </div>
+            </div>
+          </div>
+          <div className="deployment-next-action">
+            <span>Next action</span>
+            <strong>{nextAction}</strong>
+          </div>
+          <div className="deployment-actions">
+            <button className="button primary blue" onClick={onGoToKeys}>Create API key</button>
+            <button className="button outline" onClick={onGoToProjects}>Projects</button>
+            <button className="button outline" onClick={onGoToLaunch}>Launch</button>
+            <button className="button outline" onClick={onGoToDocs}>Docs</button>
+          </div>
+          <div className="deployment-footer-note">
+            <span>Autodeploy</span>
+            <strong>GitHub pushes trigger Render releases for every public service.</strong>
+            <small>Keep the repository open source, require `CLIENTPAD_API_KEY`, and let Render publish the static and API surfaces.</small>
           </div>
         </Panel>
       </div>
@@ -3491,6 +3693,49 @@ const demoUsage: UsageRow[] = [
   { api_key_id: "api_key_9c3d", name: "Dev CLI Key", billing_mode: "cloud_free", monthly_request_limit: 100_000, rate_limit_per_minute: 300, request_count: 346_118, rejected_count: 7 },
 ];
 
+const demoDeployments: DeploymentRecord[] = [
+  {
+    service: "clientpad-api",
+    host: "api.clientpad.xyz",
+    target: "clientpad-api.onrender.com",
+    status: "live",
+    deployed_at: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
+    commit: "9d5b425",
+    trigger: "GitHub push",
+    note: "Cloud API, readiness checks, and operator auth are deployed here.",
+  },
+  {
+    service: "clientpad-app",
+    host: "platform.clientpad.xyz",
+    target: "clientpad-app.onrender.com",
+    status: "live",
+    deployed_at: new Date(Date.now() - 1.4 * 60 * 60 * 1000).toISOString(),
+    commit: "229163d",
+    trigger: "GitHub push",
+    note: "Dashboard shell, infrastructure, and deployment pages ship here.",
+  },
+  {
+    service: "clientpad-docs",
+    host: "docs.clientpad.xyz",
+    target: "clientpad-docs.onrender.com",
+    status: "live",
+    deployed_at: new Date(Date.now() - 2.1 * 60 * 60 * 1000).toISOString(),
+    commit: "9f1db05",
+    trigger: "GitHub push",
+    note: "Docs root rewrite keeps the docs host serving the docs homepage.",
+  },
+  {
+    service: "clientpad-frontend",
+    host: "clientpad.xyz",
+    target: "clientpad-frontend.onrender.com",
+    status: "live",
+    deployed_at: new Date(Date.now() - 3.3 * 60 * 60 * 1000).toISOString(),
+    commit: "9d17528",
+    trigger: "GitHub push",
+    note: "Public marketing pages, footer, and open-source positioning ship here.",
+  },
+];
+
 function demoReadinessWorkspace(
   id: string,
   name: string,
@@ -3665,6 +3910,7 @@ function titleForPage(page: Page) {
     keys: "API Keys",
     launch: "Launch",
     infrastructure: "Infrastructure",
+    deployments: "Deployments",
     docs: "Docs",
     settings: "Settings",
   }[page];
@@ -3684,6 +3930,7 @@ function subtitleForPage(page: Page, project?: Project) {
     keys: "Issue, copy, and inspect developer access keys",
     launch: "Verify production services before sending customers traffic",
     infrastructure: "Platform, API, docs, and public host mapping",
+    deployments: "GitHub pushes, Render releases, and service rollout history",
     docs: "SDK and API snippets developers can copy into apps",
     settings: "API connection and operator settings",
   }[page];
