@@ -974,6 +974,55 @@ button { cursor: pointer; }
   word-break: break-all;
 }
 
+.infra-diagnostics {
+  display: grid;
+  gap: 10px;
+}
+
+.infra-diagnostic-list {
+  display: grid;
+  gap: 8px;
+}
+
+.infra-diagnostic {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+}
+
+.infra-diagnostic strong {
+  display: block;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 720;
+}
+
+.infra-diagnostic small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.infra-diagnostic em {
+  color: color-mix(in srgb, var(--brand) 82%, var(--ink));
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.45;
+}
+
+.infra-diagnostic.ok {
+  border-color: color-mix(in srgb, #20a35a 24%, var(--line));
+}
+
+.infra-diagnostic.warning,
+.infra-diagnostic.fail {
+  border-color: color-mix(in srgb, #dc8c00 28%, var(--line));
+}
+
 .infra-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1509,6 +1558,7 @@ td small {
     gap: 0;
   }
   .infra-hero-grid { grid-template-columns: 1fr; }
+  .infra-actions { flex-direction: column; }
   .nav-label {
     display: none;
   }

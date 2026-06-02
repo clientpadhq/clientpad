@@ -2447,6 +2447,7 @@ function Infrastructure({
     { label: "WhatsApp", value: readiness?.summary?.has_whatsapp_configuration ? "Configured" : "Missing", ok: Boolean(readiness?.summary?.has_whatsapp_configuration) },
     { label: "Webhooks", value: readiness?.summary?.recent_webhook_count ? `${readiness.summary.recent_webhook_count} recent` : "Idle", ok: Boolean(readiness?.summary?.recent_webhook_count) },
   ];
+  const diagnostics = readiness?.diagnostics ?? [];
   const readinessLabel =
     mode === "preview"
       ? "Preview mode"
@@ -2531,6 +2532,26 @@ function Infrastructure({
                 </div>
               </div>
             ))}
+          </div>
+          <div className="infra-diagnostics">
+            <div className="panel-head bordered compact-head">
+              <h2>Diagnostics <span>{diagnostics.length}</span></h2>
+            </div>
+            {diagnostics.length ? (
+              <div className="infra-diagnostic-list">
+                {diagnostics.slice(0, 4).map((item) => (
+                  <article key={item.key} className={`infra-diagnostic ${item.status}`}>
+                    <div>
+                      <strong>{item.label}</strong>
+                      <small>{item.detail}</small>
+                    </div>
+                    {item.status === "missing" ? <em>Open Launch to resolve this check.</em> : null}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="helper-text">No diagnostics yet. Run live checks to load service-level guidance.</p>
+            )}
           </div>
           <div className="infra-actions">
             <button className="button primary blue" onClick={onGoToKeys}>Create API key</button>
