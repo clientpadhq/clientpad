@@ -1421,6 +1421,7 @@ function Overview({
             <span>Public API</span>
             <strong>{publicApiUrl}</strong>
             <small>Build against <code>CLIENTPAD_API_KEY</code> server-side.</small>
+            <small>{heroSyncLabel}</small>
             <CopyButton text={publicApiUrl} />
           </div>
           <div className="hero-metric">
