@@ -964,18 +964,20 @@ function Dashboard({
           onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
         />
         <section className="content">
-          <StatusBanner
-            mode={mode}
-            connectionState={connectionSummary}
-            health={health}
-            readiness={readiness}
-            hasPublicApiKey={Boolean(publicApiKey.trim())}
-            projectCount={projects.length}
-            onGoToConnect={() => setPage("connect")}
-            onGoToProjects={() => setPage("projects")}
-            onGoToKeys={() => setPage("keys")}
-            onRetry={() => refresh().catch((error) => setNotice(error.message))}
-          />
+          {page !== "overview" ? (
+            <StatusBanner
+              mode={mode}
+              connectionState={connectionSummary}
+              health={health}
+              readiness={readiness}
+              hasPublicApiKey={Boolean(publicApiKey.trim())}
+              projectCount={projects.length}
+              onGoToConnect={() => setPage("connect")}
+              onGoToProjects={() => setPage("projects")}
+              onGoToKeys={() => setPage("keys")}
+              onRetry={() => refresh().catch((error) => setNotice(error.message))}
+            />
+          ) : null}
           <PageHeader
             title={titleForPage(page)}
             subtitle={subtitleForPage(page, selectedProject)}
@@ -1411,9 +1413,6 @@ function Overview({
             <button className="button outline" onClick={() => setPage("keys")}>
               Create API key
             </button>
-            <button className="button outline" onClick={() => setPage("connect")}>
-              Connect WhatsApp
-            </button>
             <button className="button outline" onClick={() => setPage("docs")}>
               Read docs
             </button>
@@ -1429,11 +1428,6 @@ function Overview({
             <span>Workspace</span>
             <strong>{heroWorkspaceLabel}</strong>
             <small>{heroSyncLabel}</small>
-          </div>
-          <div className="hero-metric">
-            <span>API keys</span>
-            <strong>{hasPublicApiKey ? "Ready" : "Missing"}</strong>
-            <small>{keys.length} tracked keys | {usageSummary?.active_api_key_count ?? keys.length} active</small>
           </div>
           <div className="hero-metric">
             <span>Usage</span>
