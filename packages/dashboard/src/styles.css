@@ -435,7 +435,7 @@ button { cursor: pointer; }
   justify-self: end;
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 10px;
 }
 
 .top-actions button {
@@ -445,32 +445,17 @@ button { cursor: pointer; }
   padding: 0;
 }
 
-.topbar-sync {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 0 9px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--panel) 88%, transparent);
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 650;
-  white-space: nowrap;
-}
-
 .theme-toggle {
-  min-height: 34px;
+  width: 36px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
   border: 1px solid var(--line) !important;
   border-radius: 999px;
   background: var(--panel) !important;
   color: var(--ink) !important;
-  padding: 0 10px !important;
-  font-size: 12px;
-  font-weight: 650;
+  padding: 0 !important;
 }
 
 .theme-toggle svg {
@@ -1602,43 +1587,6 @@ td small {
 
 .activation-panel summary::-webkit-details-marker {
   display: none;
-}
-
-.activation-panel {
-  border: 0;
-  padding: 0;
-  background: transparent;
-}
-
-.activation-summary {
-  display: grid;
-  gap: 10px;
-  cursor: pointer;
-  list-style: none;
-}
-
-.activation-summary::-webkit-details-marker {
-  display: none;
-}
-
-.activation-summary .panel-head {
-  margin-bottom: 0;
-}
-
-.activation-summary-lead {
-  margin: 0;
-  color: #526071;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.activation-panel-body {
-  display: grid;
-  gap: 16px;
-  padding: 18px;
-  border: 1px solid #dbe2ea;
-  border-radius: 10px;
-  background: #ffffff;
 }
 
 .status-banner {
