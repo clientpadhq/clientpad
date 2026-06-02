@@ -1263,15 +1263,13 @@ function Topbar({
       </div>
       <label className="searchbox">
         <Search size={18} />
-        <input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search clients by phone/name, projects, keys..." />
+        <input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search clients, projects, keys..." />
         <kbd>Ctrl K</kbd>
       </label>
       <div className="top-actions">
         <StatusChip tone={topbarTone} label={topbarStatus} />
-        <span className="topbar-sync">{lastSyncedAt ? `Synced ${timeAgo(lastSyncedAt)}` : "Waiting for sync"}</span>
         <button className="theme-toggle" onClick={onToggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
           {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          <span>{theme === "dark" ? "Light" : "Dark"}</span>
         </button>
         <button className="avatar" onClick={onLogout} title="Sign out">
           {user ? userInitials(user) : "AD"}
