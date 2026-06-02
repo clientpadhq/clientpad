@@ -1373,6 +1373,13 @@ function Overview({
   const latestWhatsAppActivity = readiness?.summary?.latest_whatsapp_activity_at ? timeAgo(readiness.summary.latest_whatsapp_activity_at) : "No WhatsApp traffic yet";
   const latestPaymentEvent = readiness?.summary?.latest_payment_event_at ? timeAgo(readiness.summary.latest_payment_event_at) : "No payment events yet";
   const recentWebhooks = readiness?.summary?.recent_webhook_count ?? 0;
+  const pipelineCounts = demoClients.reduce<Record<string, number>>((counts, client) => {
+    counts[client.status] = (counts[client.status] ?? 0) + 1;
+    return counts;
+  }, {});
+  const openPipelineCount = (pipelineCounts["New Lead"] ?? 0) + (pipelineCounts["Quoted"] ?? 0) + (pipelineCounts["Booked"] ?? 0) + (pipelineCounts["In Progress"] ?? 0);
+  const closedPipelineCount = (pipelineCounts["Completed"] ?? 0) + (pipelineCounts["Paid"] ?? 0) + (pipelineCounts["Review Requested"] ?? 0);
+  const topPipelineStage = serviceStages.reduce((bestStage, stage) => (pipelineCounts[stage] ?? 0) > (pipelineCounts[bestStage] ?? 0) ? stage : bestStage, serviceStages[0]);
   const projectName = selectedProject?.name ?? "No project selected";
   const projectSlug = selectedProject?.slug ?? "clientpad-api";
   const projectOwner = selectedProject?.owner_email ?? "No owner email";
@@ -1436,6 +1443,12 @@ function Overview({
             <small>{projectSlug} | {projectEnv}</small>
             <small>Owner {projectOwner}</small>
             <small>{projectCreated} | {heroConnectionLabel}</small>
+          </div>
+          <div className="hero-pipeline">
+            <span>Pipeline</span>
+            <strong>{openPipelineCount} open leads</strong>
+            <small>New {pipelineCounts["New Lead"] ?? 0} | Quoted {pipelineCounts["Quoted"] ?? 0} | Booked {pipelineCounts["Booked"] ?? 0}</small>
+            <small>Active {pipelineCounts["In Progress"] ?? 0} | Closed {closedPipelineCount} | Top stage {topPipelineStage} ({pipelineCounts[topPipelineStage] ?? 0})</small>
           </div>
           <div className="hero-metric">
             <span>Usage</span>
