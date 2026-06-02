@@ -2150,7 +2150,7 @@ function Panel({ children, className = "" }: { children: React.ReactNode; classN
 function Logo({ compact = false }: { compact?: boolean } = {}) {
   return (
     <div className={`logo${compact ? " compact" : ""}`}>
-      <img className="logo-mark" src="/assets/clientpad-logo-only.png" alt="" aria-hidden="true" />
+      <img className="logo-mark" src="/assets/clientpad-logo.svg" alt="" aria-hidden="true" />
       <div className="logo-copy">
         <strong>ClientPad Dashboard</strong>
         {compact ? null : <span>API-first CRM control plane</span>}
@@ -2305,58 +2305,47 @@ function ActivationPanel({
   ];
 
   return (
-    <details className="activation-panel">
-      <summary className="activation-summary">
-        <div className="panel-head bordered">
-          <div>
-            <h2>Launch checklist</h2>
-            <p className="helper-text">The shortest path from a fresh shell to a live operator workspace.</p>
-          </div>
-          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Live connected" : "Live needs attention"} />
+    <Panel className="activation-panel">
+      <div className="panel-head bordered">
+        <div>
+          <h2>Launch checklist</h2>
+          <p className="helper-text">Open this only when you need setup actions or the bootstrap flow.</p>
         </div>
-        <p className="activation-summary-lead">Open for setup actions and the bootstrap flow.</p>
-      </summary>
-      <Panel className="activation-panel-body">
-        <div className="activation-grid">
-          {items.map((item) => (
-            <div key={item.label} className={`activation-item ${item.done ? "done" : ""}`}>
-              <span className={`dot ${item.done ? "good" : "warn"}`} />
-              <div>
-                <strong>{item.label}</strong>
-                <small>{item.state}</small>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="status-banner-actions">
-          <button className="button primary blue" onClick={onGoToProjects}>Create project</button>
-          <button className="button outline" onClick={onGoToKeys}>Create API key</button>
-          <button className="button outline" onClick={onGoToConnect}>Connect WhatsApp</button>
-          <button className="button outline" onClick={onGoToDocs}>Read setup docs</button>
-        </div>
-        <details className="bootstrap-panel">
-          <summary className="bootstrap-summary">
+        <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Live connected" : "Live needs attention"} />
+      </div>
+      <div className="activation-grid">
+        {items.map((item) => (
+          <div key={item.label} className={`activation-item ${item.done ? "done" : ""}`}>
+            <span className={`dot ${item.done ? "good" : "warn"}`} />
             <div>
-              <strong>Bootstrap a live workspace</strong>
-              <p className="helper-text">Create the workspace, first project, and starter API key in one pass.</p>
-            </div>
-            <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={bootstrapping ? "Creating..." : "Optional"} />
-          </summary>
-          <div className="bootstrap-body">
-            <div className="bootstrap-grid">
-              <FormField label="Workspace name" value={bootstrapWorkspaceName} onChange={setBootstrapWorkspaceName} />
-              <FormField label="Project name" value={bootstrapProjectName} onChange={setBootstrapProjectName} />
-              <FormField label="API key name" value={bootstrapKeyName} onChange={setBootstrapKeyName} />
-            </div>
-            <div className="status-banner-actions">
-              <button className="button primary blue" onClick={onBootstrap} disabled={bootstrapping || mode === "preview"}>
-                <Plus size={15} /> {bootstrapping ? "Bootstrapping..." : "Create workspace bundle"}
-              </button>
+              <strong>{item.label}</strong>
+              <small>{item.state}</small>
             </div>
           </div>
-        </details>
-      </Panel>
-    </details>
+        ))}
+      </div>
+      <details className="bootstrap-panel">
+        <summary className="bootstrap-summary">
+          <div>
+            <strong>Bootstrap a live workspace</strong>
+            <p className="helper-text">Create the workspace, first project, and starter API key in one pass.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={bootstrapping ? "Creating..." : "Optional"} />
+        </summary>
+        <div className="bootstrap-body">
+          <div className="bootstrap-grid">
+            <FormField label="Workspace name" value={bootstrapWorkspaceName} onChange={setBootstrapWorkspaceName} />
+            <FormField label="Project name" value={bootstrapProjectName} onChange={setBootstrapProjectName} />
+            <FormField label="API key name" value={bootstrapKeyName} onChange={setBootstrapKeyName} />
+          </div>
+          <div className="status-banner-actions">
+            <button className="button primary blue" onClick={onBootstrap} disabled={bootstrapping || mode === "preview"}>
+              <Plus size={15} /> {bootstrapping ? "Bootstrapping..." : "Create workspace bundle"}
+            </button>
+          </div>
+        </div>
+      </details>
+    </Panel>
   );
 }
 

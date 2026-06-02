@@ -1589,43 +1589,6 @@ td small {
   display: none;
 }
 
-.activation-panel {
-  border: 0;
-  padding: 0;
-  background: transparent;
-}
-
-.activation-summary {
-  display: grid;
-  gap: 10px;
-  cursor: pointer;
-  list-style: none;
-}
-
-.activation-summary::-webkit-details-marker {
-  display: none;
-}
-
-.activation-summary .panel-head {
-  margin-bottom: 0;
-}
-
-.activation-summary-lead {
-  margin: 0;
-  color: #526071;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.activation-panel-body {
-  display: grid;
-  gap: 16px;
-  padding: 18px;
-  border: 1px solid #dbe2ea;
-  border-radius: 10px;
-  background: #ffffff;
-}
-
 .status-banner {
   grid-template-columns: minmax(0, 1.3fr) minmax(240px, 0.9fr) auto;
   align-items: center;

@@ -1,6 +1,6 @@
-const CACHE_NAME = "clientpad-dashboard-v2";
+const CACHE_NAME = "clientpad-dashboard-v3";
 const OFFLINE_URL = "/offline.html";
-const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", OFFLINE_URL, "/assets/clientpad-logo-only.png", "/assets/clientpad-logo-192.png", "/assets/clientpad-logo-512.png"];
+const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", OFFLINE_URL, "/assets/clientpad-logo.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
