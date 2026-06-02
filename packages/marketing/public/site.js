@@ -82,7 +82,7 @@ function normalizeLegacySeparators() {
   while (walker.nextNode()) nodes.push(walker.currentNode);
   for (const node of nodes) {
     if (!node.nodeValue) continue;
-    node.nodeValue = node.nodeValue.replace(/Â·/g, "·");
+    node.nodeValue = node.nodeValue.replace(/Ã‚Â·/g, "Â·");
   }
 }
 
@@ -145,7 +145,7 @@ function buildDropdown() {
     </div>
     <div class="menu-group">
       <span class="menu-label">Links</span>
-      <a href="https://app.clientpad.xyz">Dashboard</a>
+      <a href="https://platform.clientpad.xyz">Dashboard</a>
       <a href="https://github.com/clientpadhq/clientpad">GitHub</a>
       <a href="https://github.com/Abdulmuiz44">Builder</a>
     </div>

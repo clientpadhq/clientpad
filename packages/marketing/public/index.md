@@ -17,7 +17,7 @@ It is designed for developers building business workflows into their own apps. T
 ## Domain layout
 
 - Public site: `https://clientpad.xyz`
-- Operator dashboard: `https://app.clientpad.xyz`
+- Operator dashboard: `https://platform.clientpad.xyz`
 - Cloud and public API: `https://api.clientpad.xyz`
 
 ## Quick start

@@ -88,7 +88,7 @@ Then deploy:
 
 - `api.clientpad.xyz/api/public/v1/*` with `@clientpad/server`
 - `api.clientpad.xyz/api/cloud/v1/*` with `@clientpad/cloud`
-- `app.clientpad.xyz` static app with `@clientpad/dashboard`
+- `platform.clientpad.xyz` static app with `@clientpad/dashboard`
 
 ## Default Plans
 

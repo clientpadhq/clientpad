@@ -9,7 +9,7 @@ ClientPad production should run on Render services with Cloudflare DNS only.
 | `clientpad.xyz` | Public marketing site | `clientpad-frontend.onrender.com` |
 | `www.clientpad.xyz` | Public marketing alias | `clientpad-frontend.onrender.com` |
 | `docs.clientpad.xyz` | Developer/operator docs | `clientpad-docs.onrender.com` |
-| `app.clientpad.xyz` | Operator dashboard PWA | `clientpad-app.onrender.com` |
+| `platform.clientpad.xyz` | Operator dashboard PWA | `clientpad-app.onrender.com` |
 | `api.clientpad.xyz` | Cloud API + public API | `clientpad-api.onrender.com` |
 
 ## DNS (Cloudflare)

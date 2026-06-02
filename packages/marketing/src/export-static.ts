@@ -6,6 +6,8 @@ const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const PUBLIC_DIR = join(__dirname, "..", "public");
 const DIST_DIR = __dirname;
 const BASE_URL = process.env.MARKETING_BASE_URL || "https://clientpad.xyz";
+const SITE_VARIANT = process.env.CLIENTPAD_SITE_VARIANT === "docs" ? "docs" : "marketing";
+const IS_DOCS_VARIANT = SITE_VARIANT === "docs";
 
 const pages = [
   { path: "/", html: "index.html", md: "index.md", title: "ClientPad" },
@@ -33,13 +35,19 @@ const pages = [
 ];
 
 function buildLlmsTxt() {
-  return `# ClientPad
+  const title = IS_DOCS_VARIANT ? "ClientPad Docs" : "ClientPad";
+  const intro = IS_DOCS_VARIANT
+    ? "ClientPad documentation for quickstart, SDK, API keys, self-hosting, Cloud setup, WhatsApp, deployment, and troubleshooting."
+    : "ClientPad is open-source infrastructure for WhatsApp-first lead capture, client workflows, API keys, usage tracking, and operator dashboards.";
+  const homeLabel = IS_DOCS_VARIANT ? "Docs Home" : "ClientPad Home";
 
-> ClientPad is open-source infrastructure for WhatsApp-first lead capture, client workflows, API keys, usage tracking, and operator dashboards.
+  return `# ${title}
+
+> ${intro}
 
 ## Product
 
-- [ClientPad Home](${BASE_URL}/index.md): Product overview, package links, and quick start
+- [${homeLabel}](${BASE_URL}/index.md): Product overview, package links, and quick start
 - [About ClientPad](${BASE_URL}/about.md): Mission, positioning, and open-source business model
 - [ClientPad Cloud](${BASE_URL}/docs/clientpad-cloud.md): Hosted gateway, dashboard, usage tracking, and billing-ready operations
 - [Pricing](${BASE_URL}/pricing.md): Open-source and hosted Cloud pricing model
@@ -58,7 +66,7 @@ function buildLlmsTxt() {
 
 ## Links
 
-- [Dashboard](https://app.clientpad.xyz)
+- [Dashboard](https://platform.clientpad.xyz)
 - [Docs](https://docs.clientpad.xyz)
 - [GitHub](https://github.com/clientpadhq/clientpad)
 - [npm packages](https://www.npmjs.com/search?q=%40clientpad)
@@ -105,6 +113,11 @@ function buildRedirects() {
 async function main() {
   await mkdir(DIST_DIR, { recursive: true });
   await cp(PUBLIC_DIR, DIST_DIR, { recursive: true, force: true });
+
+  if (IS_DOCS_VARIANT) {
+    await cp(join(PUBLIC_DIR, "docs", "index.html"), join(DIST_DIR, "index.html"), { force: true });
+    await cp(join(PUBLIC_DIR, "docs", "index.md"), join(DIST_DIR, "index.md"), { force: true });
+  }
 
   await writeFile(join(DIST_DIR, "llms.txt"), buildLlmsTxt(), "utf-8");
   await writeFile(join(DIST_DIR, "llms-full.txt"), await buildLlmsFullTxt(), "utf-8");

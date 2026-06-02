@@ -964,18 +964,20 @@ function Dashboard({
           onToggleTheme={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
         />
         <section className="content">
-          <StatusBanner
-            mode={mode}
-            connectionState={connectionSummary}
-            health={health}
-            readiness={readiness}
-            hasPublicApiKey={Boolean(publicApiKey.trim())}
-            projectCount={projects.length}
-            onGoToConnect={() => setPage("connect")}
-            onGoToProjects={() => setPage("projects")}
-            onGoToKeys={() => setPage("keys")}
-            onRetry={() => refresh().catch((error) => setNotice(error.message))}
-          />
+          {page !== "overview" ? (
+            <StatusBanner
+              mode={mode}
+              connectionState={connectionSummary}
+              health={health}
+              readiness={readiness}
+              hasPublicApiKey={Boolean(publicApiKey.trim())}
+              projectCount={projects.length}
+              onGoToConnect={() => setPage("connect")}
+              onGoToProjects={() => setPage("projects")}
+              onGoToKeys={() => setPage("keys")}
+              onRetry={() => refresh().catch((error) => setNotice(error.message))}
+            />
+          ) : null}
           <PageHeader
             title={titleForPage(page)}
             subtitle={subtitleForPage(page, selectedProject)}
@@ -1213,6 +1215,16 @@ function Topbar({
           : connectionState === "misconfigured"
             ? "Live misconfigured"
             : "Live unavailable";
+  const apiLabel = health?.status === "ok" ? "API healthy" : health?.status === "degraded" ? "API degraded" : "API pending";
+  const topbarTone =
+    mode === "preview"
+      ? "blue"
+      : connectionState === "connected" && health?.status === "ok"
+        ? "green"
+        : connectionState === "checking" || health?.status === "degraded"
+          ? "amber"
+          : "gray";
+  const topbarStatus = `${connectionLabel} | ${apiLabel}`;
 
   useEffect(() => {
     const handleGlobalSearchShortcut = (event: KeyboardEvent) => {
@@ -1255,11 +1267,7 @@ function Topbar({
         <kbd>Ctrl K</kbd>
       </label>
       <div className="top-actions">
-        <StatusChip tone={mode === "preview" ? "blue" : connectionState === "connected" ? "green" : connectionState === "checking" ? "amber" : "gray"} label={connectionLabel} />
-        <StatusChip
-          tone={health?.status === "ok" ? "green" : health?.status === "degraded" ? "amber" : "gray"}
-          label={health?.status === "ok" ? "API healthy" : health?.status === "degraded" ? "API degraded" : "API pending"}
-        />
+        <StatusChip tone={topbarTone} label={topbarStatus} />
         <span className="topbar-sync">{lastSyncedAt ? `Synced ${timeAgo(lastSyncedAt)}` : "Waiting for sync"}</span>
         <button className="theme-toggle" onClick={onToggleTheme} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}>
           {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
@@ -1405,9 +1413,6 @@ function Overview({
             <button className="button outline" onClick={() => setPage("keys")}>
               Create API key
             </button>
-            <button className="button outline" onClick={() => setPage("connect")}>
-              Connect WhatsApp
-            </button>
             <button className="button outline" onClick={() => setPage("docs")}>
               Read docs
             </button>
@@ -1425,14 +1430,9 @@ function Overview({
             <small>{heroSyncLabel}</small>
           </div>
           <div className="hero-metric">
-            <span>API keys</span>
-            <strong>{hasPublicApiKey ? "Ready" : "Missing"}</strong>
-            <small>{keys.length} tracked keys · {usageSummary?.active_api_key_count ?? keys.length} active</small>
-          </div>
-          <div className="hero-metric">
             <span>Usage</span>
             <strong>{formatNumber(requestTotal)}</strong>
-            <small>{formatNumber(rejectedTotal)} rejected · {selectedPlan?.name ?? "Pro"} plan</small>
+            <small>{formatNumber(rejectedTotal)} rejected | {selectedPlan?.name ?? "Pro"} plan</small>
           </div>
         </div>
       </Panel>
@@ -1848,7 +1848,7 @@ function LaunchReadiness({
   const externalTargets = [
     { label: "Marketing", url: "https://clientpad.xyz" },
     { label: "Docs", url: "https://docs.clientpad.xyz" },
-    { label: "Dashboard", url: "https://app.clientpad.xyz" },
+    { label: "Dashboard", url: "https://platform.clientpad.xyz" },
     { label: "API health", url: "https://api.clientpad.xyz/health" },
     { label: "llms.txt", url: "https://clientpad.xyz/llms.txt" },
   ];
@@ -2313,53 +2313,58 @@ function ActivationPanel({
   ];
 
   return (
-    <Panel className="activation-panel">
-      <div className="panel-head bordered">
-        <div>
-          <h2>Launch checklist</h2>
-          <p className="helper-text">The shortest path from a fresh shell to a live operator workspace.</p>
+    <details className="activation-panel">
+      <summary className="activation-summary">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Launch checklist</h2>
+            <p className="helper-text">The shortest path from a fresh shell to a live operator workspace.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Live connected" : "Live needs attention"} />
         </div>
-        <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Live connected" : "Live needs attention"} />
-      </div>
-      <div className="activation-grid">
-        {items.map((item) => (
-          <div key={item.label} className={`activation-item ${item.done ? "done" : ""}`}>
-            <span className={`dot ${item.done ? "good" : "warn"}`} />
+        <p className="activation-summary-lead">Open for setup actions and the bootstrap flow.</p>
+      </summary>
+      <Panel className="activation-panel-body">
+        <div className="activation-grid">
+          {items.map((item) => (
+            <div key={item.label} className={`activation-item ${item.done ? "done" : ""}`}>
+              <span className={`dot ${item.done ? "good" : "warn"}`} />
+              <div>
+                <strong>{item.label}</strong>
+                <small>{item.state}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="status-banner-actions">
+          <button className="button primary blue" onClick={onGoToProjects}>Create project</button>
+          <button className="button outline" onClick={onGoToKeys}>Create API key</button>
+          <button className="button outline" onClick={onGoToConnect}>Connect WhatsApp</button>
+          <button className="button outline" onClick={onGoToDocs}>Read setup docs</button>
+        </div>
+        <details className="bootstrap-panel">
+          <summary className="bootstrap-summary">
             <div>
-              <strong>{item.label}</strong>
-              <small>{item.state}</small>
+              <strong>Bootstrap a live workspace</strong>
+              <p className="helper-text">Create the workspace, first project, and starter API key in one pass.</p>
+            </div>
+            <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={bootstrapping ? "Creating..." : "Optional"} />
+          </summary>
+          <div className="bootstrap-body">
+            <div className="bootstrap-grid">
+              <FormField label="Workspace name" value={bootstrapWorkspaceName} onChange={setBootstrapWorkspaceName} />
+              <FormField label="Project name" value={bootstrapProjectName} onChange={setBootstrapProjectName} />
+              <FormField label="API key name" value={bootstrapKeyName} onChange={setBootstrapKeyName} />
+            </div>
+            <div className="status-banner-actions">
+              <button className="button primary blue" onClick={onBootstrap} disabled={bootstrapping || mode === "preview"}>
+                <Plus size={15} /> {bootstrapping ? "Bootstrapping..." : "Create workspace bundle"}
+              </button>
             </div>
           </div>
-        ))}
-      </div>
-      <div className="status-banner-actions">
-        <button className="button primary blue" onClick={onGoToProjects}>Create project</button>
-        <button className="button outline" onClick={onGoToKeys}>Create API key</button>
-        <button className="button outline" onClick={onGoToConnect}>Connect WhatsApp</button>
-        <button className="button outline" onClick={onGoToDocs}>Read setup docs</button>
-      </div>
-      <details className="bootstrap-panel">
-        <summary className="bootstrap-summary">
-          <div>
-            <strong>Bootstrap a live workspace</strong>
-            <p className="helper-text">Create the workspace, first project, and starter API key in one pass.</p>
-          </div>
-          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={bootstrapping ? "Creating..." : "Optional"} />
-        </summary>
-        <div className="bootstrap-body">
-          <div className="bootstrap-grid">
-            <FormField label="Workspace name" value={bootstrapWorkspaceName} onChange={setBootstrapWorkspaceName} />
-            <FormField label="Project name" value={bootstrapProjectName} onChange={setBootstrapProjectName} />
-            <FormField label="API key name" value={bootstrapKeyName} onChange={setBootstrapKeyName} />
-          </div>
-          <div className="status-banner-actions">
-            <button className="button primary blue" onClick={onBootstrap} disabled={bootstrapping || mode === "preview"}>
-              <Plus size={15} /> {bootstrapping ? "Bootstrapping..." : "Create workspace bundle"}
-            </button>
-          </div>
-        </div>
-      </details>
-    </Panel>
+        </details>
+      </Panel>
+    </details>
   );
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "ClientPad Dashboard",
   "short_name": "ClientPad",
-  "description": "Installable ClientPad app dashboard for API keys, CRM pipeline, inbox, revenue, usage, and billing.",
+  "description": "Installable ClientPad dashboard for API keys, CRM pipeline, inbox, revenue, usage, and billing.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

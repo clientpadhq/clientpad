@@ -7,7 +7,7 @@ The open-source packages remain MIT licensed and self-hostable. Cloud monetizati
 ## Production domains
 
 - Public site: `https://clientpad.xyz`
-- Operator dashboard: `https://app.clientpad.xyz`
+- Operator dashboard: `https://platform.clientpad.xyz`
 - Cloud API: `https://api.clientpad.xyz/api/cloud/v1`
 - Public API: `https://api.clientpad.xyz/api/public/v1`
 

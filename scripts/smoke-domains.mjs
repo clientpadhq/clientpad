@@ -22,8 +22,8 @@ const checks = [
     bodyIncludes: ["Open-Source", "/site.css", "/site.js"],
   },
   {
-    name: "app-root",
-    url: process.env.CLIENTPAD_APP_URL || "https://app.clientpad.xyz/",
+    name: "platform-root",
+    url: process.env.CLIENTPAD_PLATFORM_URL || process.env.CLIENTPAD_APP_URL || "https://platform.clientpad.xyz/",
     expectStatus: 200,
     bodyIncludes: ["ClientPad", "id=\"root\""],
   },
