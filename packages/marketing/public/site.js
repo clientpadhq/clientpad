@@ -82,7 +82,7 @@ function normalizeLegacySeparators() {
   while (walker.nextNode()) nodes.push(walker.currentNode);
   for (const node of nodes) {
     if (!node.nodeValue) continue;
-    node.nodeValue = node.nodeValue.replace(/Ã‚Â·/g, "Â·");
+            node.nodeValue = node.nodeValue.replace(/\u00C2?\u00B7/g, "|");
   }
 }
 

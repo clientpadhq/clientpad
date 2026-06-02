@@ -39,6 +39,7 @@ import {
   Clock,
   Archive,
   CheckCircle2,
+  Server,
 } from "lucide-react";
 import "./styles.css";
 
@@ -171,6 +172,17 @@ type CloudReadinessWorkspace = {
   has_payment_provider_configuration: boolean;
 };
 
+type DeploymentRecord = {
+  service: string;
+  host: string;
+  target: string;
+  status: "live" | "deploying" | "warning";
+  deployed_at: string;
+  commit: string;
+  trigger: string;
+  note: string;
+};
+
 type CloudReadiness = {
   status: "ok" | "degraded";
   service: string;
@@ -187,7 +199,7 @@ type CloudReadiness = {
 
 type ConnectionState = "preview" | "checking" | "connected" | "misconfigured" | "unavailable";
 
-type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "docs" | "settings";
+type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "docs" | "settings";
 type QuickstartLanguage = "curl" | "python" | "node" | "go" | "ruby";
 type DashboardTheme = "light" | "dark";
 type LaunchCheckStatus = "checking" | "ok" | "warning" | "fail";
@@ -279,7 +291,7 @@ const dashboardPageParamKey = "page";
 const defaultCloudBaseUrl = window.location.hostname.includes("localhost")
   ? "http://localhost:3000/api/cloud/v1"
   : "https://api.clientpad.xyz/api/cloud/v1";
-const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "docs", "settings"];
+const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "docs", "settings"];
 const dashboardPageSet = new Set<Page>(dashboardPages);
 
 function resolveDashboardTheme(): DashboardTheme {
@@ -1031,15 +1043,6 @@ function Dashboard({
               mode={mode}
               health={health}
               readiness={readiness}
-              hasPublicApiKey={Boolean(publicApiKey.trim())}
-              bootstrapWorkspaceName={bootstrapWorkspaceName}
-              setBootstrapWorkspaceName={setBootstrapWorkspaceName}
-              bootstrapProjectName={bootstrapProjectName}
-              setBootstrapProjectName={setBootstrapProjectName}
-              bootstrapKeyName={bootstrapKeyName}
-              setBootstrapKeyName={setBootstrapKeyName}
-              onBootstrap={bootstrapWorkspace}
-              bootstrapping={bootstrapping}
             />
           )}
           {page === "projects" && <Projects projects={filteredProjects} onCreate={createProject} setPage={setPage} />}
@@ -1070,6 +1073,38 @@ function Dashboard({
               selectedWorkspace={selectedWorkspace}
               publicApiKey={publicApiKey}
               onGoToSettings={() => setPage("settings")}
+            />
+          )}
+          {page === "infrastructure" && (
+            <Infrastructure
+              mode={mode}
+              readiness={readiness}
+              health={health}
+              selectedWorkspace={selectedWorkspace}
+              publicApiKey={publicApiKey}
+              usageSummary={usageSummary}
+              onGoToDeployments={() => setPage("deployments")}
+              onGoToLaunch={() => setPage("launch")}
+              onGoToDocs={() => setPage("docs")}
+              onGoToProjects={() => setPage("projects")}
+              onGoToKeys={() => setPage("keys")}
+              onGoToConnect={() => setPage("connect")}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
+          {page === "deployments" && (
+            <Deployments
+              mode={mode}
+              readiness={readiness}
+              health={health}
+              selectedWorkspace={selectedWorkspace}
+              usageSummary={usageSummary}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToLaunch={() => setPage("launch")}
+              onGoToDocs={() => setPage("docs")}
+              onGoToProjects={() => setPage("projects")}
+              onGoToKeys={() => setPage("keys")}
+              onCopy={(text) => copyText(text, setNotice)}
             />
           )}
           {page === "docs" && (
@@ -1115,6 +1150,8 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
     ["projects", <Building2 size={18} />, "Projects"],
     ["keys", <KeyRound size={18} />, "API Keys"],
     ["launch", <ShieldCheck size={18} />, "Launch"],
+    ["infrastructure", <Server size={18} />, "Infrastructure"],
+    ["deployments", <Archive size={18} />, "Deployments"],
     ["docs", <BookOpen size={18} />, "Docs"],
   ];
 
@@ -1335,15 +1372,6 @@ function Overview({
   mode,
   health,
   readiness,
-  hasPublicApiKey,
-  bootstrapWorkspaceName,
-  setBootstrapWorkspaceName,
-  bootstrapProjectName,
-  setBootstrapProjectName,
-  bootstrapKeyName,
-  setBootstrapKeyName,
-  onBootstrap,
-  bootstrapping,
 }: {
   loading: boolean;
   totalRequests: number;
@@ -1360,15 +1388,6 @@ function Overview({
   mode: ConnectionMode;
   health: CloudHealth | null;
   readiness: CloudReadiness | null;
-  hasPublicApiKey: boolean;
-  bootstrapWorkspaceName: string;
-  setBootstrapWorkspaceName: (value: string) => void;
-  bootstrapProjectName: string;
-  setBootstrapProjectName: (value: string) => void;
-  bootstrapKeyName: string;
-  setBootstrapKeyName: (value: string) => void;
-  onBootstrap: () => Promise<void> | void;
-  bootstrapping: boolean;
 }) {
   const requestLimit = selectedPlan?.monthly_request_limit ?? 10_000_000;
   const requestTotal = usageSummary?.request_count ?? totalRequests;
@@ -1387,6 +1406,31 @@ function Overview({
     : health?.time
       ? `Health checked ${timeAgo(health.time)}`
       : "Awaiting backend sync";
+  const publicApiUrl = "https://api.clientpad.xyz/api/public/v1";
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedProject?.name ?? "Select a workspace";
+  const workspaceRole = readiness?.auth?.user ? (readiness.summary?.workspace_count ? "Active workspace" : "No workspace data yet") : "Awaiting operator sign in";
+  const workspaceHealth = readiness?.status === "ok"
+    ? "Operational"
+    : readiness?.status === "degraded"
+      ? "Degraded"
+      : readiness
+        ? "Needs attention"
+        : "Checking";
+  const latestWhatsAppActivity = readiness?.summary?.latest_whatsapp_activity_at ? timeAgo(readiness.summary.latest_whatsapp_activity_at) : "No WhatsApp traffic yet";
+  const latestPaymentEvent = readiness?.summary?.latest_payment_event_at ? timeAgo(readiness.summary.latest_payment_event_at) : "No payment events yet";
+  const recentWebhooks = readiness?.summary?.recent_webhook_count ?? 0;
+  const pipelineCounts = demoClients.reduce<Record<string, number>>((counts, client) => {
+    counts[client.status] = (counts[client.status] ?? 0) + 1;
+    return counts;
+  }, {});
+  const openPipelineCount = (pipelineCounts["New Lead"] ?? 0) + (pipelineCounts["Quoted"] ?? 0) + (pipelineCounts["Booked"] ?? 0) + (pipelineCounts["In Progress"] ?? 0);
+  const closedPipelineCount = (pipelineCounts["Completed"] ?? 0) + (pipelineCounts["Paid"] ?? 0) + (pipelineCounts["Review Requested"] ?? 0);
+  const topPipelineStage = serviceStages.reduce((bestStage, stage) => (pipelineCounts[stage] ?? 0) > (pipelineCounts[bestStage] ?? 0) ? stage : bestStage, serviceStages[0]);
+  const projectName = selectedProject?.name ?? "No project selected";
+  const projectSlug = selectedProject?.slug ?? "clientpad-api";
+  const projectOwner = selectedProject?.owner_email ?? "No owner email";
+  const projectEnv = selectedProject?.environment ? selectedProject.environment.toUpperCase() : "No environment";
+  const projectCreated = selectedProject?.created_at ? timeAgo(selectedProject.created_at) : "Create your first project";
 
   return (
     <div className="overview-stack">
@@ -1410,16 +1454,47 @@ function Overview({
             <button className="button outline" onClick={() => setPage("keys")}>
               Create API key
             </button>
-            <button className="button outline" onClick={() => setPage("docs")}>
-              Read docs
+            <button className="button outline" onClick={() => setPage("pipeline")}>
+              View pipeline
+            </button>
+            <button className="button outline" onClick={() => setPage("inbox")}>
+              Open inbox
             </button>
           </div>
         </div>
         <div className="overview-hero-metrics">
-          <div className="hero-metric">
-            <span>Connection</span>
-            <strong>{heroConnectionLabel}</strong>
-            <small>{mode === "preview" ? "Sample data only" : readiness?.auth?.user ? `Signed in as ${readiness.auth.user.email}` : "Waiting for live validation"}</small>
+          <div className="hero-workspace">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{workspaceRole}</small>
+            <small>{workspaceHealth} | {projects.length} projects | {keys.length} keys</small>
+          </div>
+          <div className="hero-activity">
+            <span>Activity</span>
+            <strong>Recent CRM signals</strong>
+            <small>WhatsApp {latestWhatsAppActivity}</small>
+            <small>Payments {latestPaymentEvent}</small>
+            <small>{recentWebhooks} webhook{recentWebhooks === 1 ? "" : "s"} in the current window</small>
+          </div>
+          <div className="hero-contract">
+            <span>Public API</span>
+            <strong>{publicApiUrl}</strong>
+            <small>Build against <code>CLIENTPAD_API_KEY</code> server-side.</small>
+            <small>{heroSyncLabel}</small>
+            <CopyButton text={publicApiUrl} />
+          </div>
+          <div className="hero-project">
+            <span>Selected project</span>
+            <strong>{projectName}</strong>
+            <small>{projectSlug} | {projectEnv}</small>
+            <small>Owner {projectOwner}</small>
+            <small>{projectCreated} | {heroConnectionLabel}</small>
+          </div>
+          <div className="hero-pipeline">
+            <span>Pipeline</span>
+            <strong>{openPipelineCount} open leads</strong>
+            <small>New {pipelineCounts["New Lead"] ?? 0} | Quoted {pipelineCounts["Quoted"] ?? 0} | Booked {pipelineCounts["Booked"] ?? 0}</small>
+            <small>Active {pipelineCounts["In Progress"] ?? 0} | Closed {closedPipelineCount} | Top stage {topPipelineStage} ({pipelineCounts[topPipelineStage] ?? 0})</small>
           </div>
           <div className="hero-metric">
             <span>Usage</span>
@@ -1430,26 +1505,6 @@ function Overview({
       </Panel>
 
       <div className="overview-layout">
-        <ActivationPanel
-          mode={mode}
-          health={health}
-          readiness={readiness}
-          projectCount={projects.length}
-          keyCount={keys.length}
-          hasPublicApiKey={hasPublicApiKey}
-          bootstrapWorkspaceName={bootstrapWorkspaceName}
-          setBootstrapWorkspaceName={setBootstrapWorkspaceName}
-          bootstrapProjectName={bootstrapProjectName}
-          setBootstrapProjectName={setBootstrapProjectName}
-          bootstrapKeyName={bootstrapKeyName}
-          setBootstrapKeyName={setBootstrapKeyName}
-          onBootstrap={onBootstrap}
-          bootstrapping={bootstrapping}
-          onGoToConnect={() => setPage("connect")}
-          onGoToProjects={() => setPage("projects")}
-          onGoToKeys={() => setPage("keys")}
-          onGoToDocs={() => setPage("docs")}
-        />
         <Panel className="api-requests">
           <div className="panel-head">
             <h2>
@@ -2311,7 +2366,7 @@ function ActivationPanel({
         <div className="panel-head bordered">
           <div>
             <h2>Launch checklist</h2>
-            <p className="helper-text">Collapsed by default so the dashboard opens on the operating surface first.</p>
+            <p className="helper-text">Open when you need launch actions, readiness checks, or bootstrap.</p>
           </div>
           <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Live connected" : "Live needs attention"} />
         </div>
@@ -2332,29 +2387,391 @@ function ActivationPanel({
             </div>
           ))}
         </div>
-        <details className="bootstrap-panel">
-          <summary className="bootstrap-summary">
-            <div>
-              <strong>Bootstrap a live workspace</strong>
-              <p className="helper-text">Create the workspace, first project, and starter API key in one pass.</p>
-            </div>
-            <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={bootstrapping ? "Creating..." : "Optional"} />
-          </summary>
-          <div className="bootstrap-body">
-            <div className="bootstrap-grid">
-              <FormField label="Workspace name" value={bootstrapWorkspaceName} onChange={setBootstrapWorkspaceName} />
-              <FormField label="Project name" value={bootstrapProjectName} onChange={setBootstrapProjectName} />
-              <FormField label="API key name" value={bootstrapKeyName} onChange={setBootstrapKeyName} />
-            </div>
-            <div className="status-banner-actions">
-              <button className="button primary blue" onClick={onBootstrap} disabled={bootstrapping || mode === "preview"}>
-                <Plus size={15} /> {bootstrapping ? "Bootstrapping..." : "Create workspace bundle"}
-              </button>
-            </div>
+        <div className="launch-bootstrap">
+          <div>
+            <strong>Bootstrap a live workspace</strong>
+            <p className="helper-text">Create the workspace, first project, and starter API key in one pass.</p>
           </div>
-        </details>
+          <div className="bootstrap-grid">
+            <FormField label="Workspace name" value={bootstrapWorkspaceName} onChange={setBootstrapWorkspaceName} />
+            <FormField label="Project name" value={bootstrapProjectName} onChange={setBootstrapProjectName} />
+            <FormField label="API key name" value={bootstrapKeyName} onChange={setBootstrapKeyName} />
+          </div>
+          <div className="status-banner-actions">
+            <button className="button primary blue" onClick={onBootstrap} disabled={bootstrapping || mode === "preview"}>
+              <Plus size={15} /> {bootstrapping ? "Bootstrapping..." : "Create workspace bundle"}
+            </button>
+          </div>
+        </div>
       </div>
     </details>
+  );
+}
+
+function Infrastructure({
+  mode,
+  readiness,
+  health,
+  selectedWorkspace,
+  publicApiKey,
+  usageSummary,
+  onGoToDeployments,
+  onGoToLaunch,
+  onGoToDocs,
+  onGoToProjects,
+  onGoToKeys,
+  onGoToConnect,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  readiness: CloudReadiness | null;
+  health: CloudHealth | null;
+  selectedWorkspace: string;
+  publicApiKey: string;
+  usageSummary: UsageSummary | null;
+  onGoToDeployments: () => void;
+  onGoToLaunch: () => void;
+  onGoToDocs: () => void;
+  onGoToProjects: () => void;
+  onGoToKeys: () => void;
+  onGoToConnect: () => void;
+  onCopy: (text: string) => void;
+}) {
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedWorkspace ?? "No workspace selected";
+  const apiUrl = "https://api.clientpad.xyz/api/public/v1";
+  const platformUrl = "https://platform.clientpad.xyz";
+  const services = [
+    {
+      name: "Dashboard",
+      host: "platform.clientpad.xyz",
+      target: "clientpad-app.onrender.com",
+      state: mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Live" : readiness ? "Needs attention" : "Checking",
+      detail: "Operator dashboard, projects, keys, inbox, and launch actions.",
+    },
+    {
+      name: "Public API",
+      host: "api.clientpad.xyz",
+      target: "clientpad-api.onrender.com",
+      state: readiness?.summary?.has_public_api_key ? "Ready" : "Needs key",
+      detail: "API contract used by developers with `CLIENTPAD_API_KEY`.",
+    },
+    {
+      name: "Docs",
+      host: "docs.clientpad.xyz",
+      target: "clientpad-docs.onrender.com",
+      state: "Live",
+      detail: "Docs host with the docs-root rewrite and static export.",
+    },
+    {
+      name: "Marketing",
+      host: "clientpad.xyz",
+      target: "clientpad-frontend.onrender.com",
+      state: "Live",
+      detail: "Public site, pricing, and developer-facing landing pages.",
+    },
+  ];
+  const checkpoints = [
+    { label: "Operator session", value: readiness?.auth?.user ? "Signed in" : "Pending", ok: Boolean(readiness?.auth?.user) },
+    { label: "Workspace", value: workspaceName, ok: Boolean(workspaceName) },
+    { label: "Public API key", value: publicApiKey.trim() ? "Configured" : "Missing", ok: Boolean(publicApiKey.trim()) },
+    { label: "WhatsApp", value: readiness?.summary?.has_whatsapp_configuration ? "Configured" : "Missing", ok: Boolean(readiness?.summary?.has_whatsapp_configuration) },
+    { label: "Webhooks", value: readiness?.summary?.recent_webhook_count ? `${readiness.summary.recent_webhook_count} recent` : "Idle", ok: Boolean(readiness?.summary?.recent_webhook_count) },
+  ];
+  const diagnostics = readiness?.diagnostics ?? [];
+  const readinessLabel =
+    mode === "preview"
+      ? "Preview mode"
+      : readiness?.status === "ok"
+        ? "Infrastructure healthy"
+        : readiness
+          ? "Infrastructure needs attention"
+          : "Waiting for live checks";
+
+  return (
+    <div className="infrastructure-layout">
+      <Panel className="infra-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Infrastructure</h2>
+            <p className="helper-text">One view for the dashboard, docs, API, and public site hosts.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={readinessLabel} />
+        </div>
+        <div className="infra-hero-grid">
+          <div className="infra-summary">
+            <span>Platform</span>
+            <strong>platform.clientpad.xyz</strong>
+            <small>Dashboard entrypoint for operators and service teams.</small>
+          </div>
+          <div className="infra-summary">
+            <span>Public API</span>
+            <strong>{apiUrl}</strong>
+            <small>Developer surface powered by `CLIENTPAD_API_KEY`.</small>
+            <CopyButton text={apiUrl} />
+          </div>
+          <div className="infra-summary">
+            <span>Docs</span>
+            <strong>docs.clientpad.xyz</strong>
+            <small>Static docs export with the docs root rewrite.</small>
+          </div>
+          <div className="infra-summary">
+            <span>Marketing</span>
+            <strong>clientpad.xyz</strong>
+            <small>Public site and conversion path for developers and operators.</small>
+          </div>
+        </div>
+      </Panel>
+
+      <div className="infra-grid">
+        <Panel className="infra-services">
+          <div className="panel-head bordered">
+            <h2>Deployment map</h2>
+            <button className="button outline" onClick={onGoToLaunch}>
+              Open launch
+            </button>
+          </div>
+          <div className="infra-service-list">
+            {services.map((service) => (
+              <article key={service.name} className="infra-service-card">
+                <div className="infra-service-head">
+                  <div>
+                    <strong>{service.name}</strong>
+                    <span>{service.host}</span>
+                  </div>
+                  <StatusChip tone={service.state === "Live" || service.state === "Ready" ? "green" : service.state === "Preview" ? "blue" : "amber"} label={service.state} />
+                </div>
+                <small>{service.detail}</small>
+                <code>{service.target}</code>
+              </article>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel className="infra-checks">
+          <div className="panel-head bordered">
+            <h2>Live checks</h2>
+            <StatusChip tone={health?.status === "ok" ? "green" : health ? "amber" : "gray"} label={health ? `${health.service} ${health.status}` : "Health pending"} />
+          </div>
+          <div className="status-stack compact">
+            {checkpoints.map((item) => (
+              <div key={item.label} className="status-item">
+                <span className={item.ok ? "dot good" : "dot warn"} />
+                <div>
+                  <strong>{item.label}</strong>
+                  <small>{item.value}</small>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="infra-diagnostics">
+            <div className="panel-head bordered compact-head">
+              <h2>Diagnostics <span>{diagnostics.length}</span></h2>
+            </div>
+            {diagnostics.length ? (
+              <div className="infra-diagnostic-list">
+                {diagnostics.slice(0, 4).map((item) => (
+                  <article key={item.key} className={`infra-diagnostic ${item.status}`}>
+                    <div>
+                      <strong>{item.label}</strong>
+                      <small>{item.detail}</small>
+                    </div>
+                    {item.status === "missing" ? <em>Open Launch to resolve this check.</em> : null}
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="helper-text">No diagnostics yet. Run live checks to load service-level guidance.</p>
+            )}
+          </div>
+          <div className="infra-actions">
+            <button className="button primary blue" onClick={onGoToKeys}>Create API key</button>
+            <button className="button outline" onClick={onGoToProjects}>Projects</button>
+            <button className="button outline" onClick={onGoToDeployments}>Deployments</button>
+            <button className="button outline" onClick={onGoToDocs}>Docs</button>
+            <button className="button outline" onClick={onGoToConnect}>WhatsApp</button>
+          </div>
+          <div className="infra-footnote">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M"} monthly requests | {usageSummary?.active_api_key_count ?? 0} active keys</small>
+            <button className="link-button" onClick={() => onCopy(platformUrl)}>
+              Copy platform URL <ChevronRight size={15} />
+            </button>
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+function Deployments({
+  mode,
+  readiness,
+  health,
+  selectedWorkspace,
+  usageSummary,
+  onGoToInfrastructure,
+  onGoToLaunch,
+  onGoToDocs,
+  onGoToProjects,
+  onGoToKeys,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  readiness: CloudReadiness | null;
+  health: CloudHealth | null;
+  selectedWorkspace: string;
+  usageSummary: UsageSummary | null;
+  onGoToInfrastructure: () => void;
+  onGoToLaunch: () => void;
+  onGoToDocs: () => void;
+  onGoToProjects: () => void;
+  onGoToKeys: () => void;
+  onCopy: (text: string) => void;
+}) {
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedWorkspace ?? "No workspace selected";
+  const apiStatus = health?.status === "ok" ? "Healthy" : health ? "Attention" : "Pending";
+  const deployStatus =
+    mode === "preview"
+      ? "Preview deployment"
+      : readiness?.status === "ok"
+        ? "Live deployment"
+        : readiness
+          ? "Needs release attention"
+          : "Waiting on deploy checks";
+  const deployUrl = "https://platform.clientpad.xyz";
+  const deployHealthLabel = health ? `${health.service} ${health.status}` : "Health pending";
+  const diagnostics = readiness?.diagnostics ?? [];
+  const deploymentRecords: DeploymentRecord[] = demoDeployments.map((deployment, index) => ({
+    ...deployment,
+    deployed_at: new Date(Date.now() - index * 43 * 60 * 1000).toISOString(),
+  }));
+  const releaseCount = deploymentRecords.length;
+  const healthyCount = deploymentRecords.filter((deployment) => deployment.status === "live").length;
+  const warningCount = deploymentRecords.filter((deployment) => deployment.status !== "live").length;
+  const latestDeployment = deploymentRecords[0];
+  const nextAction =
+    diagnostics.find((item) => item.status === "missing")?.detail
+    ?? (mode === "preview"
+      ? "Preview mode mirrors the deploy flow without hitting production services."
+      : readiness?.status === "ok"
+        ? "Deployment pipeline is stable."
+        : "Open Infrastructure or Launch to resolve live service checks.");
+
+  return (
+    <div className="deployments-layout">
+      <Panel className="deployments-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Deployments</h2>
+            <p className="helper-text">GitHub pushes, Render releases, and the state of each public service.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={deployStatus} />
+        </div>
+        <div className="deployment-hero-grid">
+          <div className="deployment-summary">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{usageSummary?.plan_name ?? "Pro"} plan | {usageSummary?.active_api_key_count ?? 0} active keys</small>
+          </div>
+          <div className="deployment-summary">
+            <span>Latest release</span>
+            <strong>{latestDeployment.service}</strong>
+            <small>{latestDeployment.commit} | {latestDeployment.trigger}</small>
+            <small>Deployed {timeAgo(latestDeployment.deployed_at)}</small>
+          </div>
+          <div className="deployment-summary">
+            <span>Rollout health</span>
+            <strong>{healthyCount}/{releaseCount} live</strong>
+            <small>{warningCount} require attention | {deployHealthLabel}</small>
+          </div>
+          <div className="deployment-summary">
+            <span>Public platform</span>
+            <strong>{deployUrl}</strong>
+            <small>Dashboard, docs, and infrastructure all route from the same GitHub deployment flow.</small>
+            <button className="button outline" onClick={() => onCopy(deployUrl)}>
+              Copy platform URL
+            </button>
+          </div>
+        </div>
+      </Panel>
+
+      <div className="deployments-grid">
+        <Panel className="deployment-services-panel">
+          <div className="panel-head bordered">
+            <h2>Service rollout</h2>
+            <button className="button outline" onClick={onGoToInfrastructure}>
+              View infrastructure
+            </button>
+          </div>
+          <div className="deployment-service-list">
+            {deploymentRecords.map((deployment) => (
+              <article key={deployment.target} className={`deployment-service-card ${deployment.status}`}>
+                <div className="deployment-service-head">
+                  <div>
+                    <strong>{deployment.service}</strong>
+                    <span>{deployment.host}</span>
+                  </div>
+                  <StatusChip tone={deployment.status === "live" ? "green" : deployment.status === "deploying" ? "blue" : "amber"} label={deployment.status === "live" ? "Live" : deployment.status === "deploying" ? "Deploying" : "Needs review"} />
+                </div>
+                <small>{deployment.note}</small>
+                <code>{deployment.target}</code>
+                <div className="deployment-meta">
+                  <span>{deployment.commit}</span>
+                  <span>{deployment.trigger}</span>
+                  <span>{timeAgo(deployment.deployed_at)}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel className="deployment-ops-panel">
+          <div className="panel-head bordered">
+            <h2>Release operations</h2>
+            <StatusChip tone={health?.status === "ok" ? "green" : health ? "amber" : "gray"} label={deployHealthLabel} />
+          </div>
+          <div className="status-stack compact">
+            <div className="status-item">
+              <span className={mode === "preview" ? "dot good" : "dot warn"} />
+              <div>
+                <strong>Deploy mode</strong>
+                <small>{mode === "preview" ? "Preview deployment" : "Production deployment"}</small>
+              </div>
+            </div>
+            <div className="status-item">
+              <span className={readiness?.status === "ok" ? "dot good" : "dot warn"} />
+              <div>
+                <strong>Readiness</strong>
+                <small>{readiness?.status === "ok" ? "All checks passed" : readiness ? "One or more checks need attention" : "No checks loaded yet"}</small>
+              </div>
+            </div>
+            <div className="status-item">
+              <span className={health?.status === "ok" ? "dot good" : "dot warn"} />
+              <div>
+                <strong>API health</strong>
+                <small>{health ? `${health.service} checked ${timeAgo(health.time)}` : "Health not checked yet"}</small>
+              </div>
+            </div>
+          </div>
+          <div className="deployment-next-action">
+            <span>Next action</span>
+            <strong>{nextAction}</strong>
+          </div>
+          <div className="deployment-actions">
+            <button className="button primary blue" onClick={onGoToKeys}>Create API key</button>
+            <button className="button outline" onClick={onGoToProjects}>Projects</button>
+            <button className="button outline" onClick={onGoToLaunch}>Launch</button>
+            <button className="button outline" onClick={onGoToDocs}>Docs</button>
+          </div>
+          <div className="deployment-footer-note">
+            <span>Autodeploy</span>
+            <strong>GitHub pushes trigger Render releases for every public service.</strong>
+            <small>Keep the repository open source, require `CLIENTPAD_API_KEY`, and let Render publish the static and API surfaces.</small>
+          </div>
+        </Panel>
+      </div>
+    </div>
   );
 }
 
@@ -3276,6 +3693,49 @@ const demoUsage: UsageRow[] = [
   { api_key_id: "api_key_9c3d", name: "Dev CLI Key", billing_mode: "cloud_free", monthly_request_limit: 100_000, rate_limit_per_minute: 300, request_count: 346_118, rejected_count: 7 },
 ];
 
+const demoDeployments: DeploymentRecord[] = [
+  {
+    service: "clientpad-api",
+    host: "api.clientpad.xyz",
+    target: "clientpad-api.onrender.com",
+    status: "live",
+    deployed_at: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
+    commit: "9d5b425",
+    trigger: "GitHub push",
+    note: "Cloud API, readiness checks, and operator auth are deployed here.",
+  },
+  {
+    service: "clientpad-app",
+    host: "platform.clientpad.xyz",
+    target: "clientpad-app.onrender.com",
+    status: "live",
+    deployed_at: new Date(Date.now() - 1.4 * 60 * 60 * 1000).toISOString(),
+    commit: "229163d",
+    trigger: "GitHub push",
+    note: "Dashboard shell, infrastructure, and deployment pages ship here.",
+  },
+  {
+    service: "clientpad-docs",
+    host: "docs.clientpad.xyz",
+    target: "clientpad-docs.onrender.com",
+    status: "live",
+    deployed_at: new Date(Date.now() - 2.1 * 60 * 60 * 1000).toISOString(),
+    commit: "9f1db05",
+    trigger: "GitHub push",
+    note: "Docs root rewrite keeps the docs host serving the docs homepage.",
+  },
+  {
+    service: "clientpad-frontend",
+    host: "clientpad.xyz",
+    target: "clientpad-frontend.onrender.com",
+    status: "live",
+    deployed_at: new Date(Date.now() - 3.3 * 60 * 60 * 1000).toISOString(),
+    commit: "9d17528",
+    trigger: "GitHub push",
+    note: "Public marketing pages, footer, and open-source positioning ship here.",
+  },
+];
+
 function demoReadinessWorkspace(
   id: string,
   name: string,
@@ -3449,6 +3909,8 @@ function titleForPage(page: Page) {
     projects: "Projects",
     keys: "API Keys",
     launch: "Launch",
+    infrastructure: "Infrastructure",
+    deployments: "Deployments",
     docs: "Docs",
     settings: "Settings",
   }[page];
@@ -3467,6 +3929,8 @@ function subtitleForPage(page: Page, project?: Project) {
     projects: "Create, inspect, and manage hosted workspaces",
     keys: "Issue, copy, and inspect developer access keys",
     launch: "Verify production services before sending customers traffic",
+    infrastructure: "Platform, API, docs, and public host mapping",
+    deployments: "GitHub pushes, Render releases, and service rollout history",
     docs: "SDK and API snippets developers can copy into apps",
     settings: "API connection and operator settings",
   }[page];
