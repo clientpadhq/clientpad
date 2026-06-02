@@ -653,6 +653,10 @@ button { cursor: pointer; }
   padding-top: 6px;
 }
 
+.overview-hero-actions .button {
+  min-width: 0;
+}
+
 .overview-hero-metrics {
   display: grid;
   gap: 10px;

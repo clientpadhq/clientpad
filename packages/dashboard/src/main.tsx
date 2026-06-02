@@ -1401,11 +1401,11 @@ function Overview({
             <button className="button outline" onClick={() => setPage("keys")}>
               Create API key
             </button>
-            <button className="button outline" onClick={() => setPage("launch")}>
-              Launch checklist
+            <button className="button outline" onClick={() => setPage("pipeline")}>
+              View pipeline
             </button>
-            <button className="button outline" onClick={() => setPage("docs")}>
-              Read docs
+            <button className="button outline" onClick={() => setPage("inbox")}>
+              Open inbox
             </button>
           </div>
         </div>
