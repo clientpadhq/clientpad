@@ -1397,6 +1397,9 @@ function Overview({
       : readiness
         ? "Needs attention"
         : "Checking";
+  const latestWhatsAppActivity = readiness?.summary?.latest_whatsapp_activity_at ? timeAgo(readiness.summary.latest_whatsapp_activity_at) : "No WhatsApp traffic yet";
+  const latestPaymentEvent = readiness?.summary?.latest_payment_event_at ? timeAgo(readiness.summary.latest_payment_event_at) : "No payment events yet";
+  const recentWebhooks = readiness?.summary?.recent_webhook_count ?? 0;
 
   return (
     <div className="overview-stack">
@@ -1434,6 +1437,13 @@ function Overview({
             <strong>{workspaceName}</strong>
             <small>{workspaceRole}</small>
             <small>{workspaceHealth} | {projects.length} projects | {keys.length} keys</small>
+          </div>
+          <div className="hero-activity">
+            <span>Activity</span>
+            <strong>Recent CRM signals</strong>
+            <small>WhatsApp {latestWhatsAppActivity}</small>
+            <small>Payments {latestPaymentEvent}</small>
+            <small>{recentWebhooks} webhook{recentWebhooks === 1 ? "" : "s"} in the current window</small>
           </div>
           <div className="hero-contract">
             <span>Public API</span>
