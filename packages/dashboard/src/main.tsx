@@ -1388,6 +1388,15 @@ function Overview({
       ? `Health checked ${timeAgo(health.time)}`
       : "Awaiting backend sync";
   const publicApiUrl = "https://api.clientpad.xyz/api/public/v1";
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedProject?.name ?? "Select a workspace";
+  const workspaceRole = readiness?.auth?.user ? (readiness.summary?.workspace_count ? "Active workspace" : "No workspace data yet") : "Awaiting operator sign in";
+  const workspaceHealth = readiness?.status === "ok"
+    ? "Operational"
+    : readiness?.status === "degraded"
+      ? "Degraded"
+      : readiness
+        ? "Needs attention"
+        : "Checking";
 
   return (
     <div className="overview-stack">
@@ -1420,6 +1429,12 @@ function Overview({
           </div>
         </div>
         <div className="overview-hero-metrics">
+          <div className="hero-workspace">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{workspaceRole}</small>
+            <small>{workspaceHealth} | {projects.length} projects | {keys.length} keys</small>
+          </div>
           <div className="hero-contract">
             <span>Public API</span>
             <strong>{publicApiUrl}</strong>

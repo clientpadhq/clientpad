@@ -659,6 +659,38 @@ button { cursor: pointer; }
   align-self: stretch;
 }
 
+.hero-workspace {
+  display: grid;
+  gap: 6px;
+  padding: 16px 15px;
+  border: 1px solid color-mix(in srgb, var(--brand) 18%, var(--line));
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 95%, var(--bg)), color-mix(in srgb, var(--panel-2) 90%, var(--panel)));
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.hero-workspace span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hero-workspace strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.hero-workspace small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .hero-contract {
   display: grid;
   gap: 6px;
