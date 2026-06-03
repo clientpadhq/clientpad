@@ -1505,6 +1505,134 @@ button { cursor: pointer; }
   line-height: 1.45;
 }
 
+.security-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.security-hero {
+  display: grid;
+  gap: 16px;
+}
+
+.security-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.security-signal {
+  display: grid;
+  gap: 6px;
+  padding: 15px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--line));
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 95%, var(--bg)), color-mix(in srgb, var(--panel-2) 90%, var(--panel)));
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.security-signal span,
+.security-policy-card span,
+.security-threat strong,
+.security-footer-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.security-signal strong,
+.security-policy-card strong,
+.security-footer-card strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+.security-signal small,
+.security-policy-card small,
+.security-threat small,
+.security-footer-card small,
+.security-policy-list p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.security-layout-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 16px;
+}
+
+.security-policy-panel,
+.security-threat-panel,
+.security-footer-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.security-policy-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--brand) 5%, var(--panel));
+}
+
+.security-policy-list {
+  display: grid;
+  gap: 8px;
+}
+
+.security-policy-list p {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
+.security-threat-list {
+  display: grid;
+  gap: 8px;
+}
+
+.security-threat {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+}
+
+.security-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.security-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.security-footer-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
 .overview-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(340px, 1fr);
@@ -1980,6 +2108,9 @@ td small {
   .developers-grid { grid-template-columns: 1fr; }
   .activity-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .activity-grid { grid-template-columns: 1fr; }
+  .security-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .security-layout-grid { grid-template-columns: 1fr; }
+  .security-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .overview-layout, .detail-layout { grid-template-columns: 1fr; }
   .billing-panel, .quickstart-panel, .active-projects, .api-keys { grid-column: auto; }
   .billing-grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
@@ -2025,6 +2156,9 @@ td small {
   .developer-contract-grid { grid-template-columns: 1fr; }
   .activity-summary-grid { grid-template-columns: 1fr; }
   .activity-shortcuts { flex-direction: column; }
+  .security-grid { grid-template-columns: 1fr; }
+  .security-footer-grid { grid-template-columns: 1fr; }
+  .security-actions { flex-direction: column; }
   .nav-label {
     display: none;
   }

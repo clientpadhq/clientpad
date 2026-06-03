@@ -208,7 +208,7 @@ type CloudReadiness = {
 
 type ConnectionState = "preview" | "checking" | "connected" | "misconfigured" | "unavailable";
 
-type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "developers" | "activity" | "docs" | "settings";
+type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "developers" | "activity" | "security" | "docs" | "settings";
 type QuickstartLanguage = "curl" | "python" | "node" | "go" | "ruby";
 type DashboardTheme = "light" | "dark";
 type LaunchCheckStatus = "checking" | "ok" | "warning" | "fail";
@@ -300,7 +300,7 @@ const dashboardPageParamKey = "page";
 const defaultCloudBaseUrl = window.location.hostname.includes("localhost")
   ? "http://localhost:3000/api/cloud/v1"
   : "https://api.clientpad.xyz/api/cloud/v1";
-const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "developers", "activity", "docs", "settings"];
+const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "developers", "activity", "security", "docs", "settings"];
 const dashboardPageSet = new Set<Page>(dashboardPages);
 
 function resolveDashboardTheme(): DashboardTheme {
@@ -1143,6 +1143,22 @@ function Dashboard({
               onGoToKeys={() => setPage("keys")}
             />
           )}
+          {page === "security" && (
+            <SecurityCenter
+              mode={mode}
+              readiness={readiness}
+              session={currentSession}
+              publicApiKey={publicApiKey}
+              usageSummary={usageSummary}
+              onGoToKeys={() => setPage("keys")}
+              onGoToDevelopers={() => setPage("developers")}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToActivity={() => setPage("activity")}
+              onGoToLaunch={() => setPage("launch")}
+              onGoToDocs={() => setPage("docs")}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
           {page === "docs" && (
             <Docs
               selectedProject={selectedProject}
@@ -1190,6 +1206,7 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
     ["deployments", <Archive size={18} />, "Deployments"],
     ["developers", <Code2 size={18} />, "Developers"],
     ["activity", <Clock size={18} />, "Activity"],
+    ["security", <ShieldCheck size={18} />, "Security"],
     ["docs", <BookOpen size={18} />, "Docs"],
   ];
 
@@ -3121,6 +3138,152 @@ function ActivityTrail({
   );
 }
 
+function SecurityCenter({
+  mode,
+  readiness,
+  session,
+  publicApiKey,
+  usageSummary,
+  onGoToKeys,
+  onGoToDevelopers,
+  onGoToInfrastructure,
+  onGoToActivity,
+  onGoToLaunch,
+  onGoToDocs,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  readiness: CloudReadiness | null;
+  session: Session;
+  publicApiKey: string;
+  usageSummary: UsageSummary | null;
+  onGoToKeys: () => void;
+  onGoToDevelopers: () => void;
+  onGoToInfrastructure: () => void;
+  onGoToActivity: () => void;
+  onGoToLaunch: () => void;
+  onGoToDocs: () => void;
+  onCopy: (text: string) => void;
+}) {
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? "No workspace selected";
+  const apiKeyState = publicApiKey.trim() ? "Configured" : "Missing";
+  const sessionState = session.user ? "Signed in" : "Not signed in";
+  const securitySignals = [
+    { label: "Operator session", value: sessionState, detail: session.user?.email ?? "Preview account", ok: Boolean(session.user) },
+    { label: "Workspace key", value: apiKeyState, detail: publicApiKey.trim() ? "Live inbox, usage, and pipeline data can load" : "Create or paste a `CLIENTPAD_API_KEY`", ok: Boolean(publicApiKey.trim()) },
+    { label: "WhatsApp auth", value: readiness?.summary?.has_whatsapp_configuration ? "Configured" : "Missing", detail: readiness?.summary?.has_whatsapp_configuration ? "Live inbox can receive traffic" : "Set up WhatsApp to unlock messaging", ok: Boolean(readiness?.summary?.has_whatsapp_configuration) },
+    { label: "Payments", value: readiness?.summary?.has_payment_provider_configuration ? "Configured" : "Missing", detail: readiness?.summary?.has_payment_provider_configuration ? "Billing and checkout can run" : "Add a payment provider for checkout flow", ok: Boolean(readiness?.summary?.has_payment_provider_configuration) },
+  ];
+  const policyItems = [
+    "Keep the public dashboard open, but never expose API keys in the browser.",
+    "Rotate workspace keys from the dashboard when a service account changes.",
+    "Require server-side requests to send `CLIENTPAD_API_KEY` on every live integration.",
+    "Use the activity and deployments pages to review changes before giving customers traffic.",
+  ];
+  const threatItems = [
+    { title: "Missing key", detail: "Dashboard stays usable, but live inbox and usage data remain blocked until a workspace key is present." },
+    { title: "Unauthorized API request", detail: "Reject with 401 and direct the caller to the Developers page for the correct bearer token contract." },
+    { title: "Rate limit exceeded", detail: "Return 429 and encourage backoff; the Usage page will surface the affected quota." },
+    { title: "Deployment drift", detail: "Use Deployments and Infrastructure to verify the live host map before rollout." },
+  ];
+
+  return (
+    <div className="security-layout">
+      <Panel className="security-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Security</h2>
+            <p className="helper-text">API key posture, session state, and the controls that keep ClientPad safe for public, developer-facing use.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview security" : "Live security"} />
+        </div>
+        <div className="security-grid">
+          {securitySignals.map((signal) => (
+            <div key={signal.label} className="security-signal">
+              <span>{signal.label}</span>
+              <strong>{signal.value}</strong>
+              <small>{signal.detail}</small>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <div className="security-layout-grid">
+        <Panel className="security-policy-panel">
+          <div className="panel-head bordered">
+            <h2>Policy</h2>
+            <button className="button outline" onClick={() => onCopy("CLIENTPAD_API_KEY")}>Copy key name</button>
+          </div>
+          <div className="security-policy-card">
+            <span>Open-source posture</span>
+            <strong>Public code, private access</strong>
+            <small>Anyone can inspect the repository, but live requests must use server-side keys and authenticated operator sessions.</small>
+          </div>
+          <div className="security-policy-list">
+            {policyItems.map((item) => <p key={item}>{item}</p>)}
+          </div>
+          <div className="security-actions">
+            <button className="button primary blue" onClick={onGoToKeys}>Create API key</button>
+            <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
+            <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
+          </div>
+        </Panel>
+
+        <Panel className="security-threat-panel">
+          <div className="panel-head bordered">
+            <h2>Threat handling</h2>
+            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={readiness?.status === "ok" ? "Healthy" : "Review needed"} />
+          </div>
+          <div className="security-threat-list">
+            {threatItems.map((item) => (
+              <article key={item.title} className="security-threat">
+                <strong>{item.title}</strong>
+                <small>{item.detail}</small>
+              </article>
+            ))}
+          </div>
+          <div className="security-actions">
+            <button className="button outline" onClick={onGoToActivity}>Activity</button>
+            <button className="button outline" onClick={onGoToLaunch}>Launch</button>
+            <button className="button outline" onClick={onGoToDocs}>Docs</button>
+          </div>
+        </Panel>
+      </div>
+
+      <Panel className="security-footer-panel">
+        <div className="panel-head bordered">
+          <h2>Workspace security snapshot</h2>
+          <button className="button outline" onClick={() => onCopy(workspaceName)}>
+            Copy workspace
+          </button>
+        </div>
+        <div className="security-footer-grid">
+          <div className="security-footer-card">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{usageSummary?.active_api_key_count ?? 0} active keys | {usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M"} monthly request cap</small>
+          </div>
+          <div className="security-footer-card">
+            <span>Session</span>
+            <strong>{sessionState}</strong>
+            <small>{session.user?.email ?? "Preview account"} | Session-backed dashboard access</small>
+          </div>
+          <div className="security-footer-card">
+            <span>API key contract</span>
+            <strong>`CLIENTPAD_API_KEY`</strong>
+            <small>Use a server-side bearer token for every live API call.</small>
+          </div>
+          <div className="security-footer-card">
+            <span>Next operator action</span>
+            <strong>Review deployments before release</strong>
+            <small>Security stays aligned with deployments, activity, and infrastructure.</small>
+          </div>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
 function timeAgo(value: string) {
   const diff = Date.now() - new Date(value).getTime();
   const minutes = Math.max(Math.floor(diff / 60000), 0);
@@ -4259,6 +4422,7 @@ function titleForPage(page: Page) {
     deployments: "Deployments",
     developers: "Developers",
     activity: "Activity",
+    security: "Security",
     docs: "Docs",
     settings: "Settings",
   }[page];
@@ -4281,6 +4445,7 @@ function subtitleForPage(page: Page, project?: Project) {
     deployments: "GitHub pushes, Render releases, and service rollout history",
     developers: "Developer onboarding, SDK setup, and API error handling",
     activity: "Recent deploys, operator actions, and request history",
+    security: "API key posture, sessions, and threat handling",
     docs: "SDK and API snippets developers can copy into apps",
     settings: "API connection and operator settings",
   }[page];
