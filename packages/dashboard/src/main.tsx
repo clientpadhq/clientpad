@@ -1270,6 +1270,10 @@ function Dashboard({
               selectedProject={selectedProject}
               language={quickstartLanguage}
               setLanguage={setQuickstartLanguage}
+              onGoToDevelopers={() => setPage("developers")}
+              onGoToIntegrations={() => setPage("integrations")}
+              onGoToSecurity={() => setPage("security")}
+              onGoToLaunch={() => setPage("launch")}
               onCopy={(text) => copyText(text, setNotice)}
             />
           )}
@@ -2128,25 +2132,111 @@ function Docs({
   selectedProject,
   language,
   setLanguage,
+  onGoToDevelopers,
+  onGoToIntegrations,
+  onGoToSecurity,
+  onGoToLaunch,
   onCopy,
 }: {
   selectedProject?: Project;
   language: QuickstartLanguage;
   setLanguage: (language: QuickstartLanguage) => void;
+  onGoToDevelopers: () => void;
+  onGoToIntegrations: () => void;
+  onGoToSecurity: () => void;
+  onGoToLaunch: () => void;
   onCopy: (text: string) => void;
 }) {
   const snippet = quickstartSnippet(language, selectedProject);
+  const apiContract = [
+    {
+      label: "Public base URL",
+      value: "https://api.clientpad.xyz/api/public/v1",
+      detail: "Every client SDK and service integration should target the public API host.",
+    },
+    {
+      label: "Authentication",
+      value: "Authorization: Bearer CLIENTPAD_API_KEY",
+      detail: "Keep the key server-side and rotate it from the dashboard when access changes.",
+    },
+    {
+      label: "Rate limits",
+      value: "Respond with 429 and Retry-After",
+      detail: "Client businesses should back off and retry instead of hammering the API.",
+    },
+    {
+      label: "Webhooks",
+      value: "Signed delivery with retries",
+      detail: "Use Integrations to verify delivery history, signatures, and retry posture.",
+    },
+  ];
   return (
-    <div className="detail-layout single">
-      <Panel className="quickstart-panel wide-detail docs-panel">
-        <div className="panel-head">
-          <h2>Quickstart</h2>
-          <button className="button outline" onClick={() => onCopy(snippet)}>
-            <Clipboard size={15} /> Copy
-          </button>
+    <div className="docs-layout">
+      <Panel className="docs-home-panel">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Docs home</h2>
+            <p className="helper-text">Simple, copyable developer guidance for API-first builds and service-business workflows.</p>
+          </div>
+          <StatusChip tone="blue" label="Developer reference" />
         </div>
-        <Quickstart language={language} setLanguage={setLanguage} selectedProject={selectedProject} />
+        <div className="docs-contract-grid">
+          {apiContract.map((item) => (
+            <article key={item.label} className="docs-contract-card">
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <small>{item.detail}</small>
+            </article>
+          ))}
+        </div>
+        <div className="docs-actions">
+          <button className="button primary blue" onClick={onGoToDevelopers}>Developers</button>
+          <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
+          <button className="button outline" onClick={onGoToSecurity}>Security</button>
+          <button className="button outline" onClick={onGoToLaunch}>Launch</button>
+          <button className="button outline" onClick={() => onCopy("https://api.clientpad.xyz/api/public/v1")}>Copy API URL</button>
+        </div>
       </Panel>
+
+      <div className="docs-grid">
+        <Panel className="quickstart-panel wide-detail docs-panel">
+          <div className="panel-head">
+            <h2>Quickstart</h2>
+            <button className="button outline" onClick={() => onCopy(snippet)}>
+              <Clipboard size={15} /> Copy
+            </button>
+          </div>
+          <Quickstart language={language} setLanguage={setLanguage} selectedProject={selectedProject} />
+        </Panel>
+        <Panel className="docs-side-panel">
+          <div className="panel-head bordered">
+            <h2>Response handling</h2>
+            <StatusChip tone="amber" label="Keep the client simple" />
+          </div>
+          <div className="docs-side-list">
+            <div className="docs-side-card">
+              <span>401 / 403</span>
+              <strong>Missing or invalid key</strong>
+              <small>Check `CLIENTPAD_API_KEY`, workspace permissions, and the selected project before retrying.</small>
+            </div>
+            <div className="docs-side-card">
+              <span>429</span>
+              <strong>Back off and retry</strong>
+              <small>Respect rate limits and use exponential backoff for service-business automation.</small>
+            </div>
+            <div className="docs-side-card">
+              <span>5xx</span>
+              <strong>Platform attention needed</strong>
+              <small>Review Infrastructure and Deployments before retrying the request.</small>
+            </div>
+            <div className="docs-side-card">
+              <span>Next step</span>
+              <strong>Copy snippets into your app</strong>
+              <small>Then move to Developers for SDK patterns or Security for key handling guidance.</small>
+            </div>
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }

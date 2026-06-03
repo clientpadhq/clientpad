@@ -2082,6 +2082,79 @@ button { cursor: pointer; }
   gap: 10px;
 }
 
+.docs-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.docs-home-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.docs-contract-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.docs-contract-card,
+.docs-side-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
+.docs-contract-card span,
+.docs-side-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.docs-contract-card strong,
+.docs-side-card strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.docs-contract-card small,
+.docs-side-card small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.docs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.docs-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.docs-side-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.docs-side-list {
+  display: grid;
+  gap: 10px;
+}
+
 .overview-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(340px, 1fr);
@@ -2565,6 +2638,8 @@ td small {
   .monitoring-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .logs-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .logs-grid { grid-template-columns: 1fr; }
+  .docs-contract-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .docs-grid { grid-template-columns: 1fr; }
   .security-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .security-layout-grid { grid-template-columns: 1fr; }
   .security-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2622,6 +2697,8 @@ td small {
   .logs-summary-grid { grid-template-columns: 1fr; }
   .logs-detail-metrics { grid-template-columns: 1fr; }
   .logs-actions { flex-direction: column; }
+  .docs-contract-grid { grid-template-columns: 1fr; }
+  .docs-actions { flex-direction: column; }
   .security-grid { grid-template-columns: 1fr; }
   .security-footer-grid { grid-template-columns: 1fr; }
   .security-actions { flex-direction: column; }
