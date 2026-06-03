@@ -1919,6 +1919,169 @@ button { cursor: pointer; }
   background: color-mix(in srgb, var(--panel) 92%, transparent);
 }
 
+.logs-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.logs-hero {
+  display: grid;
+  gap: 16px;
+}
+
+.logs-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.logs-summary-card {
+  display: grid;
+  gap: 6px;
+  padding: 15px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--line));
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 95%, var(--bg)), color-mix(in srgb, var(--panel-2) 90%, var(--panel)));
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.logs-summary-card span,
+.logs-detail-card > span,
+.logs-detail-metrics span,
+.logs-next-action span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.logs-summary-card strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.logs-summary-card small,
+.logs-detail-card small,
+.logs-detail-metrics strong,
+.logs-next-action strong {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.logs-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.75fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.logs-table-panel,
+.logs-detail-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.logs-row {
+  cursor: pointer;
+}
+
+.logs-row td {
+  white-space: normal;
+  vertical-align: top;
+}
+
+.logs-row td strong {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.35;
+  margin-bottom: 3px;
+  word-break: break-word;
+}
+
+.logs-row td small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.logs-row:hover {
+  background: color-mix(in srgb, var(--brand) 6%, var(--panel));
+}
+
+.logs-row.selected {
+  background: color-mix(in srgb, var(--brand) 10%, var(--panel));
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+
+.logs-row.selected td {
+  background: transparent;
+}
+
+.logs-detail-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
+.logs-detail-card strong {
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.logs-detail-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.logs-detail-metrics div {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel-2) 90%, transparent);
+}
+
+.logs-detail-metrics strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.logs-next-action {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--brand) 18%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--brand) 4%, var(--panel));
+}
+
+.logs-next-action strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.logs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .overview-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(340px, 1fr);
@@ -2400,6 +2563,8 @@ td small {
   .monitoring-metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .monitoring-grid { grid-template-columns: 1fr; }
   .monitoring-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .logs-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .logs-grid { grid-template-columns: 1fr; }
   .security-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .security-layout-grid { grid-template-columns: 1fr; }
   .security-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2454,6 +2619,9 @@ td small {
   .monitoring-metric-grid { grid-template-columns: 1fr; }
   .monitoring-footer-grid { grid-template-columns: 1fr; }
   .monitoring-actions { flex-direction: column; }
+  .logs-summary-grid { grid-template-columns: 1fr; }
+  .logs-detail-metrics { grid-template-columns: 1fr; }
+  .logs-actions { flex-direction: column; }
   .security-grid { grid-template-columns: 1fr; }
   .security-footer-grid { grid-template-columns: 1fr; }
   .security-actions { flex-direction: column; }

@@ -43,6 +43,7 @@ import {
   Code2,
   Link2,
   Activity,
+  FileText,
 } from "lucide-react";
 import "./styles.css";
 
@@ -204,6 +205,19 @@ type WebhookDelivery = {
   response: string;
 };
 
+type RequestLogEntry = {
+  id: string;
+  method: "GET" | "POST" | "PATCH" | "DELETE";
+  path: string;
+  status: number;
+  latency: string;
+  requestId: string;
+  apiKey: string;
+  workspace: string;
+  time: string;
+  note: string;
+};
+
 type MonitoringMetric = {
   label: string;
   value: string;
@@ -234,7 +248,7 @@ type CloudReadiness = {
 
 type ConnectionState = "preview" | "checking" | "connected" | "misconfigured" | "unavailable";
 
-type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "developers" | "activity" | "integrations" | "security" | "monitoring" | "docs" | "settings";
+type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "developers" | "activity" | "integrations" | "security" | "monitoring" | "logs" | "docs" | "settings";
 type QuickstartLanguage = "curl" | "python" | "node" | "go" | "ruby";
 type DashboardTheme = "light" | "dark";
 type LaunchCheckStatus = "checking" | "ok" | "warning" | "fail";
@@ -326,7 +340,7 @@ const dashboardPageParamKey = "page";
 const defaultCloudBaseUrl = window.location.hostname.includes("localhost")
   ? "http://localhost:3000/api/cloud/v1"
   : "https://api.clientpad.xyz/api/cloud/v1";
-const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "developers", "activity", "integrations", "security", "monitoring", "docs", "settings"];
+const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "developers", "activity", "integrations", "security", "monitoring", "logs", "docs", "settings"];
 const dashboardPageSet = new Set<Page>(dashboardPages);
 
 function resolveDashboardTheme(): DashboardTheme {
@@ -1153,6 +1167,7 @@ function Dashboard({
               onGoToDeployments={() => setPage("deployments")}
               onGoToIntegrations={() => setPage("integrations")}
               onGoToMonitoring={() => setPage("monitoring")}
+              onGoToLogs={() => setPage("logs")}
               onGoToDocs={() => setPage("docs")}
               onGoToLaunch={() => setPage("launch")}
               onCopy={(text) => copyText(text, setNotice)}
@@ -1169,6 +1184,7 @@ function Dashboard({
               onGoToDevelopers={() => setPage("developers")}
               onGoToIntegrations={() => setPage("integrations")}
               onGoToMonitoring={() => setPage("monitoring")}
+              onGoToLogs={() => setPage("logs")}
               onGoToInbox={() => setPage("inbox")}
               onGoToKeys={() => setPage("keys")}
             />
@@ -1186,6 +1202,7 @@ function Dashboard({
               onGoToDeployments={() => setPage("deployments")}
               onGoToActivity={() => setPage("activity")}
               onGoToMonitoring={() => setPage("monitoring")}
+              onGoToLogs={() => setPage("logs")}
               onGoToLaunch={() => setPage("launch")}
               onGoToDocs={() => setPage("docs")}
               onGoToKeys={() => setPage("keys")}
@@ -1205,6 +1222,7 @@ function Dashboard({
               onGoToActivity={() => setPage("activity")}
               onGoToIntegrations={() => setPage("integrations")}
               onGoToMonitoring={() => setPage("monitoring")}
+              onGoToLogs={() => setPage("logs")}
               onGoToLaunch={() => setPage("launch")}
               onGoToDocs={() => setPage("docs")}
               onCopy={(text) => copyText(text, setNotice)}
@@ -1224,12 +1242,13 @@ function Dashboard({
               onGoToIntegrations={() => setPage("integrations")}
               onGoToActivity={() => setPage("activity")}
               onGoToSecurity={() => setPage("security")}
+              onGoToLogs={() => setPage("logs")}
               onGoToLaunch={() => setPage("launch")}
               onCopy={(text) => copyText(text, setNotice)}
             />
           )}
-          {page === "monitoring" && (
-            <Monitoring
+          {page === "logs" && (
+            <Logs
               mode={mode}
               health={health}
               readiness={readiness}
@@ -1237,12 +1256,12 @@ function Dashboard({
               session={currentSession}
               selectedWorkspace={selectedWorkspace}
               publicApiKey={publicApiKey}
+              onGoToMonitoring={() => setPage("monitoring")}
               onGoToInfrastructure={() => setPage("infrastructure")}
               onGoToDeployments={() => setPage("deployments")}
               onGoToIntegrations={() => setPage("integrations")}
-              onGoToActivity={() => setPage("activity")}
               onGoToSecurity={() => setPage("security")}
-              onGoToLaunch={() => setPage("launch")}
+              onGoToDevelopers={() => setPage("developers")}
               onCopy={(text) => copyText(text, setNotice)}
             />
           )}
@@ -1296,6 +1315,7 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
     ["integrations", <Link2 size={18} />, "Integrations"],
     ["security", <ShieldCheck size={18} />, "Security"],
     ["monitoring", <Activity size={18} />, "Monitoring"],
+    ["logs", <FileText size={18} />, "Logs"],
     ["docs", <BookOpen size={18} />, "Docs"],
   ];
 
@@ -2929,6 +2949,7 @@ function Developers({
   onGoToDeployments,
   onGoToIntegrations,
   onGoToMonitoring,
+  onGoToLogs,
   onGoToDocs,
   onGoToLaunch,
   onCopy,
@@ -2942,6 +2963,7 @@ function Developers({
   onGoToDeployments: () => void;
   onGoToIntegrations: () => void;
   onGoToMonitoring: () => void;
+  onGoToLogs: () => void;
   onGoToDocs: () => void;
   onGoToLaunch: () => void;
   onCopy: (text: string) => void;
@@ -3057,6 +3079,7 @@ function Developers({
             <button className="button primary blue" onClick={onGoToDeployments}>Deployments</button>
             <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
             <button className="button outline" onClick={onGoToMonitoring}>Monitoring</button>
+            <button className="button outline" onClick={onGoToLogs}>Logs</button>
             <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
             <button className="button outline" onClick={onGoToDocs}>Docs</button>
             <button className="button outline" onClick={onGoToLaunch}>Launch</button>
@@ -3107,6 +3130,7 @@ function ActivityTrail({
   onGoToDevelopers,
   onGoToIntegrations,
   onGoToMonitoring,
+  onGoToLogs,
   onGoToInbox,
   onGoToKeys,
 }: {
@@ -3119,6 +3143,7 @@ function ActivityTrail({
   onGoToDevelopers: () => void;
   onGoToIntegrations: () => void;
   onGoToMonitoring: () => void;
+  onGoToLogs: () => void;
   onGoToInbox: () => void;
   onGoToKeys: () => void;
 }) {
@@ -3226,6 +3251,7 @@ function ActivityTrail({
             <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
             <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
             <button className="button outline" onClick={onGoToMonitoring}>Monitoring</button>
+            <button className="button outline" onClick={onGoToLogs}>Logs</button>
             <button className="button outline" onClick={onGoToInbox}>Inbox</button>
           </div>
           <div className="activity-note">
@@ -3251,6 +3277,7 @@ function Integrations({
   onGoToDeployments,
   onGoToActivity,
   onGoToMonitoring,
+  onGoToLogs,
   onGoToLaunch,
   onGoToDocs,
   onGoToKeys,
@@ -3267,6 +3294,7 @@ function Integrations({
   onGoToDeployments: () => void;
   onGoToActivity: () => void;
   onGoToMonitoring: () => void;
+  onGoToLogs: () => void;
   onGoToLaunch: () => void;
   onGoToDocs: () => void;
   onGoToKeys: () => void;
@@ -3351,6 +3379,7 @@ function Integrations({
             <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
             <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
             <button className="button outline" onClick={onGoToMonitoring}>Monitoring</button>
+            <button className="button outline" onClick={onGoToLogs}>Logs</button>
           </div>
         </Panel>
 
@@ -3431,6 +3460,7 @@ function SecurityCenter({
   onGoToActivity,
   onGoToIntegrations,
   onGoToMonitoring,
+  onGoToLogs,
   onGoToLaunch,
   onGoToDocs,
   onCopy,
@@ -3446,6 +3476,7 @@ function SecurityCenter({
   onGoToActivity: () => void;
   onGoToIntegrations: () => void;
   onGoToMonitoring: () => void;
+  onGoToLogs: () => void;
   onGoToLaunch: () => void;
   onGoToDocs: () => void;
   onCopy: (text: string) => void;
@@ -3513,6 +3544,7 @@ function SecurityCenter({
             <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
             <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
             <button className="button outline" onClick={onGoToMonitoring}>Monitoring</button>
+            <button className="button outline" onClick={onGoToLogs}>Logs</button>
           </div>
         </Panel>
 
@@ -3584,6 +3616,7 @@ function Monitoring({
   onGoToIntegrations,
   onGoToActivity,
   onGoToSecurity,
+  onGoToLogs,
   onGoToLaunch,
   onCopy,
 }: {
@@ -3599,6 +3632,7 @@ function Monitoring({
   onGoToIntegrations: () => void;
   onGoToActivity: () => void;
   onGoToSecurity: () => void;
+  onGoToLogs: () => void;
   onGoToLaunch: () => void;
   onCopy: (text: string) => void;
 }) {
@@ -3716,6 +3750,7 @@ function Monitoring({
             <button className="button outline" onClick={onGoToDeployments}>Deployments</button>
             <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
             <button className="button outline" onClick={onGoToSecurity}>Security</button>
+            <button className="button outline" onClick={onGoToLogs}>Logs</button>
           </div>
         </Panel>
       </div>
@@ -3751,8 +3786,174 @@ function Monitoring({
           <button className="button outline" onClick={onGoToActivity}>Activity</button>
           <button className="button outline" onClick={onGoToLaunch}>Launch</button>
           <button className="button outline" onClick={onGoToDeployments}>Deployments</button>
+          <button className="button outline" onClick={onGoToLogs}>Logs</button>
         </div>
       </Panel>
+    </div>
+  );
+}
+
+function Logs({
+  mode,
+  health,
+  readiness,
+  usageSummary,
+  session,
+  selectedWorkspace,
+  publicApiKey,
+  onGoToMonitoring,
+  onGoToInfrastructure,
+  onGoToDeployments,
+  onGoToIntegrations,
+  onGoToSecurity,
+  onGoToDevelopers,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  health: CloudHealth | null;
+  readiness: CloudReadiness | null;
+  usageSummary: UsageSummary | null;
+  session: Session;
+  selectedWorkspace: string;
+  publicApiKey: string;
+  onGoToMonitoring: () => void;
+  onGoToInfrastructure: () => void;
+  onGoToDeployments: () => void;
+  onGoToIntegrations: () => void;
+  onGoToSecurity: () => void;
+  onGoToDevelopers: () => void;
+  onCopy: (text: string) => void;
+}) {
+  const [selectedLogId, setSelectedLogId] = useState(demoRequestLogs[0]?.id ?? "");
+  useEffect(() => {
+    if (!demoRequestLogs.some((entry) => entry.id === selectedLogId)) {
+      setSelectedLogId(demoRequestLogs[0]?.id ?? "");
+    }
+  }, [selectedLogId]);
+
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedWorkspace ?? "No workspace selected";
+  const totalRequests = usageSummary?.request_count ?? demoRequestLogs.length;
+  const successfulRequests = demoRequestLogs.filter((entry) => entry.status < 400).length;
+  const clientErrors = demoRequestLogs.filter((entry) => entry.status >= 400 && entry.status < 500).length;
+  const serverErrors = demoRequestLogs.filter((entry) => entry.status >= 500).length;
+  const selectedLog = demoRequestLogs.find((entry) => entry.id === selectedLogId) ?? demoRequestLogs[0];
+  const selectedStatusTone = requestStatusTone(selectedLog.status);
+  const selectedStatusLabel = requestStatusLabel(selectedLog.status);
+  const selectedNextAction = requestLogNextAction(selectedLog);
+  const sessionLabel = session.user?.email ?? (mode === "preview" ? "Preview operator session" : "Operator session required");
+  const apiKeyLabel = publicApiKey.trim() ? "Configured" : "Missing";
+
+  const summaryCards = [
+    { label: "Requests", value: formatNumber(totalRequests), detail: `${formatNumber(successfulRequests)} successful in this snapshot` },
+    { label: "Client errors", value: formatNumber(clientErrors), detail: "4xx responses that need key, scope, or rate-limit review" },
+    { label: "Server errors", value: formatNumber(serverErrors), detail: "5xx responses that need platform attention" },
+    { label: "Workspace", value: workspaceName, detail: readiness?.workspace ? `Selected ${timeAgo(readiness.time)}` : "No live workspace selected" },
+    { label: "API key", value: apiKeyLabel, detail: publicApiKey.trim() ? "Server-side bearer token is present" : "Add CLIENTPAD_API_KEY before making live requests" },
+  ];
+
+  return (
+    <div className="logs-layout">
+      <Panel className="logs-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Logs</h2>
+            <p className="helper-text">Request history, API key usage, and operator-visible failures for the live ClientPad surface.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview logs" : readiness?.status === "ok" ? "Live logs" : "Logs need review"} />
+        </div>
+        <div className="logs-summary-grid">
+          {summaryCards.map((card) => (
+            <div key={card.label} className="logs-summary-card">
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              <small>{card.detail}</small>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <div className="logs-grid">
+        <Panel className="logs-table-panel table-panel">
+          <div className="panel-head bordered">
+            <h2>Request feed</h2>
+            <StatusChip tone={selectedStatusTone} label={`${selectedStatusLabel} selected`} />
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Method</th>
+                  <th>Path</th>
+                  <th>Status</th>
+                  <th>Latency</th>
+                  <th>Workspace</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {demoRequestLogs.map((entry) => (
+                  <tr
+                    key={entry.id}
+                    className={`logs-row ${selectedLogId === entry.id ? "selected" : ""}`}
+                    onClick={() => setSelectedLogId(entry.id)}
+                  >
+                    <td><Badge tone={requestStatusTone(entry.status)}>{entry.method}</Badge></td>
+                    <td>
+                      <strong>{entry.path}</strong>
+                      <small>{entry.note}</small>
+                    </td>
+                    <td><Badge tone={requestStatusTone(entry.status)}>{entry.status}</Badge></td>
+                    <td>{entry.latency}</td>
+                    <td>{entry.workspace}</td>
+                    <td>{entry.time}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+
+        <Panel className="logs-detail-panel">
+          <div className="panel-head bordered">
+            <h2>Selected request</h2>
+            <button className="button outline" onClick={() => onCopy(selectedLog.requestId)}>Copy request ID</button>
+          </div>
+          <div className="logs-detail-card">
+            <span>Request {selectedLog.requestId}</span>
+            <strong>{selectedLog.method} {selectedLog.path}</strong>
+            <small>{selectedLog.workspace} | {selectedLog.latency} | {selectedLog.time}</small>
+            <div className="logs-detail-metrics">
+              <div>
+                <span>Status</span>
+                <strong><Badge tone={selectedStatusTone}>{selectedLog.status}</Badge></strong>
+              </div>
+              <div>
+                <span>API key</span>
+                <strong>{selectedLog.apiKey === "operator_session" ? "Operator session" : selectedLog.apiKey}</strong>
+              </div>
+              <div>
+                <span>Session</span>
+                <strong>{sessionLabel}</strong>
+              </div>
+            </div>
+            <div className="logs-next-action">
+              <span>Next operator action</span>
+              <strong>{selectedNextAction}</strong>
+            </div>
+            <p className="helper-text">
+              {selectedLog.note}
+            </p>
+          </div>
+          <div className="logs-actions">
+            <button className="button primary blue" onClick={onGoToMonitoring}>Monitoring</button>
+            <button className="button outline" onClick={onGoToDeployments}>Deployments</button>
+            <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
+            <button className="button outline" onClick={onGoToSecurity}>Security</button>
+            <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
+            <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }
@@ -3780,6 +3981,27 @@ function RowActions({ editable = false }: { editable?: boolean }) {
 
 function Badge({ children, tone }: { children: React.ReactNode; tone: "green" | "blue" | "gray" | "amber" }) {
   return <span className={`badge ${tone}`}>{children}</span>;
+}
+
+function requestStatusTone(status: number): "green" | "blue" | "gray" | "amber" {
+  if (status >= 500) return "amber";
+  if (status >= 400) return "amber";
+  if (status >= 300) return "blue";
+  return "green";
+}
+
+function requestStatusLabel(status: number) {
+  if (status >= 500) return "5xx";
+  if (status >= 400) return "4xx";
+  if (status >= 300) return "3xx";
+  return "2xx";
+}
+
+function requestLogNextAction(entry: RequestLogEntry) {
+  if (entry.status >= 500) return "Inspect the API service logs and redeploy if the error is reproducible.";
+  if (entry.status >= 429 || entry.status === 403) return "Review key scopes, workspace permissions, and rate limits before retrying.";
+  if (entry.status >= 400) return "Confirm the endpoint, request payload, and workspace configuration before retrying.";
+  return "No immediate action required; keep monitoring the live request stream.";
 }
 
 
@@ -4757,6 +4979,16 @@ const demoWebhookDeliveries: WebhookDelivery[] = [
   },
 ];
 
+const demoRequestLogs: RequestLogEntry[] = [
+  { id: "req_01", method: "POST", path: "/api/cloud/v1/auth/login", status: 200, latency: "82ms", requestId: "req-01-8f3e", apiKey: "operator_session", workspace: "Acme Corp", time: "32s ago", note: "Operator signed in and loaded workspace state." },
+  { id: "req_02", method: "GET", path: "/api/cloud/v1/readiness", status: 200, latency: "91ms", requestId: "req-02-4b1c", apiKey: "cp_live_444f", workspace: "Acme Corp", time: "1m ago", note: "Monitoring refreshed health, webhook, and workspace status." },
+  { id: "req_03", method: "POST", path: "/api/cloud/v1/webhooks", status: 201, latency: "118ms", requestId: "req-03-9d02", apiKey: "cp_live_444f", workspace: "Staging API", time: "3m ago", note: "Integration delivery accepted and queued for processing." },
+  { id: "req_04", method: "GET", path: "/api/public/v1/resources", status: 200, latency: "147ms", requestId: "req-04-1ea9", apiKey: "cp_live_2a7b", workspace: "Internal Tools", time: "6m ago", note: "Developer SDK read a public resource from the API." },
+  { id: "req_05", method: "POST", path: "/api/public/v1/leads", status: 429, latency: "203ms", requestId: "req-05-7c41", apiKey: "cp_live_9c3d", workspace: "Sandbox", time: "9m ago", note: "Rate limit hit, retry suggested after backoff." },
+  { id: "req_06", method: "DELETE", path: "/api/cloud/v1/api-keys/api_key_2a7b", status: 204, latency: "74ms", requestId: "req-06-b802", apiKey: "operator_session", workspace: "Acme Corp", time: "14m ago", note: "API key rotation completed from the dashboard." },
+  { id: "req_07", method: "PATCH", path: "/api/cloud/v1/projects/project_1a7d9c3e", status: 403, latency: "88ms", requestId: "req-07-2f6d", apiKey: "cp_live_444f", workspace: "Staging API", time: "19m ago", note: "Permission denied for a non-owner request." },
+];
+
 function demoReadinessWorkspace(
   id: string,
   name: string,
@@ -4937,6 +5169,7 @@ function titleForPage(page: Page) {
     integrations: "Integrations",
     security: "Security",
     monitoring: "Monitoring",
+    logs: "Logs",
     docs: "Docs",
     settings: "Settings",
   }[page];
@@ -4962,6 +5195,7 @@ function subtitleForPage(page: Page, project?: Project) {
     integrations: "Webhook delivery, retries, and integration posture",
     security: "API key posture, sessions, and threat handling",
     monitoring: "Health, latency, uptime, and error posture",
+    logs: "Request history, API key usage, and response codes",
     docs: "SDK and API snippets developers can copy into apps",
     settings: "API connection and operator settings",
   }[page];
