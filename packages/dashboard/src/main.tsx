@@ -4215,6 +4215,7 @@ function ConnectWhatsApp({
   const summary = readiness?.summary;
   const workspace = readiness?.workspace;
   const webhookUrl = `${window.location.origin.replace(/\/$/, "")}/whatsapp/webhook`;
+  const publicApiUrl = "https://api.clientpad.xyz/api/public/v1";
   const connectionLabel =
     mode === "preview"
       ? "Preview mode"
@@ -4244,60 +4245,114 @@ function ConnectWhatsApp({
             : !summary?.recent_webhook_count
               ? "Send a test WhatsApp message to confirm webhook traffic."
               : !summary?.has_payment_provider_configuration
-                ? "Connect a payment provider if revenue flows are expected."
+              ? "Connect a payment provider if revenue flows are expected."
                 : "Everything required for live WhatsApp traffic is present.";
+  const summaryCards = [
+    { label: "Operator", value: readiness?.auth?.user?.email ?? "Not signed in", detail: readiness?.auth?.user ? "Operator session confirmed by the backend." : "Sign in before checking live traffic." },
+    { label: "Workspace", value: workspace?.name ?? selectedWorkspace ?? "Missing", detail: workspace ? `${workspace.project_count} projects | ${workspace.key_count} keys` : "Create or select a workspace to continue." },
+    { label: "API key", value: summary?.has_public_api_key ? "Ready" : "Missing", detail: summary?.has_public_api_key ? "Public API access is available." : "Create a workspace public API key first." },
+    { label: "Webhook", value: webhookUrl, detail: "Subscribe Meta to this endpoint for live traffic." },
+  ];
+  const actionCards = [
+    { label: "Projects", title: "Create the first project", detail: "Keep CRM data, business records, and API usage tied to one workspace project.", action: onGoToProjects },
+    { label: "API keys", title: "Create or rotate a key", detail: "Issue a new `cp_live_...` key or revoke the old one before going live.", action: onGoToKeys },
+    { label: "Refresh", title: "Re-run the readiness probe", detail: "Verify the API, WhatsApp config, and webhook pipeline after each deploy.", action: onRefresh },
+  ];
 
   return (
-    <div className="detail-layout connect-layout">
-      <Panel>
+    <div className="connect-layout">
+      <Panel className="connect-hero">
         <div className="panel-head bordered">
-          <h2>WhatsApp connection</h2>
+          <div>
+            <h2>Connect WhatsApp</h2>
+            <p className="helper-text">Finish onboarding by wiring a workspace, API key, and webhook endpoint into the live ClientPad cloud.</p>
+          </div>
           <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={connectionLabel} />
         </div>
-        <p className="helper-text">
-          This screen only shows state the backend can actually prove. If the cloud is connected but WhatsApp is incomplete, the dashboard stays honest about it.
-        </p>
-        <div className="status-stack">
-          {[
-            { label: "API", value: readiness ? "Reachable" : "Not checked yet", ok: Boolean(readiness) },
-            { label: "Operator session", value: readiness?.auth?.user ? "Accepted" : "Pending", ok: Boolean(readiness?.auth?.user) },
-            { label: "Workspace", value: workspace ? workspace.name : selectedWorkspace || "Missing", ok: Boolean(workspace || selectedWorkspace) },
-            { label: "Public API key", value: summary?.has_public_api_key ? "Ready" : "Missing", ok: Boolean(summary?.has_public_api_key) },
-            { label: "WhatsApp config", value: summary?.has_whatsapp_configuration ? "Configured" : "Missing", ok: Boolean(summary?.has_whatsapp_configuration) },
-            { label: "Webhook traffic", value: summary?.recent_webhook_count ? `${summary.recent_webhook_count} recent` : "None yet", ok: Boolean(summary?.recent_webhook_count) },
-          ].map((item) => (
-            <div key={item.label} className="status-item">
-              <span className={item.ok ? "dot good" : "dot warn"} />
-              <div>
-                <strong>{item.label}</strong>
-                <small>{item.value}</small>
-              </div>
-            </div>
+        <div className="connect-summary-grid">
+          {summaryCards.map((card) => (
+            <article key={card.label} className="connect-summary-card">
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              <small>{card.detail}</small>
+            </article>
           ))}
         </div>
+        <div className="connect-actions">
+          <button className="button primary blue" onClick={onGoToProjects}>Create or select project</button>
+          <button className="button outline" onClick={onGoToKeys}>Create API key</button>
+          <button className="button outline" onClick={onRefresh}><Clock size={15} /> Refresh</button>
+          <button className="button outline" onClick={() => onCopy(checklistItems.join("\n"))}><Clipboard size={15} /> Copy checklist</button>
+        </div>
       </Panel>
-      <Panel className="wide-detail setup-card">
+
+      <div className="connect-grid">
+        <Panel className="connect-checks-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Readiness checks</h2>
+              <p className="helper-text">Every line below is a real dependency the backend can prove.</p>
+            </div>
+            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={nextFix === "Everything required for live WhatsApp traffic is present." ? "Ready" : "Needs action"} />
+          </div>
+          <div className="status-stack compact">
+            {[
+              { label: "API", value: readiness ? "Reachable" : "Not checked yet", ok: Boolean(readiness) },
+              { label: "Operator session", value: readiness?.auth?.user ? "Accepted" : "Pending", ok: Boolean(readiness?.auth?.user) },
+              { label: "Workspace", value: workspace ? workspace.name : selectedWorkspace || "Missing", ok: Boolean(workspace || selectedWorkspace) },
+              { label: "Public API key", value: summary?.has_public_api_key ? "Ready" : "Missing", ok: Boolean(summary?.has_public_api_key) },
+              { label: "WhatsApp config", value: summary?.has_whatsapp_configuration ? "Configured" : "Missing", ok: Boolean(summary?.has_whatsapp_configuration) },
+              { label: "Webhook traffic", value: summary?.recent_webhook_count ? `${summary.recent_webhook_count} recent` : "None yet", ok: Boolean(summary?.recent_webhook_count) },
+            ].map((item) => (
+              <div key={item.label} className="status-item">
+                <span className={item.ok ? "dot good" : "dot warn"} />
+                <div>
+                  <strong>{item.label}</strong>
+                  <small>{item.value}</small>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="status-callout">
+            <strong>{connectionLabel}</strong>
+            <p>{nextFix}</p>
+          </div>
+        </Panel>
+
+        <Panel className="connect-side-panel">
+          <div className="panel-head bordered">
+            <h2>Webhook and next steps</h2>
+            <StatusChip tone="blue" label="Operator guide" />
+          </div>
+          <div className="webhook-box">
+            <span>Webhook endpoint</span>
+            <code>{webhookUrl}</code>
+            <small className="helper-text">Mount this endpoint on the host serving your ClientPad webhook handler, then subscribe Meta to it.</small>
+            <div className="inline-actions">
+              <button className="button primary blue" onClick={() => onCopy(webhookUrl)}>Copy URL</button>
+              <button className="button outline" onClick={onGoToKeys}>Open API keys</button>
+            </div>
+          </div>
+          <div className="connect-action-grid">
+            {actionCards.map((card) => (
+              <button key={card.label} className="connect-action-card" onClick={card.action}>
+                <span>{card.label}</span>
+                <strong>{card.title}</strong>
+                <small>{card.detail}</small>
+              </button>
+            ))}
+          </div>
+          <div className="status-callout">
+            <strong>Public API</strong>
+            <p>{publicApiUrl}</p>
+          </div>
+        </Panel>
+      </div>
+
+      <Panel className="connect-diagnostics-panel wide-detail setup-card">
         <div className="panel-head">
           <h2>Connection diagnostics</h2>
-          <div className="inline-actions">
-            <button className="button outline" onClick={onRefresh}><Clock size={15} /> Refresh</button>
-            <button className="button outline" onClick={() => onCopy(checklistItems.join("\n"))}><Clipboard size={15} /> Copy checklist</button>
-          </div>
-        </div>
-        <div className="webhook-box">
-          <span>Webhook endpoint</span>
-          <code>{webhookUrl}</code>
-          <small className="helper-text">Mount this endpoint on the host serving your ClientPad webhook handler, then subscribe Meta to it.</small>
-          <div className="inline-actions">
-            <button className="button primary blue" onClick={() => onCopy(webhookUrl)}>Copy URL</button>
-            <button className="button outline" onClick={onGoToKeys}>Open API keys</button>
-          </div>
-        </div>
-        <div className="status-callout">
-          <strong>{connectionLabel}</strong>
-          <p>
-            {nextFix}
-          </p>
+          <StatusChip tone={diagnostics.length ? "amber" : "green"} label={diagnostics.length ? "Review diagnostics" : "No missing checks"} />
         </div>
         <div className="status-stack">
           {diagnostics.map((item) => (
@@ -4313,10 +4368,6 @@ function ConnectWhatsApp({
         <ol className="checklist">
           {checklistItems.map((item) => <li key={item}>{item}</li>)}
         </ol>
-        <div className="empty-actions">
-          <button className="button primary blue" onClick={onGoToProjects}>Create or select project</button>
-          <button className="button outline" onClick={onGoToKeys}>Create API key</button>
-        </div>
       </Panel>
     </div>
   );

@@ -2865,19 +2865,88 @@ td small {
 .metric-label { display: block; color: #526071; font-size: 13px; margin-bottom: 10px; }
 .metric-value { display: block; font-size: 28px; line-height: 1.1; }
 .metric-value.healthy { color: #0b8d4d; }
-.connect-layout .panel:first-child { display: grid; gap: 14px; align-content: start; }
-.setup-card { display: grid; gap: 16px; }
+.connect-layout {
+  display: grid;
+  gap: 16px;
+}
+.connect-hero,
+.connect-checks-panel,
+.connect-side-panel,
+.connect-diagnostics-panel {
+  display: grid;
+  gap: 16px;
+}
+.connect-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.connect-summary-card,
+.connect-action-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+.connect-summary-card span,
+.connect-action-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.connect-summary-card strong,
+.connect-action-card strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+.connect-summary-card small,
+.connect-action-card small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.connect-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.connect-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+  gap: 16px;
+  align-items: start;
+}
+.connect-action-grid {
+  display: grid;
+  gap: 10px;
+}
+.connect-action-card {
+  text-align: left;
+}
+.connect-action-card:hover {
+  background: color-mix(in srgb, var(--brand) 5%, var(--panel));
+}
+.setup-card {
+  display: grid;
+  gap: 16px;
+}
 .webhook-box {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px 12px;
-  border: 1px solid #bad6ff;
-  border-radius: 8px;
-  background: #f4f8ff;
+  border: 1px solid color-mix(in srgb, var(--brand) 20%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--brand) 4%, var(--panel));
   padding: 14px;
 }
-.webhook-box span { grid-column: 1 / -1; color: #526071; font-size: 13px; }
-.webhook-box code { overflow: auto; color: #005ed8; font-size: 13px; }
+.webhook-box span { grid-column: 1 / -1; color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.webhook-box code { overflow: auto; color: var(--ink); font-size: 13px; }
 .qr-card {
   width: 154px;
   display: grid;
@@ -2969,6 +3038,8 @@ td small {
 @media (max-width: 1180px) {
   .metric-grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
   .inbox-layout { grid-template-columns: 1fr; }
+  .connect-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .connect-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 760px) {
@@ -2977,6 +3048,9 @@ td small {
   .webhook-box { grid-template-columns: 1fr; }
   .qr-card { width: 140px; grid-template-columns: repeat(7, 14px); }
   .qr-card i { width: 14px; height: 14px; }
+  .connect-summary-grid { grid-template-columns: 1fr; }
+  .connect-actions { flex-direction: column; }
+  .connect-action-grid { grid-template-columns: 1fr; }
 }
 .billing-summary { grid-column: 1 / -1; }
 
