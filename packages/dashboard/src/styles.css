@@ -1221,6 +1221,144 @@ button { cursor: pointer; }
   background: color-mix(in srgb, var(--panel) 92%, transparent);
 }
 
+.developers-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.developers-hero {
+  display: grid;
+  gap: 16px;
+}
+
+.developer-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.developer-summary {
+  display: grid;
+  gap: 6px;
+  padding: 15px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--line));
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 95%, var(--bg)), color-mix(in srgb, var(--panel-2) 90%, var(--panel)));
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.developer-summary span,
+.developer-note span,
+.developer-contract span,
+.developer-checklist span,
+.developer-error strong {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.developer-summary strong,
+.developer-note strong,
+.developer-contract strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+.developer-summary small,
+.developer-note small,
+.developer-contract small,
+.developer-error small,
+.developer-checklist li {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.developer-summary .button.outline {
+  justify-self: start;
+}
+
+.developers-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 16px;
+}
+
+.developer-setup-panel,
+.developer-ops-panel,
+.developer-footer-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.developer-note-grid,
+.developer-contract-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.developer-note,
+.developer-contract {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
+.developer-note strong,
+.developer-contract strong {
+  font-size: 14px;
+}
+
+.developer-error-list {
+  display: grid;
+  gap: 8px;
+}
+
+.developer-error {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+}
+
+.developer-error strong {
+  color: var(--ink);
+}
+
+.developer-checklist {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--brand) 5%, var(--panel));
+}
+
+.developer-checklist ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.developer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .overview-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(340px, 1fr);
@@ -1692,6 +1830,8 @@ td small {
   .infra-grid { grid-template-columns: 1fr; }
   .deployment-hero-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .deployments-grid { grid-template-columns: 1fr; }
+  .developer-hero-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .developers-grid { grid-template-columns: 1fr; }
   .overview-layout, .detail-layout { grid-template-columns: 1fr; }
   .billing-panel, .quickstart-panel, .active-projects, .api-keys { grid-column: auto; }
   .billing-grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
@@ -1729,8 +1869,12 @@ td small {
   }
   .infra-hero-grid { grid-template-columns: 1fr; }
   .deployment-hero-grid { grid-template-columns: 1fr; }
+  .developer-hero-grid { grid-template-columns: 1fr; }
   .infra-actions { flex-direction: column; }
   .deployment-actions { flex-direction: column; }
+  .developer-actions { flex-direction: column; }
+  .developer-note-grid,
+  .developer-contract-grid { grid-template-columns: 1fr; }
   .nav-label {
     display: none;
   }

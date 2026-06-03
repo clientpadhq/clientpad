@@ -40,6 +40,7 @@ import {
   Archive,
   CheckCircle2,
   Server,
+  Code2,
 } from "lucide-react";
 import "./styles.css";
 
@@ -199,7 +200,7 @@ type CloudReadiness = {
 
 type ConnectionState = "preview" | "checking" | "connected" | "misconfigured" | "unavailable";
 
-type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "docs" | "settings";
+type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "developers" | "docs" | "settings";
 type QuickstartLanguage = "curl" | "python" | "node" | "go" | "ruby";
 type DashboardTheme = "light" | "dark";
 type LaunchCheckStatus = "checking" | "ok" | "warning" | "fail";
@@ -291,7 +292,7 @@ const dashboardPageParamKey = "page";
 const defaultCloudBaseUrl = window.location.hostname.includes("localhost")
   ? "http://localhost:3000/api/cloud/v1"
   : "https://api.clientpad.xyz/api/cloud/v1";
-const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "docs", "settings"];
+const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "developers", "docs", "settings"];
 const dashboardPageSet = new Set<Page>(dashboardPages);
 
 function resolveDashboardTheme(): DashboardTheme {
@@ -1107,6 +1108,20 @@ function Dashboard({
               onCopy={(text) => copyText(text, setNotice)}
             />
           )}
+          {page === "developers" && (
+            <Developers
+              mode={mode}
+              readiness={readiness}
+              selectedProject={selectedProject}
+              usageSummary={usageSummary}
+              onGoToKeys={() => setPage("keys")}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToDeployments={() => setPage("deployments")}
+              onGoToDocs={() => setPage("docs")}
+              onGoToLaunch={() => setPage("launch")}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
           {page === "docs" && (
             <Docs
               selectedProject={selectedProject}
@@ -1152,6 +1167,7 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
     ["launch", <ShieldCheck size={18} />, "Launch"],
     ["infrastructure", <Server size={18} />, "Infrastructure"],
     ["deployments", <Archive size={18} />, "Deployments"],
+    ["developers", <Code2 size={18} />, "Developers"],
     ["docs", <BookOpen size={18} />, "Docs"],
   ];
 
@@ -2775,6 +2791,178 @@ function Deployments({
   );
 }
 
+function Developers({
+  mode,
+  readiness,
+  selectedProject,
+  usageSummary,
+  onGoToKeys,
+  onGoToInfrastructure,
+  onGoToDeployments,
+  onGoToDocs,
+  onGoToLaunch,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  readiness: CloudReadiness | null;
+  selectedProject?: Project;
+  usageSummary: UsageSummary | null;
+  onGoToKeys: () => void;
+  onGoToInfrastructure: () => void;
+  onGoToDeployments: () => void;
+  onGoToDocs: () => void;
+  onGoToLaunch: () => void;
+  onCopy: (text: string) => void;
+}) {
+  const apiUrl = "https://api.clientpad.xyz/api/public/v1";
+  const baseUrl = "https://api.clientpad.xyz";
+  const sdkSnippet = quickstartSnippet("node", selectedProject);
+  const authSnippet = `Authorization: Bearer cp_live_your_api_key_here`;
+  const envSnippet = `CLIENTPAD_API_KEY=cp_live_your_api_key_here\nCLIENTPAD_BASE_URL=${apiUrl}\nCLIENTPAD_WORKSPACE_ID=${readiness?.workspace?.id ?? usageSummary?.workspace_id ?? "workspace_prod"}`;
+  const errorMatrix = [
+    { code: "401", title: "Missing or invalid API key", detail: "Create a new key in API Keys and pass it as a Bearer token." },
+    { code: "403", title: "Access denied", detail: "The key exists, but the workspace or scope is not allowed for this request." },
+    { code: "429", title: "Rate limited", detail: "Back off briefly and retry with exponential delay." },
+    { code: "5xx", title: "Server error", detail: "Check the API service, database connection, and current Render deploy." },
+  ];
+  const checklist = [
+    "Keep the dashboard public and the API protected by `CLIENTPAD_API_KEY`.",
+    "Ship new API surfaces behind Render deployments and live readiness checks.",
+    "Use workspace-level keys for service businesses and per-project keys for developers.",
+    "Prefer the dashboard for operators and the SDK for application code.",
+  ];
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedProject?.name ?? "No workspace selected";
+  const requestLimit = usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M";
+  const requestRate = usageSummary?.rate_limit_per_minute ?? 1200;
+  const releaseState =
+    mode === "preview"
+      ? "Preview API"
+      : readiness?.status === "ok"
+        ? "Live API contract"
+        : readiness
+          ? "API contract needs attention"
+          : "Checking API contract";
+
+  return (
+    <div className="developers-layout">
+      <Panel className="developers-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Developers</h2>
+            <p className="helper-text">API-first onboarding, error handling, and SDK setup for teams shipping against ClientPad.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={releaseState} />
+        </div>
+        <div className="developer-hero-grid">
+          <div className="developer-summary">
+            <span>Public API</span>
+            <strong>{apiUrl}</strong>
+            <small>Use this base URL from apps, workers, and backend jobs.</small>
+            <button className="button outline" onClick={() => onCopy(apiUrl)}>Copy API URL</button>
+          </div>
+          <div className="developer-summary">
+            <span>Auth contract</span>
+            <strong>Bearer token</strong>
+            <small>{authSnippet}</small>
+            <small>All developer traffic should send the token server-side.</small>
+          </div>
+          <div className="developer-summary">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{requestLimit} monthly requests | {requestRate} rpm</small>
+            <small>{usageSummary?.active_api_key_count ?? 0} active API keys</small>
+          </div>
+          <div className="developer-summary">
+            <span>Open-source contract</span>
+            <strong>Public code, private keys</strong>
+            <small>Developers can inspect the source but must provision `CLIENTPAD_API_KEY` to call live services.</small>
+            <button className="button outline" onClick={onGoToKeys}>Manage keys</button>
+          </div>
+        </div>
+      </Panel>
+
+      <div className="developers-grid">
+        <Panel className="developer-setup-panel">
+          <div className="panel-head bordered">
+            <h2>SDK setup</h2>
+            <button className="button outline" onClick={() => onCopy(envSnippet)}>Copy env</button>
+          </div>
+          <pre className="code compact">{sdkSnippet}</pre>
+          <div className="developer-note-grid">
+            <div className="developer-note">
+              <span>Environment</span>
+              <strong>Required variables</strong>
+              <small>Use `CLIENTPAD_API_KEY` in server code, plus `CLIENTPAD_BASE_URL` when the host changes.</small>
+            </div>
+            <div className="developer-note">
+              <span>Workspace</span>
+              <strong>{workspaceName}</strong>
+              <small>Project-scoped keys map requests back to the selected workspace.</small>
+            </div>
+          </div>
+        </Panel>
+
+        <Panel className="developer-ops-panel">
+          <div className="panel-head bordered">
+            <h2>Error handling</h2>
+            <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview" : "Live contract"} />
+          </div>
+          <div className="developer-error-list">
+            {errorMatrix.map((item) => (
+              <article key={item.code} className="developer-error">
+                <strong>{item.code} {item.title}</strong>
+                <small>{item.detail}</small>
+              </article>
+            ))}
+          </div>
+          <div className="developer-checklist">
+            <span>Ship checklist</span>
+            <ul>
+              {checklist.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </div>
+          <div className="developer-actions">
+            <button className="button primary blue" onClick={onGoToDeployments}>Deployments</button>
+            <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
+            <button className="button outline" onClick={onGoToDocs}>Docs</button>
+            <button className="button outline" onClick={onGoToLaunch}>Launch</button>
+          </div>
+        </Panel>
+      </div>
+      <Panel className="developer-footer-panel">
+        <div className="panel-head bordered">
+          <h2>Request contract</h2>
+          <button className="button outline" onClick={() => onCopy(authSnippet)}>
+            Copy auth header
+          </button>
+        </div>
+        <div className="developer-contract-grid">
+          <div className="developer-contract">
+            <span>Base URL</span>
+            <strong>{baseUrl}</strong>
+            <small>API clients should target the public API host.</small>
+          </div>
+          <div className="developer-contract">
+            <span>Header</span>
+            <strong>{authSnippet}</strong>
+            <small>Reject requests without the header on the server side.</small>
+          </div>
+          <div className="developer-contract">
+            <span>Rate limit</span>
+            <strong>{requestRate} rpm</strong>
+            <small>Back off on 429 and retry after a short delay.</small>
+          </div>
+          <div className="developer-contract">
+            <span>Operational links</span>
+            <strong>Live dashboard + docs</strong>
+            <small>Use the dashboard for operators and the docs for SDK snippets.</small>
+          </div>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
 function timeAgo(value: string) {
   const diff = Date.now() - new Date(value).getTime();
   const minutes = Math.max(Math.floor(diff / 60000), 0);
@@ -3911,6 +4099,7 @@ function titleForPage(page: Page) {
     launch: "Launch",
     infrastructure: "Infrastructure",
     deployments: "Deployments",
+    developers: "Developers",
     docs: "Docs",
     settings: "Settings",
   }[page];
@@ -3931,6 +4120,7 @@ function subtitleForPage(page: Page, project?: Project) {
     launch: "Verify production services before sending customers traffic",
     infrastructure: "Platform, API, docs, and public host mapping",
     deployments: "GitHub pushes, Render releases, and service rollout history",
+    developers: "Developer onboarding, SDK setup, and API error handling",
     docs: "SDK and API snippets developers can copy into apps",
     settings: "API connection and operator settings",
   }[page];
