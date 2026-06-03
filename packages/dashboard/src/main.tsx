@@ -1282,7 +1282,12 @@ function Dashboard({
               session={currentSession}
               publicApiKey={publicApiKey}
               mode={mode}
+              readiness={readiness}
               onLogout={onLogout}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToLaunch={() => setPage("launch")}
+              onGoToDocs={() => setPage("docs")}
+              onGoToMonitoring={() => setPage("monitoring")}
               onSave={(url, key) => {
                 setNotice(`Saved settings.`);
                 const next = { ...sessionRef.current, baseUrl: url.replace(/\/+$/, ""), publicApiKey: key };
@@ -2245,68 +2250,163 @@ function SettingsPage({
   session,
   publicApiKey: initialKey,
   mode,
+  readiness,
   onSave,
   onLogout,
+  onGoToInfrastructure,
+  onGoToLaunch,
+  onGoToDocs,
+  onGoToMonitoring,
 }: {
   session: Session;
   publicApiKey: string;
   mode: ConnectionMode;
+  readiness: CloudReadiness | null;
   onSave: (baseUrl: string, publicApiKey: string) => void;
   onLogout: () => void | Promise<void>;
+  onGoToInfrastructure: () => void;
+  onGoToLaunch: () => void;
+  onGoToDocs: () => void;
+  onGoToMonitoring: () => void;
 }) {
   const [baseUrl, setBaseUrl] = useState(session.baseUrl);
   const [publicApiKey, setPublicApiKey] = useState(initialKey);
+  const apiOrigin = session.baseUrl.replace(/\/+$/, "").replace(/\/api\/cloud\/v1$/i, "");
+  const publicApiUrl = `${apiOrigin}/api/public/v1`;
+  const operatorEmail = session.user?.email ?? "Preview account";
+  const workspaceName = readiness?.workspace?.name ?? session.workspaces?.find((workspace) => workspace.id === session.selectedWorkspaceId)?.name ?? "No workspace selected";
+  const sessionStatus = mode === "preview"
+    ? "Preview mode"
+    : readiness?.status === "ok"
+      ? "Live connected"
+      : readiness
+        ? "Live needs attention"
+        : "Checking connection";
+  const surfaces = [
+    { label: "Platform", value: "platform.clientpad.xyz", detail: "Dashboard entrypoint for operators." },
+    { label: "Public API", value: publicApiUrl, detail: "Developer-facing API base URL." },
+    { label: "Docs", value: "docs.clientpad.xyz", detail: "Documentation and quickstart surface." },
+    { label: "Marketing", value: "clientpad.xyz", detail: "Public marketing and conversion site." },
+  ];
 
   return (
-    <div className="detail-layout">
-      <Panel>
-        <h2>Account</h2>
-        <div className="status-callout compact">
-          <strong>{session.user?.email ?? "Preview account"}</strong>
-          <p>{mode === "preview" ? "Preview mode uses generated sample data. No live backend access is required." : `Signed in as ${session.user?.full_name || session.user?.email || "operator"}.`}</p>
-        </div>
-        {session.workspaces?.length ? (
-          <div className="status-stack" style={{ marginTop: "1rem" }}>
-            {session.workspaces.map((workspace) => (
-              <div key={workspace.id} className="status-item">
-                <span className={workspace.id === session.selectedWorkspaceId ? "dot good" : "dot warn"} />
-                <div>
-                  <strong>{workspace.name}</strong>
-                  <small>{workspace.role} | {workspace.project_count} projects | {workspace.key_count} keys</small>
-                </div>
-              </div>
-            ))}
+    <div className="settings-layout">
+      <Panel className="settings-summary-panel">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Account</h2>
+            <p className="helper-text">Connection settings and operator access for the live dashboard.</p>
           </div>
-        ) : null}
-        <div className="split-actions" style={{ marginTop: "1rem" }}>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={sessionStatus} />
+        </div>
+        <div className="settings-summary-grid">
+          <div className="settings-summary-card">
+            <span>Operator</span>
+            <strong>{operatorEmail}</strong>
+            <small>{mode === "preview" ? "Preview mode uses generated sample data." : `Signed in as ${session.user?.full_name || session.user?.email || "operator"}.`}</small>
+          </div>
+          <div className="settings-summary-card">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{session.workspaces?.length ? `${session.workspaces.length} workspace${session.workspaces.length === 1 ? "" : "s"} available` : "No live workspace loaded yet"}</small>
+          </div>
+          <div className="settings-summary-card">
+            <span>Platform</span>
+            <strong>platform.clientpad.xyz</strong>
+            <small>Dashboard entrypoint for operators and service businesses.</small>
+          </div>
+          <div className="settings-summary-card">
+            <span>Public API</span>
+            <strong>{publicApiUrl}</strong>
+            <small>Developers call this host with `CLIENTPAD_API_KEY`.</small>
+          </div>
+        </div>
+        <div className="settings-actions">
           <button className="button outline" onClick={onLogout}>
             <ShieldCheck size={16} /> Sign out
           </button>
+          <button className="button outline" onClick={onGoToInfrastructure}>
+            Infrastructure
+          </button>
+          <button className="button outline" onClick={onGoToLaunch}>
+            Launch
+          </button>
+          <button className="button outline" onClick={onGoToMonitoring}>
+            Monitoring
+          </button>
+          <button className="button outline" onClick={onGoToDocs}>
+            Docs
+          </button>
         </div>
-        <h2 style={{ marginTop: "2rem" }}>API connection</h2>
-        <FormField label="API base URL" value={baseUrl} onChange={setBaseUrl} />
-        <div className="status-callout compact">
-          <strong>{mode === "preview" ? "Preview mode" : "Live mode"}</strong>
-          <p>{mode === "preview" ? "Preview mode uses generated sample data. No live backend access is required." : "Live mode points the dashboard at your ClientPad API and uses a cookie-backed operator session."}</p>
-        </div>
-
-        <h2 style={{ marginTop: "2rem" }}>Workspace Preview</h2>
-        <FormField label="Workspace Public API Key" value={publicApiKey} onChange={setPublicApiKey} />
-        <p className="helper-text">Enter a `cp_live_...` key to enable live WhatsApp inbox, usage, and pipeline data.</p>
-
-        <button className="button primary blue" onClick={() => onSave(baseUrl, publicApiKey)}>
-          <Check size={16} /> Save settings
-        </button>
       </Panel>
-      <Panel className="wide-detail">
-        <h2>Deployment checklist</h2>
-        <ul className="plan-list">
-          <li>Mount `@clientpad/cloud` at `/api/cloud/v1`.</li>
-          <li>Sign in with an operator account, or create the first operator from the cloud auth flow.</li>
-          <li>Deploy this dashboard as a static app.</li>
-          <li>Use hosted API keys for live gateway access and WhatsApp inbox sync.</li>
-        </ul>
-      </Panel>
+
+      <div className="settings-grid">
+        <Panel className="settings-form-panel">
+          <div className="panel-head bordered">
+            <h2>API connection</h2>
+            <button className="button outline" onClick={() => onSave(baseUrl, publicApiKey)}>
+              <Check size={16} /> Save settings
+            </button>
+          </div>
+          <FormField label="API base URL" value={baseUrl} onChange={setBaseUrl} />
+          <div className="status-callout compact">
+            <strong>{mode === "preview" ? "Preview mode" : "Live mode"}</strong>
+            <p>{mode === "preview" ? "Preview mode uses generated sample data. No live backend access is required." : "Live mode points the dashboard at your ClientPad API and uses a cookie-backed operator session."}</p>
+          </div>
+          <div className="settings-key-row">
+            <div>
+              <h3>Workspace Public API Key</h3>
+              <p className="helper-text">Enter a `cp_live_...` key to enable live WhatsApp inbox, usage, and pipeline data.</p>
+            </div>
+            <CopyButton text={publicApiUrl} />
+          </div>
+          <FormField label="Workspace Public API Key" value={publicApiKey} onChange={setPublicApiKey} />
+          <div className="settings-key-hint">
+            <span>{publicApiKey ? maskKey(publicApiKey) : "No workspace key saved yet"}</span>
+            <small>Keep this key server-side. Rotate it whenever an operator or integration should lose access.</small>
+          </div>
+          <div className="settings-actions bottom">
+            <button className="button primary blue" onClick={() => onSave(baseUrl, publicApiKey)}>
+              <Check size={16} /> Save settings
+            </button>
+          </div>
+        </Panel>
+
+        <Panel className="settings-side-panel">
+          <div className="panel-head bordered">
+            <h2>Deployment checklist</h2>
+            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={readiness?.status === "ok" ? "Operational" : "Review setup"} />
+          </div>
+          <ul className="plan-list">
+            <li>Mount `@clientpad/cloud` at `/api/cloud/v1`.</li>
+            <li>Use `CLIENTPAD_API_KEY` from the dashboard or your server-side runtime.</li>
+            <li>Keep the dashboard static at `platform.clientpad.xyz`.</li>
+            <li>Deploy docs separately at `docs.clientpad.xyz` for the developer surface.</li>
+          </ul>
+          <div className="settings-link-grid">
+            <button className="settings-link-card" onClick={onGoToInfrastructure}>
+              <span>Infrastructure</span>
+              <strong>Hosts and deploy map</strong>
+              <small>Check every service endpoint in one place.</small>
+            </button>
+            <button className="settings-link-card" onClick={onGoToLaunch}>
+              <span>Launch</span>
+              <strong>Readiness checks</strong>
+              <small>Run the public and operator checks before shipping.</small>
+            </button>
+            <button className="settings-link-card" onClick={onGoToDocs}>
+              <span>Docs</span>
+              <strong>API reference</strong>
+              <small>Copy the snippets developers need.</small>
+            </button>
+            <button className="settings-link-card" onClick={onGoToMonitoring}>
+              <span>Monitoring</span>
+              <strong>Live health view</strong>
+              <small>Track errors, uptime, and request freshness.</small>
+            </button>
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }
