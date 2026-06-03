@@ -1633,6 +1633,151 @@ button { cursor: pointer; }
   background: color-mix(in srgb, var(--panel) 92%, transparent);
 }
 
+.integrations-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.integrations-hero {
+  display: grid;
+  gap: 16px;
+}
+
+.integration-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.integration-summary {
+  display: grid;
+  gap: 6px;
+  padding: 15px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--line));
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 95%, var(--bg)), color-mix(in srgb, var(--panel-2) 90%, var(--panel)));
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.integration-summary span,
+.integration-footer-card span,
+.integration-delivery strong,
+.webhook-box span,
+.integration-checklist span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.integration-summary strong,
+.integration-footer-card strong,
+.integration-delivery-head strong,
+.webhook-box code {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+.integration-summary small,
+.integration-footer-card small,
+.integration-delivery small,
+.integration-delivery-meta span,
+.webhook-box small,
+.integration-checklist li {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.integration-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 16px;
+}
+
+.integration-config-panel,
+.integration-deliveries-panel,
+.integration-footer-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.integration-checklist {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--brand) 5%, var(--panel));
+}
+
+.integration-checklist ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.integration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.integration-delivery-list {
+  display: grid;
+  gap: 10px;
+}
+
+.integration-delivery {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
+.integration-delivery-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: start;
+}
+
+.integration-delivery-head span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.integration-delivery-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.integration-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.integration-footer-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
 .overview-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(340px, 1fr);
@@ -2108,6 +2253,9 @@ td small {
   .developers-grid { grid-template-columns: 1fr; }
   .activity-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .activity-grid { grid-template-columns: 1fr; }
+  .integration-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .integration-grid { grid-template-columns: 1fr; }
+  .integration-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .security-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .security-layout-grid { grid-template-columns: 1fr; }
   .security-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2156,6 +2304,9 @@ td small {
   .developer-contract-grid { grid-template-columns: 1fr; }
   .activity-summary-grid { grid-template-columns: 1fr; }
   .activity-shortcuts { flex-direction: column; }
+  .integration-summary-grid { grid-template-columns: 1fr; }
+  .integration-footer-grid { grid-template-columns: 1fr; }
+  .integration-actions { flex-direction: column; }
   .security-grid { grid-template-columns: 1fr; }
   .security-footer-grid { grid-template-columns: 1fr; }
   .security-actions { flex-direction: column; }

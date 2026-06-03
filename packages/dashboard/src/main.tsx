@@ -41,6 +41,7 @@ import {
   CheckCircle2,
   Server,
   Code2,
+  Link2,
 } from "lucide-react";
 import "./styles.css";
 
@@ -192,6 +193,16 @@ type ActivityRecord = {
   tone: "green" | "blue" | "amber" | "gray";
 };
 
+type WebhookDelivery = {
+  id: string;
+  event: string;
+  endpoint: string;
+  status: "delivered" | "retrying" | "failed";
+  attempts: number;
+  time: string;
+  response: string;
+};
+
 type CloudReadiness = {
   status: "ok" | "degraded";
   service: string;
@@ -208,7 +219,7 @@ type CloudReadiness = {
 
 type ConnectionState = "preview" | "checking" | "connected" | "misconfigured" | "unavailable";
 
-type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "developers" | "activity" | "security" | "docs" | "settings";
+type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "developers" | "activity" | "integrations" | "security" | "docs" | "settings";
 type QuickstartLanguage = "curl" | "python" | "node" | "go" | "ruby";
 type DashboardTheme = "light" | "dark";
 type LaunchCheckStatus = "checking" | "ok" | "warning" | "fail";
@@ -300,7 +311,7 @@ const dashboardPageParamKey = "page";
 const defaultCloudBaseUrl = window.location.hostname.includes("localhost")
   ? "http://localhost:3000/api/cloud/v1"
   : "https://api.clientpad.xyz/api/cloud/v1";
-const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "developers", "activity", "security", "docs", "settings"];
+const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "developers", "activity", "integrations", "security", "docs", "settings"];
 const dashboardPageSet = new Set<Page>(dashboardPages);
 
 function resolveDashboardTheme(): DashboardTheme {
@@ -1125,6 +1136,7 @@ function Dashboard({
               onGoToKeys={() => setPage("keys")}
               onGoToInfrastructure={() => setPage("infrastructure")}
               onGoToDeployments={() => setPage("deployments")}
+              onGoToIntegrations={() => setPage("integrations")}
               onGoToDocs={() => setPage("docs")}
               onGoToLaunch={() => setPage("launch")}
               onCopy={(text) => copyText(text, setNotice)}
@@ -1139,8 +1151,27 @@ function Dashboard({
               onGoToDeployments={() => setPage("deployments")}
               onGoToInfrastructure={() => setPage("infrastructure")}
               onGoToDevelopers={() => setPage("developers")}
+              onGoToIntegrations={() => setPage("integrations")}
               onGoToInbox={() => setPage("inbox")}
               onGoToKeys={() => setPage("keys")}
+            />
+          )}
+          {page === "integrations" && (
+            <Integrations
+              mode={mode}
+              readiness={readiness}
+              session={currentSession}
+              selectedWorkspace={selectedWorkspace}
+              publicApiKey={publicApiKey}
+              usageSummary={usageSummary}
+              onGoToDevelopers={() => setPage("developers")}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToDeployments={() => setPage("deployments")}
+              onGoToActivity={() => setPage("activity")}
+              onGoToLaunch={() => setPage("launch")}
+              onGoToDocs={() => setPage("docs")}
+              onGoToKeys={() => setPage("keys")}
+              onCopy={(text) => copyText(text, setNotice)}
             />
           )}
           {page === "security" && (
@@ -1154,6 +1185,7 @@ function Dashboard({
               onGoToDevelopers={() => setPage("developers")}
               onGoToInfrastructure={() => setPage("infrastructure")}
               onGoToActivity={() => setPage("activity")}
+              onGoToIntegrations={() => setPage("integrations")}
               onGoToLaunch={() => setPage("launch")}
               onGoToDocs={() => setPage("docs")}
               onCopy={(text) => copyText(text, setNotice)}
@@ -1206,6 +1238,7 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
     ["deployments", <Archive size={18} />, "Deployments"],
     ["developers", <Code2 size={18} />, "Developers"],
     ["activity", <Clock size={18} />, "Activity"],
+    ["integrations", <Link2 size={18} />, "Integrations"],
     ["security", <ShieldCheck size={18} />, "Security"],
     ["docs", <BookOpen size={18} />, "Docs"],
   ];
@@ -2838,6 +2871,7 @@ function Developers({
   onGoToKeys,
   onGoToInfrastructure,
   onGoToDeployments,
+  onGoToIntegrations,
   onGoToDocs,
   onGoToLaunch,
   onCopy,
@@ -2849,6 +2883,7 @@ function Developers({
   onGoToKeys: () => void;
   onGoToInfrastructure: () => void;
   onGoToDeployments: () => void;
+  onGoToIntegrations: () => void;
   onGoToDocs: () => void;
   onGoToLaunch: () => void;
   onCopy: (text: string) => void;
@@ -2962,6 +2997,7 @@ function Developers({
           </div>
           <div className="developer-actions">
             <button className="button primary blue" onClick={onGoToDeployments}>Deployments</button>
+            <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
             <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
             <button className="button outline" onClick={onGoToDocs}>Docs</button>
             <button className="button outline" onClick={onGoToLaunch}>Launch</button>
@@ -3010,6 +3046,7 @@ function ActivityTrail({
   onGoToDeployments,
   onGoToInfrastructure,
   onGoToDevelopers,
+  onGoToIntegrations,
   onGoToInbox,
   onGoToKeys,
 }: {
@@ -3020,6 +3057,7 @@ function ActivityTrail({
   onGoToDeployments: () => void;
   onGoToInfrastructure: () => void;
   onGoToDevelopers: () => void;
+  onGoToIntegrations: () => void;
   onGoToInbox: () => void;
   onGoToKeys: () => void;
 }) {
@@ -3125,15 +3163,192 @@ function ActivityTrail({
             <button className="button primary blue" onClick={onGoToKeys}>Create API key</button>
             <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
             <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
+            <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
             <button className="button outline" onClick={onGoToInbox}>Inbox</button>
           </div>
           <div className="activity-note">
             <span>Why this page exists</span>
             <strong>ClientPad needs the same operational clarity as a real CRM platform.</strong>
-            <small>Operators should be able to answer “what changed?” without leaving the dashboard.</small>
+            <small>Operators should be able to answer "what changed?" without leaving the dashboard.</small>
           </div>
         </Panel>
       </div>
+    </div>
+  );
+}
+
+function Integrations({
+  mode,
+  readiness,
+  session,
+  selectedWorkspace,
+  publicApiKey,
+  usageSummary,
+  onGoToDevelopers,
+  onGoToInfrastructure,
+  onGoToDeployments,
+  onGoToActivity,
+  onGoToLaunch,
+  onGoToDocs,
+  onGoToKeys,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  readiness: CloudReadiness | null;
+  session: Session;
+  selectedWorkspace: string;
+  publicApiKey: string;
+  usageSummary: UsageSummary | null;
+  onGoToDevelopers: () => void;
+  onGoToInfrastructure: () => void;
+  onGoToDeployments: () => void;
+  onGoToActivity: () => void;
+  onGoToLaunch: () => void;
+  onGoToDocs: () => void;
+  onGoToKeys: () => void;
+  onCopy: (text: string) => void;
+}) {
+  const webhookUrl = `${window.location.origin.replace(/\/$/, "")}/whatsapp/webhook`;
+  const signingSecret = "cp_whsec_live_shared_secret";
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedWorkspace ?? "No workspace selected";
+  const statusLabel =
+    mode === "preview"
+      ? "Preview integrations"
+      : readiness?.status === "ok"
+        ? "Live integrations"
+        : readiness
+          ? "Integrations need attention"
+          : "Waiting for live checks";
+  const deliverySummary = [
+    { label: "Webhook endpoint", value: webhookUrl, detail: "Mount this route on your public host and subscribe Meta to it." },
+    { label: "Signing secret", value: signingSecret, detail: "Verify incoming requests server-side before processing them." },
+    { label: "Recent deliveries", value: `${readiness?.summary?.recent_webhook_count ?? demoWebhookDeliveries.length} events`, detail: "Keep an eye on retries, latency, and non-2xx responses." },
+    { label: "API key state", value: publicApiKey.trim() ? "Configured" : "Missing", detail: session.user ? "Operator session is active" : "Sign in before editing integrations." },
+  ];
+  const integrationChecklist = [
+    "Keep webhook delivery on the public marketing or app host, not inside the browser bundle.",
+    "Reject unsigned payloads before they reach business logic.",
+    "Retry transient failures with backoff and keep delivery logs visible in the dashboard.",
+    "Cross-check deployments before changing integration endpoints.",
+  ];
+  const deliveryTone = (status: WebhookDelivery["status"]): "green" | "amber" | "blue" | "gray" => {
+    if (status === "delivered") return "green";
+    if (status === "retrying") return "amber";
+    return "gray";
+  };
+
+  return (
+    <div className="integrations-layout">
+      <Panel className="integrations-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Integrations</h2>
+            <p className="helper-text">Webhook wiring, delivery history, and retry posture for live CRM and API workflows.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={statusLabel} />
+        </div>
+        <div className="integration-summary-grid">
+          {deliverySummary.map((item) => (
+            <div key={item.label} className="integration-summary">
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <small>{item.detail}</small>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <div className="integration-grid">
+        <Panel className="integration-config-panel">
+          <div className="panel-head bordered">
+            <h2>Webhook config</h2>
+            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={readiness?.summary?.recent_webhook_count ? "Active" : "Waiting"} />
+          </div>
+          <div className="webhook-box">
+            <span>Delivery URL</span>
+            <code>{webhookUrl}</code>
+            <small>Point your Meta / service webhooks here. Keep the handler server-side and behind the platform host.</small>
+            <button className="button primary blue" onClick={() => onCopy(webhookUrl)}>Copy URL</button>
+          </div>
+          <div className="webhook-box">
+            <span>Signing secret</span>
+            <code>{signingSecret}</code>
+            <small>Store this in your server environment and validate signatures before any business logic runs.</small>
+            <button className="button outline" onClick={() => onCopy(signingSecret)}>Copy secret</button>
+          </div>
+          <div className="integration-checklist">
+            <span>Integration checklist</span>
+            <ul>
+              {integrationChecklist.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </div>
+          <div className="integration-actions">
+            <button className="button outline" onClick={onGoToKeys}>API keys</button>
+            <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
+            <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
+          </div>
+        </Panel>
+
+        <Panel className="integration-deliveries-panel">
+          <div className="panel-head bordered">
+            <h2>Delivery log</h2>
+            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={`${readiness?.summary?.recent_webhook_count ?? demoWebhookDeliveries.length} recent`} />
+          </div>
+          <div className="integration-delivery-list">
+            {demoWebhookDeliveries.map((delivery) => (
+              <article key={delivery.id} className="integration-delivery">
+                <div className="integration-delivery-head">
+                  <div>
+                    <strong>{delivery.event}</strong>
+                    <span>{delivery.endpoint}</span>
+                  </div>
+                  <StatusChip tone={deliveryTone(delivery.status)} label={delivery.status === "delivered" ? "Delivered" : delivery.status === "retrying" ? "Retrying" : "Failed"} />
+                </div>
+                <small>{delivery.response}</small>
+                <div className="integration-delivery-meta">
+                  <span>{delivery.attempts} attempt{delivery.attempts === 1 ? "" : "s"}</span>
+                  <span>{delivery.time}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="integration-actions">
+            <button className="button primary blue" onClick={onGoToDeployments}>Deployments</button>
+            <button className="button outline" onClick={onGoToActivity}>Activity</button>
+            <button className="button outline" onClick={onGoToLaunch}>Launch</button>
+            <button className="button outline" onClick={onGoToDocs}>Docs</button>
+          </div>
+        </Panel>
+      </div>
+
+      <Panel className="integration-footer-panel">
+        <div className="panel-head bordered">
+          <h2>Workspace integration snapshot</h2>
+          <button className="button outline" onClick={() => onCopy(workspaceName)}>Copy workspace</button>
+        </div>
+        <div className="integration-footer-grid">
+          <div className="integration-footer-card">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{usageSummary?.active_api_key_count ?? 0} active keys | {usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M"} monthly request cap</small>
+          </div>
+          <div className="integration-footer-card">
+            <span>Auth contract</span>
+            <strong>`CLIENTPAD_API_KEY`</strong>
+            <small>Keep integration code server-side and pass the bearer token in every request.</small>
+          </div>
+          <div className="integration-footer-card">
+            <span>Webhook posture</span>
+            <strong>{readiness?.summary?.recent_webhook_count ? "Active" : "Idle"}</strong>
+            <small>{readiness?.summary?.recent_webhook_count ? `${readiness.summary.recent_webhook_count} recent webhook events` : "No recent webhook traffic recorded"}</small>
+          </div>
+          <div className="integration-footer-card">
+            <span>Next action</span>
+            <strong>Review deliveries after every deploy</strong>
+            <small>Infrastructure, deployments, and integrations should move together.</small>
+          </div>
+        </div>
+      </Panel>
     </div>
   );
 }
@@ -3148,6 +3363,7 @@ function SecurityCenter({
   onGoToDevelopers,
   onGoToInfrastructure,
   onGoToActivity,
+  onGoToIntegrations,
   onGoToLaunch,
   onGoToDocs,
   onCopy,
@@ -3161,6 +3377,7 @@ function SecurityCenter({
   onGoToDevelopers: () => void;
   onGoToInfrastructure: () => void;
   onGoToActivity: () => void;
+  onGoToIntegrations: () => void;
   onGoToLaunch: () => void;
   onGoToDocs: () => void;
   onCopy: (text: string) => void;
@@ -3226,6 +3443,7 @@ function SecurityCenter({
             <button className="button primary blue" onClick={onGoToKeys}>Create API key</button>
             <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
             <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
+            <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
           </div>
         </Panel>
 
@@ -4245,6 +4463,45 @@ const demoDeployments: DeploymentRecord[] = [
   },
 ];
 
+const demoWebhookDeliveries: WebhookDelivery[] = [
+  {
+    id: "wh_001",
+    event: "conversation.opened",
+    endpoint: "https://clientpad.xyz/whatsapp/webhook",
+    status: "delivered",
+    attempts: 1,
+    time: "38m ago",
+    response: "200 OK in 84ms",
+  },
+  {
+    id: "wh_002",
+    event: "lead.created",
+    endpoint: "https://clientpad.xyz/whatsapp/webhook",
+    status: "delivered",
+    attempts: 1,
+    time: "52m ago",
+    response: "200 OK in 73ms",
+  },
+  {
+    id: "wh_003",
+    event: "payment.completed",
+    endpoint: "https://clientpad.xyz/whatsapp/webhook",
+    status: "retrying",
+    attempts: 2,
+    time: "1h ago",
+    response: "408 Timeout, retry scheduled",
+  },
+  {
+    id: "wh_004",
+    event: "client.replied",
+    endpoint: "https://clientpad.xyz/whatsapp/webhook",
+    status: "delivered",
+    attempts: 1,
+    time: "2h ago",
+    response: "200 OK in 91ms",
+  },
+];
+
 function demoReadinessWorkspace(
   id: string,
   name: string,
@@ -4422,6 +4679,7 @@ function titleForPage(page: Page) {
     deployments: "Deployments",
     developers: "Developers",
     activity: "Activity",
+    integrations: "Integrations",
     security: "Security",
     docs: "Docs",
     settings: "Settings",
@@ -4445,6 +4703,7 @@ function subtitleForPage(page: Page, project?: Project) {
     deployments: "GitHub pushes, Render releases, and service rollout history",
     developers: "Developer onboarding, SDK setup, and API error handling",
     activity: "Recent deploys, operator actions, and request history",
+    integrations: "Webhook delivery, retries, and integration posture",
     security: "API key posture, sessions, and threat handling",
     docs: "SDK and API snippets developers can copy into apps",
     settings: "API connection and operator settings",
