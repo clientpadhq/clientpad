@@ -184,6 +184,14 @@ type DeploymentRecord = {
   note: string;
 };
 
+type ActivityRecord = {
+  actor: string;
+  action: string;
+  context: string;
+  time: string;
+  tone: "green" | "blue" | "amber" | "gray";
+};
+
 type CloudReadiness = {
   status: "ok" | "degraded";
   service: string;
@@ -200,7 +208,7 @@ type CloudReadiness = {
 
 type ConnectionState = "preview" | "checking" | "connected" | "misconfigured" | "unavailable";
 
-type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "developers" | "docs" | "settings";
+type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "developers" | "activity" | "docs" | "settings";
 type QuickstartLanguage = "curl" | "python" | "node" | "go" | "ruby";
 type DashboardTheme = "light" | "dark";
 type LaunchCheckStatus = "checking" | "ok" | "warning" | "fail";
@@ -292,7 +300,7 @@ const dashboardPageParamKey = "page";
 const defaultCloudBaseUrl = window.location.hostname.includes("localhost")
   ? "http://localhost:3000/api/cloud/v1"
   : "https://api.clientpad.xyz/api/cloud/v1";
-const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "developers", "docs", "settings"];
+const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "developers", "activity", "docs", "settings"];
 const dashboardPageSet = new Set<Page>(dashboardPages);
 
 function resolveDashboardTheme(): DashboardTheme {
@@ -1122,6 +1130,19 @@ function Dashboard({
               onCopy={(text) => copyText(text, setNotice)}
             />
           )}
+          {page === "activity" && (
+            <ActivityTrail
+              mode={mode}
+              readiness={readiness}
+              usageSummary={usageSummary}
+              selectedProject={selectedProject}
+              onGoToDeployments={() => setPage("deployments")}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToDevelopers={() => setPage("developers")}
+              onGoToInbox={() => setPage("inbox")}
+              onGoToKeys={() => setPage("keys")}
+            />
+          )}
           {page === "docs" && (
             <Docs
               selectedProject={selectedProject}
@@ -1168,6 +1189,7 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
     ["infrastructure", <Server size={18} />, "Infrastructure"],
     ["deployments", <Archive size={18} />, "Deployments"],
     ["developers", <Code2 size={18} />, "Developers"],
+    ["activity", <Clock size={18} />, "Activity"],
     ["docs", <BookOpen size={18} />, "Docs"],
   ];
 
@@ -2963,6 +2985,142 @@ function Developers({
   );
 }
 
+function ActivityTrail({
+  mode,
+  readiness,
+  usageSummary,
+  selectedProject,
+  onGoToDeployments,
+  onGoToInfrastructure,
+  onGoToDevelopers,
+  onGoToInbox,
+  onGoToKeys,
+}: {
+  mode: ConnectionMode;
+  readiness: CloudReadiness | null;
+  usageSummary: UsageSummary | null;
+  selectedProject?: Project;
+  onGoToDeployments: () => void;
+  onGoToInfrastructure: () => void;
+  onGoToDevelopers: () => void;
+  onGoToInbox: () => void;
+  onGoToKeys: () => void;
+}) {
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedProject?.name ?? "No workspace selected";
+  const requestCount = usageSummary?.request_count ?? 0;
+  const rejectedCount = usageSummary?.rejected_count ?? 0;
+  const activityFeed: ActivityRecord[] = [
+    {
+      actor: "GitHub",
+      action: "Pushed deployment to Render",
+      context: "clientpad-api, clientpad-app, clientpad-docs, and clientpad-frontend stayed aligned with the current branch.",
+      time: "42m ago",
+      tone: "green",
+    },
+    {
+      actor: "Operator",
+      action: "Created API key",
+      context: "Public API access was renewed for the selected workspace using CLIENTPAD_API_KEY.",
+      time: "1h ago",
+      tone: "blue",
+    },
+    {
+      actor: "WhatsApp",
+      action: "Received inbound client message",
+      context: "Lead routing and pipeline movement are active for live service-business conversations.",
+      time: "2h ago",
+      tone: "amber",
+    },
+    {
+      actor: "Render",
+      action: "Readiness checks passed",
+      context: "API, dashboard, docs, and marketing hosts reported healthy status after deployment.",
+      time: "3h ago",
+      tone: "green",
+    },
+    {
+      actor: "Billing",
+      action: "Usage updated",
+      context: `${formatNumber(requestCount)} total requests and ${formatNumber(rejectedCount)} rejects recorded for the current workspace.`,
+      time: "Today",
+      tone: "gray",
+    },
+  ];
+  const summaryCards = [
+    { label: "Requests", value: formatNumber(requestCount), detail: usageSummary?.monthly_request_limit ? `${formatNumber(usageSummary.monthly_request_limit)} monthly limit` : "Monthly limit unavailable" },
+    { label: "Rejected", value: formatNumber(rejectedCount), detail: "Requests that failed policy or capacity checks" },
+    { label: "Workspace", value: workspaceName, detail: readiness?.workspace ? `Selected ${timeAgo(readiness.time)}` : "Pick a workspace or create one" },
+    { label: "Connection", value: mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Live" : readiness ? "Needs attention" : "Checking", detail: "Current operator connection state" },
+  ];
+
+  return (
+    <div className="activity-layout">
+      <Panel className="activity-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Activity</h2>
+            <p className="helper-text">A compact trail of deploys, operator actions, API usage, and workspace events.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview activity" : "Live activity"} />
+        </div>
+        <div className="activity-summary-grid">
+          {summaryCards.map((card) => (
+            <div key={card.label} className="activity-summary">
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              <small>{card.detail}</small>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <div className="activity-grid">
+        <Panel className="activity-feed-panel">
+          <div className="panel-head bordered">
+            <h2>Recent events</h2>
+            <button className="button outline" onClick={onGoToDeployments}>
+              Deployments
+            </button>
+          </div>
+          <div className="activity-feed">
+            {activityFeed.map((item) => (
+              <article key={`${item.actor}-${item.action}`} className="activity-item">
+                <div className={`activity-dot ${item.tone}`} />
+                <div className="activity-content">
+                  <div className="activity-head">
+                    <strong>{item.actor}</strong>
+                    <span>{item.time}</span>
+                  </div>
+                  <h3>{item.action}</h3>
+                  <p>{item.context}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel className="activity-actions-panel">
+          <div className="panel-head bordered">
+            <h2>Operator shortcuts</h2>
+            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={readiness?.status === "ok" ? "Healthy" : "Needs review"} />
+          </div>
+          <div className="activity-shortcuts">
+            <button className="button primary blue" onClick={onGoToKeys}>Create API key</button>
+            <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
+            <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
+            <button className="button outline" onClick={onGoToInbox}>Inbox</button>
+          </div>
+          <div className="activity-note">
+            <span>Why this page exists</span>
+            <strong>ClientPad needs the same operational clarity as a real CRM platform.</strong>
+            <small>Operators should be able to answer “what changed?” without leaving the dashboard.</small>
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
 function timeAgo(value: string) {
   const diff = Date.now() - new Date(value).getTime();
   const minutes = Math.max(Math.floor(diff / 60000), 0);
@@ -4100,6 +4258,7 @@ function titleForPage(page: Page) {
     infrastructure: "Infrastructure",
     deployments: "Deployments",
     developers: "Developers",
+    activity: "Activity",
     docs: "Docs",
     settings: "Settings",
   }[page];
@@ -4121,6 +4280,7 @@ function subtitleForPage(page: Page, project?: Project) {
     infrastructure: "Platform, API, docs, and public host mapping",
     deployments: "GitHub pushes, Render releases, and service rollout history",
     developers: "Developer onboarding, SDK setup, and API error handling",
+    activity: "Recent deploys, operator actions, and request history",
     docs: "SDK and API snippets developers can copy into apps",
     settings: "API connection and operator settings",
   }[page];
