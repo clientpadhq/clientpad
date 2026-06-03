@@ -1778,6 +1778,147 @@ button { cursor: pointer; }
   background: color-mix(in srgb, var(--panel) 92%, transparent);
 }
 
+.monitoring-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.monitoring-hero {
+  display: grid;
+  gap: 16px;
+}
+
+.monitoring-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.monitoring-metric {
+  display: grid;
+  gap: 6px;
+  padding: 15px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--line));
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel) 95%, var(--bg)), color-mix(in srgb, var(--panel-2) 90%, var(--panel)));
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.monitoring-metric span,
+.monitoring-footer-card span,
+.monitoring-service strong,
+.monitoring-alert strong {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.monitoring-metric strong,
+.monitoring-footer-card strong,
+.monitoring-alert strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+.monitoring-metric small,
+.monitoring-footer-card small,
+.monitoring-service small,
+.monitoring-alert small,
+.monitoring-service span,
+.monitoring-alert span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.monitoring-metric.green { border-color: color-mix(in srgb, #20a35a 22%, var(--line)); }
+.monitoring-metric.blue { border-color: color-mix(in srgb, #1f6feb 22%, var(--line)); }
+.monitoring-metric.amber { border-color: color-mix(in srgb, #dc8c00 24%, var(--line)); }
+.monitoring-metric.gray { border-color: var(--line); }
+
+.monitoring-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 16px;
+}
+
+.monitoring-services-panel,
+.monitoring-alerts-panel,
+.monitoring-footer-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.monitoring-service-list,
+.monitoring-alert-list {
+  display: grid;
+  gap: 10px;
+}
+
+.monitoring-service,
+.monitoring-alert {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
+.monitoring-service-head,
+.monitoring-alert-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: start;
+}
+
+.monitoring-service-head span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.monitoring-alert.ok {
+  border-color: color-mix(in srgb, #20a35a 24%, var(--line));
+}
+
+.monitoring-alert.warning {
+  border-color: color-mix(in srgb, #dc8c00 26%, var(--line));
+}
+
+.monitoring-alert.fail {
+  border-color: color-mix(in srgb, #d92d20 26%, var(--line));
+}
+
+.monitoring-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.monitoring-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.monitoring-footer-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
 .overview-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(340px, 1fr);
@@ -2256,6 +2397,9 @@ td small {
   .integration-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .integration-grid { grid-template-columns: 1fr; }
   .integration-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .monitoring-metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .monitoring-grid { grid-template-columns: 1fr; }
+  .monitoring-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .security-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .security-layout-grid { grid-template-columns: 1fr; }
   .security-footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2307,6 +2451,9 @@ td small {
   .integration-summary-grid { grid-template-columns: 1fr; }
   .integration-footer-grid { grid-template-columns: 1fr; }
   .integration-actions { flex-direction: column; }
+  .monitoring-metric-grid { grid-template-columns: 1fr; }
+  .monitoring-footer-grid { grid-template-columns: 1fr; }
+  .monitoring-actions { flex-direction: column; }
   .security-grid { grid-template-columns: 1fr; }
   .security-footer-grid { grid-template-columns: 1fr; }
   .security-actions { flex-direction: column; }

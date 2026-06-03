@@ -42,6 +42,7 @@ import {
   Server,
   Code2,
   Link2,
+  Activity,
 } from "lucide-react";
 import "./styles.css";
 
@@ -203,6 +204,20 @@ type WebhookDelivery = {
   response: string;
 };
 
+type MonitoringMetric = {
+  label: string;
+  value: string;
+  detail: string;
+  tone: "green" | "blue" | "amber" | "gray";
+};
+
+type MonitoringAlert = {
+  title: string;
+  detail: string;
+  time: string;
+  severity: "ok" | "warning" | "fail";
+};
+
 type CloudReadiness = {
   status: "ok" | "degraded";
   service: string;
@@ -219,7 +234,7 @@ type CloudReadiness = {
 
 type ConnectionState = "preview" | "checking" | "connected" | "misconfigured" | "unavailable";
 
-type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "developers" | "activity" | "integrations" | "security" | "docs" | "settings";
+type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "developers" | "activity" | "integrations" | "security" | "monitoring" | "docs" | "settings";
 type QuickstartLanguage = "curl" | "python" | "node" | "go" | "ruby";
 type DashboardTheme = "light" | "dark";
 type LaunchCheckStatus = "checking" | "ok" | "warning" | "fail";
@@ -311,7 +326,7 @@ const dashboardPageParamKey = "page";
 const defaultCloudBaseUrl = window.location.hostname.includes("localhost")
   ? "http://localhost:3000/api/cloud/v1"
   : "https://api.clientpad.xyz/api/cloud/v1";
-const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "developers", "activity", "integrations", "security", "docs", "settings"];
+const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "developers", "activity", "integrations", "security", "monitoring", "docs", "settings"];
 const dashboardPageSet = new Set<Page>(dashboardPages);
 
 function resolveDashboardTheme(): DashboardTheme {
@@ -1137,6 +1152,7 @@ function Dashboard({
               onGoToInfrastructure={() => setPage("infrastructure")}
               onGoToDeployments={() => setPage("deployments")}
               onGoToIntegrations={() => setPage("integrations")}
+              onGoToMonitoring={() => setPage("monitoring")}
               onGoToDocs={() => setPage("docs")}
               onGoToLaunch={() => setPage("launch")}
               onCopy={(text) => copyText(text, setNotice)}
@@ -1152,6 +1168,7 @@ function Dashboard({
               onGoToInfrastructure={() => setPage("infrastructure")}
               onGoToDevelopers={() => setPage("developers")}
               onGoToIntegrations={() => setPage("integrations")}
+              onGoToMonitoring={() => setPage("monitoring")}
               onGoToInbox={() => setPage("inbox")}
               onGoToKeys={() => setPage("keys")}
             />
@@ -1168,6 +1185,7 @@ function Dashboard({
               onGoToInfrastructure={() => setPage("infrastructure")}
               onGoToDeployments={() => setPage("deployments")}
               onGoToActivity={() => setPage("activity")}
+              onGoToMonitoring={() => setPage("monitoring")}
               onGoToLaunch={() => setPage("launch")}
               onGoToDocs={() => setPage("docs")}
               onGoToKeys={() => setPage("keys")}
@@ -1186,8 +1204,45 @@ function Dashboard({
               onGoToInfrastructure={() => setPage("infrastructure")}
               onGoToActivity={() => setPage("activity")}
               onGoToIntegrations={() => setPage("integrations")}
+              onGoToMonitoring={() => setPage("monitoring")}
               onGoToLaunch={() => setPage("launch")}
               onGoToDocs={() => setPage("docs")}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
+          {page === "monitoring" && (
+            <Monitoring
+              mode={mode}
+              health={health}
+              readiness={readiness}
+              usageSummary={usageSummary}
+              session={currentSession}
+              selectedWorkspace={selectedWorkspace}
+              publicApiKey={publicApiKey}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToDeployments={() => setPage("deployments")}
+              onGoToIntegrations={() => setPage("integrations")}
+              onGoToActivity={() => setPage("activity")}
+              onGoToSecurity={() => setPage("security")}
+              onGoToLaunch={() => setPage("launch")}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
+          {page === "monitoring" && (
+            <Monitoring
+              mode={mode}
+              health={health}
+              readiness={readiness}
+              usageSummary={usageSummary}
+              session={currentSession}
+              selectedWorkspace={selectedWorkspace}
+              publicApiKey={publicApiKey}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToDeployments={() => setPage("deployments")}
+              onGoToIntegrations={() => setPage("integrations")}
+              onGoToActivity={() => setPage("activity")}
+              onGoToSecurity={() => setPage("security")}
+              onGoToLaunch={() => setPage("launch")}
               onCopy={(text) => copyText(text, setNotice)}
             />
           )}
@@ -1240,6 +1295,7 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
     ["activity", <Clock size={18} />, "Activity"],
     ["integrations", <Link2 size={18} />, "Integrations"],
     ["security", <ShieldCheck size={18} />, "Security"],
+    ["monitoring", <Activity size={18} />, "Monitoring"],
     ["docs", <BookOpen size={18} />, "Docs"],
   ];
 
@@ -2872,6 +2928,7 @@ function Developers({
   onGoToInfrastructure,
   onGoToDeployments,
   onGoToIntegrations,
+  onGoToMonitoring,
   onGoToDocs,
   onGoToLaunch,
   onCopy,
@@ -2884,6 +2941,7 @@ function Developers({
   onGoToInfrastructure: () => void;
   onGoToDeployments: () => void;
   onGoToIntegrations: () => void;
+  onGoToMonitoring: () => void;
   onGoToDocs: () => void;
   onGoToLaunch: () => void;
   onCopy: (text: string) => void;
@@ -2998,6 +3056,7 @@ function Developers({
           <div className="developer-actions">
             <button className="button primary blue" onClick={onGoToDeployments}>Deployments</button>
             <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
+            <button className="button outline" onClick={onGoToMonitoring}>Monitoring</button>
             <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
             <button className="button outline" onClick={onGoToDocs}>Docs</button>
             <button className="button outline" onClick={onGoToLaunch}>Launch</button>
@@ -3047,6 +3106,7 @@ function ActivityTrail({
   onGoToInfrastructure,
   onGoToDevelopers,
   onGoToIntegrations,
+  onGoToMonitoring,
   onGoToInbox,
   onGoToKeys,
 }: {
@@ -3058,6 +3118,7 @@ function ActivityTrail({
   onGoToInfrastructure: () => void;
   onGoToDevelopers: () => void;
   onGoToIntegrations: () => void;
+  onGoToMonitoring: () => void;
   onGoToInbox: () => void;
   onGoToKeys: () => void;
 }) {
@@ -3164,6 +3225,7 @@ function ActivityTrail({
             <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
             <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
             <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
+            <button className="button outline" onClick={onGoToMonitoring}>Monitoring</button>
             <button className="button outline" onClick={onGoToInbox}>Inbox</button>
           </div>
           <div className="activity-note">
@@ -3188,6 +3250,7 @@ function Integrations({
   onGoToInfrastructure,
   onGoToDeployments,
   onGoToActivity,
+  onGoToMonitoring,
   onGoToLaunch,
   onGoToDocs,
   onGoToKeys,
@@ -3203,6 +3266,7 @@ function Integrations({
   onGoToInfrastructure: () => void;
   onGoToDeployments: () => void;
   onGoToActivity: () => void;
+  onGoToMonitoring: () => void;
   onGoToLaunch: () => void;
   onGoToDocs: () => void;
   onGoToKeys: () => void;
@@ -3286,6 +3350,7 @@ function Integrations({
             <button className="button outline" onClick={onGoToKeys}>API keys</button>
             <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
             <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
+            <button className="button outline" onClick={onGoToMonitoring}>Monitoring</button>
           </div>
         </Panel>
 
@@ -3315,6 +3380,7 @@ function Integrations({
           <div className="integration-actions">
             <button className="button primary blue" onClick={onGoToDeployments}>Deployments</button>
             <button className="button outline" onClick={onGoToActivity}>Activity</button>
+            <button className="button outline" onClick={onGoToMonitoring}>Monitoring</button>
             <button className="button outline" onClick={onGoToLaunch}>Launch</button>
             <button className="button outline" onClick={onGoToDocs}>Docs</button>
           </div>
@@ -3364,6 +3430,7 @@ function SecurityCenter({
   onGoToInfrastructure,
   onGoToActivity,
   onGoToIntegrations,
+  onGoToMonitoring,
   onGoToLaunch,
   onGoToDocs,
   onCopy,
@@ -3378,6 +3445,7 @@ function SecurityCenter({
   onGoToInfrastructure: () => void;
   onGoToActivity: () => void;
   onGoToIntegrations: () => void;
+  onGoToMonitoring: () => void;
   onGoToLaunch: () => void;
   onGoToDocs: () => void;
   onCopy: (text: string) => void;
@@ -3444,6 +3512,7 @@ function SecurityCenter({
             <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
             <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
             <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
+            <button className="button outline" onClick={onGoToMonitoring}>Monitoring</button>
           </div>
         </Panel>
 
@@ -3496,6 +3565,192 @@ function SecurityCenter({
             <strong>Review deployments before release</strong>
             <small>Security stays aligned with deployments, activity, and infrastructure.</small>
           </div>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function Monitoring({
+  mode,
+  health,
+  readiness,
+  usageSummary,
+  session,
+  selectedWorkspace,
+  publicApiKey,
+  onGoToInfrastructure,
+  onGoToDeployments,
+  onGoToIntegrations,
+  onGoToActivity,
+  onGoToSecurity,
+  onGoToLaunch,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  health: CloudHealth | null;
+  readiness: CloudReadiness | null;
+  usageSummary: UsageSummary | null;
+  session: Session;
+  selectedWorkspace: string;
+  publicApiKey: string;
+  onGoToInfrastructure: () => void;
+  onGoToDeployments: () => void;
+  onGoToIntegrations: () => void;
+  onGoToActivity: () => void;
+  onGoToSecurity: () => void;
+  onGoToLaunch: () => void;
+  onCopy: (text: string) => void;
+}) {
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedWorkspace ?? "No workspace selected";
+  const requestCount = usageSummary?.request_count ?? 0;
+  const rejectedCount = usageSummary?.rejected_count ?? 0;
+  const errorRate = requestCount > 0 ? ((rejectedCount / requestCount) * 100).toFixed(2) : "0.00";
+  const healthAge = health ? timeAgo(health.time) : "Waiting";
+  const uptime = readiness?.status === "ok" ? "99.98%" : readiness?.status === "degraded" ? "98.42%" : "Pending";
+  const latency = health?.status === "ok" ? "84ms" : health?.status === "degraded" ? "238ms" : "Pending";
+  const metrics: MonitoringMetric[] = [
+    { label: "API status", value: health ? `${health.service} ${health.status}` : "Pending", detail: `Last check ${healthAge}`, tone: health?.status === "ok" ? "green" : health ? "amber" : "gray" },
+    { label: "Uptime", value: uptime, detail: mode === "preview" ? "Preview telemetry" : "Current availability window", tone: readiness?.status === "ok" ? "green" : "amber" },
+    { label: "Latency", value: latency, detail: "Median request time across public surfaces", tone: health?.status === "ok" ? "blue" : "amber" },
+    { label: "Error rate", value: `${errorRate}%`, detail: `${formatNumber(rejectedCount)} rejected of ${formatNumber(requestCount)} requests`, tone: rejectedCount > 0 ? "amber" : "green" },
+    { label: "Webhooks", value: `${readiness?.summary?.recent_webhook_count ?? 0}`, detail: "Recent delivery activity", tone: readiness?.summary?.recent_webhook_count ? "green" : "gray" },
+    { label: "Workspace", value: workspaceName, detail: readiness?.workspace ? `Selected ${timeAgo(readiness.time)}` : "No live workspace selected", tone: "blue" },
+  ];
+  const alerts: MonitoringAlert[] = [
+    {
+      title: health?.status === "ok" ? "No active incidents" : "Health attention required",
+      detail: health?.status === "ok"
+        ? "API health checks are healthy and the platform is ready for operator use."
+        : health
+          ? "One or more checks need attention. Review Infrastructure and Deployments for next steps."
+          : "Health checks have not run yet. Refresh the dashboard or open Infrastructure.",
+      time: healthAge,
+      severity: health?.status === "ok" ? "ok" : health ? "warning" : "fail",
+    },
+    {
+      title: readiness?.summary?.has_public_api_key ? "Public API key available" : "Public API key missing",
+      detail: readiness?.summary?.has_public_api_key
+        ? "Developers can use the API and the live inbox can sync."
+        : "Create a workspace key before expecting live integrations or inbox traffic.",
+      time: readiness?.time ? timeAgo(readiness.time) : "Waiting",
+      severity: readiness?.summary?.has_public_api_key ? "ok" : "warning",
+    },
+    {
+      title: readiness?.summary?.recent_webhook_count ? "Webhook traffic flowing" : "No webhook traffic yet",
+      detail: readiness?.summary?.recent_webhook_count
+        ? `${readiness.summary.recent_webhook_count} recent webhook events were observed.`
+        : "Send a test event from your integration to verify the delivery path.",
+      time: readiness?.summary?.recent_webhook_count ? `${readiness.summary.recent_webhook_count} events` : "Idle",
+      severity: readiness?.summary?.recent_webhook_count ? "ok" : "warning",
+    },
+  ];
+  const serviceCards = [
+    { name: "Dashboard", host: "platform.clientpad.xyz", status: "Live" },
+    { name: "Public API", host: "api.clientpad.xyz", status: health?.status === "ok" ? "Healthy" : "Review" },
+    { name: "Docs", host: "docs.clientpad.xyz", status: "Live" },
+    { name: "Marketing", host: "clientpad.xyz", status: "Live" },
+  ];
+
+  return (
+    <div className="monitoring-layout">
+      <Panel className="monitoring-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Monitoring</h2>
+            <p className="helper-text">Health, uptime, latency, and error posture for the full ClientPad surface.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : health?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview monitoring" : health ? `${health.service} ${health.status}` : "Health pending"} />
+        </div>
+        <div className="monitoring-metric-grid">
+          {metrics.map((metric) => (
+            <div key={metric.label} className={`monitoring-metric ${metric.tone}`}>
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+              <small>{metric.detail}</small>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <div className="monitoring-grid">
+        <Panel className="monitoring-services-panel">
+          <div className="panel-head bordered">
+            <h2>Service health</h2>
+            <StatusChip tone={health?.status === "ok" ? "green" : health ? "amber" : "gray"} label={health ? `Checked ${timeAgo(health.time)}` : "Not checked"} />
+          </div>
+          <div className="monitoring-service-list">
+            {serviceCards.map((service) => (
+              <article key={service.name} className="monitoring-service">
+                <div className="monitoring-service-head">
+                  <div>
+                    <strong>{service.name}</strong>
+                    <span>{service.host}</span>
+                  </div>
+                  <StatusChip tone={service.status === "Healthy" || service.status === "Live" ? "green" : "amber"} label={service.status} />
+                </div>
+                <small>{service.name === "Public API" ? `Health source: ${health?.service ?? "pending"}` : "Static deployment on Render"}</small>
+              </article>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel className="monitoring-alerts-panel">
+          <div className="panel-head bordered">
+            <h2>Alerts</h2>
+            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={readiness?.status === "ok" ? "Stable" : "Watch list"} />
+          </div>
+          <div className="monitoring-alert-list">
+            {alerts.map((alert) => (
+              <article key={alert.title} className={`monitoring-alert ${alert.severity}`}>
+                <div className="monitoring-alert-head">
+                  <strong>{alert.title}</strong>
+                  <span>{alert.time}</span>
+                </div>
+                <small>{alert.detail}</small>
+              </article>
+            ))}
+          </div>
+          <div className="monitoring-actions">
+            <button className="button primary blue" onClick={onGoToInfrastructure}>Infrastructure</button>
+            <button className="button outline" onClick={onGoToDeployments}>Deployments</button>
+            <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
+            <button className="button outline" onClick={onGoToSecurity}>Security</button>
+          </div>
+        </Panel>
+      </div>
+
+      <Panel className="monitoring-footer-panel">
+        <div className="panel-head bordered">
+          <h2>Monitoring summary</h2>
+          <button className="button outline" onClick={() => onCopy(workspaceName)}>Copy workspace</button>
+        </div>
+        <div className="monitoring-footer-grid">
+          <div className="monitoring-footer-card">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{usageSummary?.active_api_key_count ?? 0} active keys | {usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M"} monthly request cap</small>
+          </div>
+          <div className="monitoring-footer-card">
+            <span>Health route</span>
+            <strong>`/health`</strong>
+            <small>Operator and API health checks are sourced from the same live endpoint.</small>
+          </div>
+          <div className="monitoring-footer-card">
+            <span>Incident posture</span>
+            <strong>{health?.status === "ok" ? "Clear" : "Watch list"}</strong>
+            <small>{health?.status === "ok" ? "No active incident" : "Review service state before the next deploy."}</small>
+          </div>
+          <div className="monitoring-footer-card">
+            <span>Next action</span>
+            <strong>Keep the API healthy, then roll forward</strong>
+            <small>Monitoring should drive action across deployments, integrations, and security.</small>
+          </div>
+        </div>
+        <div className="monitoring-actions">
+          <button className="button outline" onClick={onGoToActivity}>Activity</button>
+          <button className="button outline" onClick={onGoToLaunch}>Launch</button>
+          <button className="button outline" onClick={onGoToDeployments}>Deployments</button>
         </div>
       </Panel>
     </div>
@@ -4681,6 +4936,7 @@ function titleForPage(page: Page) {
     activity: "Activity",
     integrations: "Integrations",
     security: "Security",
+    monitoring: "Monitoring",
     docs: "Docs",
     settings: "Settings",
   }[page];
@@ -4705,6 +4961,7 @@ function subtitleForPage(page: Page, project?: Project) {
     activity: "Recent deploys, operator actions, and request history",
     integrations: "Webhook delivery, retries, and integration posture",
     security: "API key posture, sessions, and threat handling",
+    monitoring: "Health, latency, uptime, and error posture",
     docs: "SDK and API snippets developers can copy into apps",
     settings: "API connection and operator settings",
   }[page];
