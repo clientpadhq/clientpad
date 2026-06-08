@@ -1086,7 +1086,13 @@ function Dashboard({
               readiness={readiness}
             />
           )}
-          {page === "revenue" && <RevenueDashboard />}
+          {page === "revenue" && (
+            <RevenueDashboard
+              onGoToBilling={() => setPage("billing")}
+              onGoToUsage={() => setPage("usage")}
+              onGoToKeys={() => setPage("keys")}
+            />
+          )}
 
           {page === "overview" && (
             <Overview
@@ -5079,23 +5085,134 @@ function TeamInboxDemo() {
   );
 }
 
-function RevenueDashboard() {
+function RevenueDashboard({
+  onGoToBilling,
+  onGoToUsage,
+  onGoToKeys,
+}: {
+  onGoToBilling: () => void;
+  onGoToUsage: () => void;
+  onGoToKeys: () => void;
+}) {
   const totalPaid = demoRevenue.reduce((sum, client) => sum + client.amount, 0);
   const pending = demoClients.filter((client) => ["Quoted", "Booked", "Completed"].includes(client.status)).reduce((sum, client) => sum + client.value, 0);
+  const paidCount = demoRevenue.length;
+  const pendingCount = demoClients.filter((client) => ["Quoted", "Booked", "In Progress"].includes(client.status)).length;
+  const collectionRate = Math.round((paidCount / Math.max(demoClients.length, 1)) * 100);
+  const providerTotals = demoRevenue.reduce<Record<RevenueClient["provider"], number>>((totals, client) => {
+    totals[client.provider] = (totals[client.provider] ?? 0) + client.amount;
+    return totals;
+  }, { Paystack: 0, Flutterwave: 0 });
+  const averageReceipt = Math.round(totalPaid / Math.max(demoRevenue.length, 1));
+  const lastPayout = demoRevenue[0]?.paidAt ?? "May 8, 2026";
   return (
-    <div className="detail-layout single">
-      <div className="metric-grid revenue-metrics">
-        <Panel><span className="metric-label">Total paid</span><strong className="metric-value">${totalPaid.toLocaleString()}</strong></Panel>
-        <Panel><span className="metric-label">Pending payments</span><strong className="metric-value">${pending.toLocaleString()}</strong></Panel>
-        <Panel><span className="metric-label">Paystack</span><strong className="metric-value healthy">Live</strong><small>Webhook synced 2 min ago</small></Panel>
-        <Panel><span className="metric-label">Flutterwave</span><strong className="metric-value healthy">Live</strong><small>Settlement pending: $420</small></Panel>
-      </div>
-      <Panel className="table-panel wide-detail">
-        <div className="panel-head bordered"><h2>Recent paid clients</h2><span>{demoRevenue.length} payments</span></div>
-        <div className="table-wrap"><table><thead><tr><th>Client</th><th>Phone</th><th>Amount</th><th>Provider</th><th>Paid at</th></tr></thead><tbody>
-          {demoRevenue.map((client) => <tr key={`${client.phone}-${client.paidAt}`}><td>{client.name}</td><td>{client.phone}</td><td>${client.amount.toLocaleString()}</td><td>{client.provider}</td><td>{client.paidAt}</td></tr>)}
-        </tbody></table></div>
+    <div className="revenue-layout">
+      <Panel className="revenue-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Revenue and collections</h2>
+            <p className="helper-text">Payment tracking for service businesses, with live provider posture and quick operator actions.</p>
+          </div>
+          <StatusChip tone="green" label="Collections live" />
+        </div>
+        <div className="revenue-summary-grid">
+          <article className="revenue-summary-card">
+            <span>Total paid</span>
+            <strong>${totalPaid.toLocaleString()}</strong>
+            <small>{paidCount} settled payments from the current revenue set.</small>
+          </article>
+          <article className="revenue-summary-card">
+            <span>Pending pipeline</span>
+            <strong>${pending.toLocaleString()}</strong>
+            <small>{pendingCount} clients are quoted, booked, or in progress.</small>
+          </article>
+          <article className="revenue-summary-card">
+            <span>Collection rate</span>
+            <strong>{collectionRate}%</strong>
+            <small>Paid receipts compared with total client records.</small>
+          </article>
+          <article className="revenue-summary-card">
+            <span>Average receipt</span>
+            <strong>${averageReceipt.toLocaleString()}</strong>
+            <small>Average paid ticket size from the recent payment trail.</small>
+          </article>
+        </div>
+        <div className="revenue-provider-grid">
+          <article className="revenue-provider-card">
+            <span>Paystack</span>
+            <strong className="healthy">Live</strong>
+            <small>${providerTotals.Paystack.toLocaleString()} collected • webhook synced 2 min ago</small>
+          </article>
+          <article className="revenue-provider-card">
+            <span>Flutterwave</span>
+            <strong className="healthy">Live</strong>
+            <small>${providerTotals.Flutterwave.toLocaleString()} collected • settlement pending: $420</small>
+          </article>
+          <article className="revenue-provider-card">
+            <span>Last payout</span>
+            <strong>{lastPayout}</strong>
+            <small>Most recent settlement posted to the dashboard timeline.</small>
+          </article>
+        </div>
       </Panel>
+
+      <div className="revenue-grid">
+        <Panel className="revenue-table-card">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Recent paid clients</h2>
+              <p className="helper-text">Use this table to confirm settled jobs and spot provider or receipt mismatches.</p>
+            </div>
+            <StatusChip tone="blue" label={`${demoRevenue.length} payments`} />
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Client</th><th>Phone</th><th>Amount</th><th>Provider</th><th>Paid at</th></tr>
+              </thead>
+              <tbody>
+                {demoRevenue.map((client) => (
+                  <tr key={`${client.phone}-${client.paidAt}`}>
+                    <td>{client.name}</td>
+                    <td>{client.phone}</td>
+                    <td>${client.amount.toLocaleString()}</td>
+                    <td><span className={`status-pill provider-${client.provider.toLowerCase()}`}>{client.provider}</span></td>
+                    <td>{client.paidAt}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+
+        <Panel className="revenue-side-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Billing ops</h2>
+              <p className="helper-text">Jump to the places operators use to resolve billing and usage problems.</p>
+            </div>
+            <StatusChip tone="green" label="Operator actions" />
+          </div>
+          <div className="revenue-action-list">
+            <button className="revenue-action-card" onClick={onGoToBilling}>
+              <span>Billing</span>
+              <strong>Review plans, upgrade paths, and checkout links.</strong>
+            </button>
+            <button className="revenue-action-card" onClick={onGoToUsage}>
+              <span>Usage</span>
+              <strong>Check requests, rejections, and remaining capacity.</strong>
+            </button>
+            <button className="revenue-action-card" onClick={onGoToKeys}>
+              <span>API keys</span>
+              <strong>Confirm which keys are live and safe to expose.</strong>
+            </button>
+          </div>
+          <div className="revenue-note-card">
+            <span>Next action</span>
+            <strong>{pendingCount ? "Follow up on quoted and booked clients to close the cash gap." : "Collections are clean. Keep monitoring receipts and provider sync."}</strong>
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }

@@ -3522,8 +3522,147 @@ td small {
 
 .revenue-metrics .panel small { color: #667386; display: block; margin-top: 8px; }
 
+.revenue-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.revenue-hero {
+  display: grid;
+  gap: 16px;
+}
+
+.revenue-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.revenue-summary-card,
+.revenue-provider-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 94%, var(--panel-2));
+}
+
+.revenue-summary-card span,
+.revenue-provider-card span,
+.revenue-action-card span,
+.revenue-note-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.revenue-summary-card strong {
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.revenue-summary-card small,
+.revenue-provider-card small,
+.revenue-action-card strong,
+.revenue-note-card strong {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.revenue-provider-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.revenue-provider-card strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 740;
+}
+
+.revenue-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.revenue-table-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.revenue-side-panel {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.revenue-action-list {
+  display: grid;
+  gap: 10px;
+}
+
+.revenue-action-card {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 96%, var(--panel-2));
+  text-align: left;
+}
+
+.revenue-action-card strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.revenue-action-card:hover {
+  background: color-mix(in srgb, var(--brand) 6%, var(--panel));
+}
+
+.revenue-note-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--brand) 14%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--brand) 4%, var(--panel));
+}
+
+.revenue-note-card strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status-pill.provider-paystack {
+  background: color-mix(in srgb, #1463e9 10%, var(--panel));
+  border-color: color-mix(in srgb, #1463e9 18%, var(--line));
+  color: #1463e9;
+}
+
+.status-pill.provider-flutterwave {
+  background: color-mix(in srgb, #7c3aed 10%, var(--panel));
+  border-color: color-mix(in srgb, #7c3aed 18%, var(--line));
+  color: #7c3aed;
+}
+
 @media (max-width: 1180px) {
   .metric-grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+  .revenue-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .revenue-provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .revenue-grid { grid-template-columns: 1fr; }
   .lookup-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inbox-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inbox-toolbar { grid-template-columns: minmax(0, 1fr); }
@@ -3535,6 +3674,8 @@ td small {
 
 @media (max-width: 760px) {
   .metric-grid { grid-template-columns: 1fr; }
+  .revenue-summary-grid,
+  .revenue-provider-grid { grid-template-columns: 1fr; }
   .lookup-summary-grid { grid-template-columns: 1fr; }
   .lookup-preset-row { gap: 6px; }
   .inbox-summary-grid { grid-template-columns: 1fr; }
