@@ -333,6 +333,12 @@ type RevenueClient = {
 };
 
 const serviceStages = ["New Lead", "Quoted", "Booked", "In Progress", "Completed", "Paid", "Review Requested"] as const;
+const inboxFilters = [
+  { key: "all", label: "All" },
+  { key: "open", label: "Open" },
+  { key: "review", label: "Review" },
+  { key: "archived", label: "Archived" },
+] as const;
 
 const sessionKey = "clientpad.cloud.session";
 const dashboardThemeKey = "clientpad.dashboard.theme";
@@ -4466,6 +4472,8 @@ function TeamInbox({
   const [loading, setLoading] = useState(true);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<(typeof inboxFilters)[number]["key"]>("all");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const sdk = useMemo(() => {
@@ -4510,6 +4518,38 @@ function TeamInbox({
     }).catch(err => console.error("Failed to load conversation detail", err));
   }, [selectedId, sdk, publicApiKey]);
 
+  const filteredConversations = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return conversations.filter((conversation) => {
+      const searchText = [
+        conversation.contact_name,
+        conversation.phone,
+        conversation.ai_summary,
+        conversation.ai_intent,
+        conversation.status,
+      ].filter(Boolean).join(" ").toLowerCase();
+      const matchesQuery = !needle || searchText.includes(needle);
+      const matchesFilter =
+        filter === "all" ||
+        (filter === "open" && conversation.status === "open") ||
+        (filter === "review" && (conversation.requires_owner_approval || conversation.status === "pending")) ||
+        (filter === "archived" && conversation.status === "archived");
+      return matchesQuery && matchesFilter;
+    });
+  }, [conversations, filter, query]);
+
+  useEffect(() => {
+    if (!filteredConversations.length) {
+      if (selectedId && !conversations.some((conversation) => conversation.id === selectedId)) {
+        setSelectedId(null);
+      }
+      return;
+    }
+    if (!filteredConversations.some((conversation) => conversation.id === selectedId)) {
+      setSelectedId(filteredConversations[0].id);
+    }
+  }, [conversations, filteredConversations, selectedId]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -4517,6 +4557,12 @@ function TeamInbox({
   }, [messages]);
 
   const selectedConversation = conversations.find(c => c.id === selectedId);
+  const openConversationCount = conversations.filter((conversation) => conversation.status === "open").length;
+  const reviewQueueCount = conversations.filter((conversation) => conversation.requires_owner_approval || conversation.status === "pending").length;
+  const archivedConversationCount = conversations.filter((conversation) => conversation.status === "archived").length;
+  const draftCount = suggestions.length;
+  const selectedStage = (selectedConversation as any)?.lead_pipeline_stage || "New Lead";
+  const selectedSummary = selectedConversation?.ai_summary || "Select a live conversation to review the latest customer context.";
 
   async function sendReply(textOverride?: string) {
     if (!selectedId) return;
@@ -4581,44 +4627,122 @@ function TeamInbox({
   }
 
   return (
+    <div className="inbox-stack">
+      <Panel className="inbox-summary-panel">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Team inbox</h2>
+            <p className="helper-text">A simple operator surface for customer conversations, approval queues, and AI drafts.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.summary.has_public_api_key ? "green" : "amber"} label={mode === "preview" ? "Preview inbox" : readiness?.summary.has_public_api_key ? "Live inbox" : "Live inbox needs key"} />
+        </div>
+        <div className="inbox-summary-grid">
+          <article className="inbox-summary-card">
+            <span>Open threads</span>
+            <strong>{openConversationCount}</strong>
+            <small>Customer conversations awaiting a response.</small>
+          </article>
+          <article className="inbox-summary-card">
+            <span>Review queue</span>
+            <strong>{reviewQueueCount}</strong>
+            <small>Messages that need an owner before they can go out.</small>
+          </article>
+          <article className="inbox-summary-card">
+            <span>AI drafts</span>
+            <strong>{draftCount}</strong>
+            <small>Suggested replies ready to edit or send.</small>
+          </article>
+          <article className="inbox-summary-card">
+            <span>Selected stage</span>
+            <strong>{selectedStage}</strong>
+            <small>{selectedConversation ? "Current thread pipeline stage." : "Pick a thread to see pipeline context."}</small>
+          </article>
+        </div>
+      </Panel>
+
+      <div className="inbox-toolbar">
+        <label className="inbox-search">
+          <Search size={16} />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search by name, phone, intent, or summary"
+          />
+        </label>
+        <div className="inbox-filter-tabs" role="tablist" aria-label="Inbox filters">
+          {inboxFilters.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              className={`range-tab ${filter === option.key ? "selected" : ""}`}
+              onClick={() => setFilter(option.key)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <div className="inbox-toolbar-meta">
+          <span>{filteredConversations.length} visible</span>
+          <span>{archivedConversationCount} archived</span>
+        </div>
+      </div>
+
     <div className="inbox-layout">
       <Panel className="conversation-list">
-        <div className="panel-head">
-          <h2>Conversations</h2>
+        <div className="panel-head bordered">
+          <div>
+            <h2>Conversations</h2>
+            <p className="helper-text">Open one thread, resolve the request, and move it through the pipeline.</p>
+          </div>
           <StatusChip tone={mode === "preview" ? "blue" : readiness?.summary.has_public_api_key ? "green" : "amber"} label={mode === "preview" ? "Preview inbox" : readiness?.summary.has_public_api_key ? "Live inbox" : "Live inbox needs key"} />
         </div>
         <div className="scroll-area">
-          {loading ? <p className="loading">Loading...</p> : conversations.map((c) => (
-            <button 
-              key={c.id} 
-              className={`conversation ${selectedId === c.id ? "active" : ""}`}
-              onClick={() => setSelectedId(c.id)}
-            >
-              <div className="conv-header">
-                <strong>{c.contact_name || c.phone}</strong>
-                <small>{c.last_message_at ? new Date(c.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}</small>
-              </div>
-              <p className="preview">{c.ai_summary || "No messages yet"}</p>
-              <div className="conv-badges">
-                {c.requires_owner_approval && <Badge tone="blue">Owner Approval</Badge>}
-                {c.ai_intent && <Badge tone="gray">{c.ai_intent}</Badge>}
-                {c.status ? <Badge tone={c.status === "open" ? "green" : "gray"}>{c.status}</Badge> : null}
-              </div>
-            </button>
-          ))}
-          {!loading && conversations.length === 0 && <p className="empty">No live conversations yet. Send a test WhatsApp message or connect the public API key to start seeing traffic.</p>}
+          {loading ? <p className="loading">Loading...</p> : filteredConversations.map((conversation) => {
+            const avatar = getInitials(conversation.contact_name || conversation.phone);
+            return (
+              <button
+                key={conversation.id}
+                className={`conversation ${selectedId === conversation.id ? "active" : ""}`}
+                onClick={() => setSelectedId(conversation.id)}
+              >
+                <div className="conversation-top">
+                  <div className="conversation-avatar">{avatar}</div>
+                  <div className="conversation-copy">
+                    <div className="conv-header">
+                      <strong>{conversation.contact_name || conversation.phone}</strong>
+                      <small>{conversation.last_message_at ? new Date(conversation.last_message_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "New"}</small>
+                    </div>
+                    <p className="preview">{conversation.ai_summary || "No messages yet"}</p>
+                  </div>
+                </div>
+                <div className="conv-badges">
+                  {conversation.requires_owner_approval && <Badge tone="blue">Owner Approval</Badge>}
+                  {conversation.ai_intent && <Badge tone="gray">{conversation.ai_intent}</Badge>}
+                  {conversation.status ? <Badge tone={conversation.status === "open" ? "green" : "gray"}>{conversation.status}</Badge> : null}
+                </div>
+              </button>
+            );
+          })}
+          {!loading && filteredConversations.length === 0 && <p className="empty">No conversations match the current search or filter.</p>}
         </div>
       </Panel>
 
       <Panel className="timeline-panel">
         {selectedConversation ? (
           <>
-            <div className="panel-head">
-              <div className="header-info">
-                <h2>{selectedConversation.contact_name || selectedConversation.phone}</h2>
-                <Badge tone={selectedConversation.status === "open" ? "green" : "gray"}>
-                  {selectedConversation.status.toUpperCase()}
-                </Badge>
+            <div className="panel-head bordered">
+              <div className="header-info inbox-thread-head">
+                <div>
+                  <h2>{selectedConversation.contact_name || selectedConversation.phone}</h2>
+                  <p className="helper-text">{selectedSummary}</p>
+                </div>
+                <div className="header-meta-row">
+                  <Badge tone={selectedConversation.status === "open" ? "green" : "gray"}>
+                    {selectedConversation.status.toUpperCase()}
+                  </Badge>
+                  {selectedConversation.ai_intent ? <Badge tone="blue">{selectedConversation.ai_intent}</Badge> : null}
+                  <Badge tone="gray">{selectedConversation.phone}</Badge>
+                </div>
               </div>
               <div className="header-actions">
                 <button className="button outline" onClick={() => updateStatus("closed")}>Close</button>
@@ -4632,21 +4756,28 @@ function TeamInbox({
                     {m.direction === "inbound" ? <User size={14} /> : <Bot size={14} />}
                   </div>
                   <div className="bubble">
+                    <div className="bubble-meta">
+                      <strong>{m.direction === "inbound" ? "Customer" : "ClientPad"}</strong>
+                      <small>{new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</small>
+                    </div>
                     <p>{m.message_text}</p>
-                    <small>{new Date(m.created_at).toLocaleTimeString()}</small>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="composer">
-              <textarea 
-                placeholder="Type a reply..." 
+            <div className="composer inbox-composer">
+              <div className="composer-label">
+                <strong>Compose reply</strong>
+                <span>Keep the customer moving. Use AI drafts from the right panel when useful.</span>
+              </div>
+              <textarea
+                placeholder="Type a reply..."
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
                 disabled={sending}
               />
-              <button 
-                className="button primary blue" 
+              <button
+                className="button primary blue"
                 onClick={() => sendReply()}
                 disabled={sending || !replyText.trim()}
               >
@@ -4665,6 +4796,7 @@ function TeamInbox({
           <h2>AI Drafts</h2>
           <StatusChip tone="green" label={`${suggestions.length} drafts`} />
         </div>
+        <p className="helper-text">These drafts can be edited before they go out. Keep the workflow simple and human-reviewed.</p>
         <div className="suggestions-list">
           {suggestions.length > 0 ? suggestions.map((s, i) => (
             <div key={i} className="suggestion-card">
@@ -4700,7 +4832,7 @@ function TeamInbox({
             <div className="lead-info">
               <div className="info-row">
                 <span>Pipeline Stage</span>
-                <strong>{(selectedConversation as any).lead_pipeline_stage || "New Lead"}</strong>
+                <strong>{selectedStage}</strong>
               </div>
               <div className="info-row">
                 <span>Phone</span>
@@ -4719,28 +4851,98 @@ function TeamInbox({
                 {serviceStages.map(s => <option key={s} value={s.toLowerCase().replace(" ", "_")}>{s}</option>)}
               </select>
             </div>
+            <div className="next-step-card">
+              <span>Next best action</span>
+              <strong>{selectedConversation.requires_owner_approval ? "Review and approve the draft before sending." : "Reply with the latest customer context and move it through the pipeline."}</strong>
+            </div>
           </div>
         )}
       </Panel>
+    </div>
     </div>
   );
 }
 
 function TeamInboxDemo() {
+  const totalOpen = demoConversations.filter((conversation) => conversation.status === "open").length;
   return (
-    <div className="inbox-layout">
+    <div className="inbox-stack">
+      <Panel className="inbox-summary-panel">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Team inbox</h2>
+            <p className="helper-text">Preview mode shows the CRM workflow without live API traffic.</p>
+          </div>
+          <StatusChip tone="blue" label="Preview inbox" />
+        </div>
+        <div className="inbox-summary-grid">
+          <article className="inbox-summary-card">
+            <span>Open threads</span>
+            <strong>{totalOpen}</strong>
+            <small>Preview conversations ready for a reply.</small>
+          </article>
+          <article className="inbox-summary-card">
+            <span>Review queue</span>
+            <strong>1</strong>
+            <small>Owner approval is required before the next send.</small>
+          </article>
+          <article className="inbox-summary-card">
+            <span>AI drafts</span>
+            <strong>{demoReplies.length}</strong>
+            <small>Suggested replies for fast operator follow-up.</small>
+          </article>
+          <article className="inbox-summary-card">
+            <span>Selected stage</span>
+            <strong>In Progress</strong>
+            <small>The preview thread is already moving through the pipeline.</small>
+          </article>
+        </div>
+      </Panel>
+      <div className="inbox-toolbar">
+        <label className="inbox-search">
+          <Search size={16} />
+          <input defaultValue="Ada, Musa, or Zuri" />
+        </label>
+        <div className="inbox-filter-tabs">
+          {inboxFilters.map((option, index) => (
+            <button key={option.key} className={`range-tab ${index === 1 ? "selected" : ""}`}>{option.label}</button>
+          ))}
+        </div>
+        <div className="inbox-toolbar-meta">
+          <span>{demoConversations.length} visible</span>
+          <span>1 archived</span>
+        </div>
+      </div>
+      <div className="inbox-layout">
       <Panel className="conversation-list">
-        <h2>Conversations</h2>
+        <div className="panel-head bordered">
+          <div>
+            <h2>Conversations</h2>
+            <p className="helper-text">The client-facing inbox stays simple and readable.</p>
+          </div>
+          <StatusChip tone="blue" label="Preview inbox" />
+        </div>
         {demoConversations.map((conversation, index) => (
           <button key={conversation.name} className={index === 0 ? "conversation active" : "conversation"}>
-            <strong>{conversation.name}</strong>
-            <span>{conversation.preview}</span>
+            <div className="conversation-top">
+              <div className="conversation-avatar">{getInitials(conversation.name)}</div>
+              <div className="conversation-copy">
+                <strong>{conversation.name}</strong>
+                <span>{conversation.preview}</span>
+              </div>
+            </div>
             <small>{conversation.time}</small>
           </button>
         ))}
       </Panel>
       <Panel className="timeline-panel">
-        <div className="panel-head"><h2>Message timeline</h2><Badge tone="green">Assigned</Badge></div>
+        <div className="panel-head bordered">
+          <div>
+            <h2>Message timeline</h2>
+            <p className="helper-text">A concise exchange between the customer and the operator.</p>
+          </div>
+          <Badge tone="green">Assigned</Badge>
+        </div>
         <div className="messages">
           <p className="bubble inbound">Hi, can I get the quote for AC servicing today?</p>
           <p className="bubble outbound">Yes - NGN 45,000 including call-out. We can book 3 PM.</p>
@@ -4749,9 +4951,24 @@ function TeamInboxDemo() {
         <label className="mention-field">Assignment / mentions<input defaultValue="@Aisha assigned | @Ops please watch payment" /></label>
       </Panel>
       <Panel className="quick-replies">
-        <h2>Quick reply suggestions</h2>
+        <div className="panel-head bordered">
+          <div>
+            <h2>Quick reply suggestions</h2>
+            <p className="helper-text">Use a draft, then edit the text before sending it live.</p>
+          </div>
+          <StatusChip tone="green" label={`${demoReplies.length} drafts`} />
+        </div>
         {demoReplies.map((reply) => <button className="reply-chip" key={reply}>{reply}</button>)}
+        <div className="lead-panel">
+          <h3>Lead Context</h3>
+          <div className="lead-info">
+            <div className="info-row"><span>Pipeline Stage</span><strong>In Progress</strong></div>
+            <div className="info-row"><span>Phone</span><strong>+234 801 555 9021</strong></div>
+            <div className="info-row"><span>Intent</span><strong>Quote request</strong></div>
+          </div>
+        </div>
       </Panel>
+      </div>
     </div>
   );
 }
@@ -4800,6 +5017,15 @@ function CopyButton({ text }: { text: string }) {
       {done ? "Copied" : "Copy"}
     </button>
   );
+}
+
+function getInitials(value: string) {
+  const parts = value
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .slice(0, 2);
+  if (parts.length === 0) return "CP";
+  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("").slice(0, 2) || "CP";
 }
 
 class CloudApi {
@@ -5120,9 +5346,9 @@ const demoRevenue: RevenueClient[] = [
 ];
 
 const demoConversations = [
-  { name: "Ada Okafor", preview: "Please confirm roof photos.", time: "09:42" },
-  { name: "Musa Bello", preview: "Can you discount the generator repair?", time: "08:18" },
-  { name: "Zuri Homes", preview: "Friday still works for us.", time: "Yesterday" },
+  { name: "Ada Okafor", preview: "Please confirm roof photos.", time: "09:42", status: "open" },
+  { name: "Musa Bello", preview: "Can you discount the generator repair?", time: "08:18", status: "pending" },
+  { name: "Zuri Homes", preview: "Friday still works for us.", time: "Yesterday", status: "archived" },
 ];
 
 const demoReplies = [
