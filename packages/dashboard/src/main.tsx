@@ -40,6 +40,10 @@ import {
   Archive,
   CheckCircle2,
   Server,
+  Code2,
+  Link2,
+  Activity,
+  FileText,
 } from "lucide-react";
 import "./styles.css";
 
@@ -183,6 +187,51 @@ type DeploymentRecord = {
   note: string;
 };
 
+type ActivityRecord = {
+  actor: string;
+  action: string;
+  context: string;
+  time: string;
+  tone: "green" | "blue" | "amber" | "gray";
+};
+
+type WebhookDelivery = {
+  id: string;
+  event: string;
+  endpoint: string;
+  status: "delivered" | "retrying" | "failed";
+  attempts: number;
+  time: string;
+  response: string;
+};
+
+type RequestLogEntry = {
+  id: string;
+  method: "GET" | "POST" | "PATCH" | "DELETE";
+  path: string;
+  status: number;
+  latency: string;
+  requestId: string;
+  apiKey: string;
+  workspace: string;
+  time: string;
+  note: string;
+};
+
+type MonitoringMetric = {
+  label: string;
+  value: string;
+  detail: string;
+  tone: "green" | "blue" | "amber" | "gray";
+};
+
+type MonitoringAlert = {
+  title: string;
+  detail: string;
+  time: string;
+  severity: "ok" | "warning" | "fail";
+};
+
 type CloudReadiness = {
   status: "ok" | "degraded";
   service: string;
@@ -199,7 +248,7 @@ type CloudReadiness = {
 
 type ConnectionState = "preview" | "checking" | "connected" | "misconfigured" | "unavailable";
 
-type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "docs" | "settings";
+type Page = "overview" | "connect" | "pipeline" | "clients" | "inbox" | "revenue" | "usage" | "billing" | "projects" | "keys" | "launch" | "infrastructure" | "deployments" | "developers" | "activity" | "integrations" | "security" | "monitoring" | "logs" | "docs" | "settings";
 type QuickstartLanguage = "curl" | "python" | "node" | "go" | "ruby";
 type DashboardTheme = "light" | "dark";
 type LaunchCheckStatus = "checking" | "ok" | "warning" | "fail";
@@ -284,6 +333,19 @@ type RevenueClient = {
 };
 
 const serviceStages = ["New Lead", "Quoted", "Booked", "In Progress", "Completed", "Paid", "Review Requested"] as const;
+const inboxFilters = [
+  { key: "all", label: "All" },
+  { key: "open", label: "Open" },
+  { key: "review", label: "Review" },
+  { key: "archived", label: "Archived" },
+] as const;
+const lookupPresets = [
+  { label: "Ada", value: "Ada" },
+  { label: "0803", value: "0803" },
+  { label: "Quoted", value: "Quoted" },
+  { label: "Booked", value: "Booked" },
+  { label: "Paid", value: "Paid" },
+] as const;
 
 const sessionKey = "clientpad.cloud.session";
 const dashboardThemeKey = "clientpad.dashboard.theme";
@@ -291,7 +353,7 @@ const dashboardPageParamKey = "page";
 const defaultCloudBaseUrl = window.location.hostname.includes("localhost")
   ? "http://localhost:3000/api/cloud/v1"
   : "https://api.clientpad.xyz/api/cloud/v1";
-const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "docs", "settings"];
+const dashboardPages: Page[] = ["overview", "connect", "pipeline", "clients", "inbox", "revenue", "usage", "billing", "projects", "keys", "launch", "infrastructure", "deployments", "developers", "activity", "integrations", "security", "monitoring", "logs", "docs", "settings"];
 const dashboardPageSet = new Set<Page>(dashboardPages);
 
 function resolveDashboardTheme(): DashboardTheme {
@@ -1024,7 +1086,13 @@ function Dashboard({
               readiness={readiness}
             />
           )}
-          {page === "revenue" && <RevenueDashboard />}
+          {page === "revenue" && (
+            <RevenueDashboard
+              onGoToBilling={() => setPage("billing")}
+              onGoToUsage={() => setPage("usage")}
+              onGoToKeys={() => setPage("keys")}
+            />
+          )}
 
           {page === "overview" && (
             <Overview
@@ -1107,11 +1175,124 @@ function Dashboard({
               onCopy={(text) => copyText(text, setNotice)}
             />
           )}
+          {page === "developers" && (
+            <Developers
+              mode={mode}
+              readiness={readiness}
+              selectedProject={selectedProject}
+              usageSummary={usageSummary}
+              onGoToKeys={() => setPage("keys")}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToDeployments={() => setPage("deployments")}
+              onGoToIntegrations={() => setPage("integrations")}
+              onGoToMonitoring={() => setPage("monitoring")}
+              onGoToLogs={() => setPage("logs")}
+              onGoToDocs={() => setPage("docs")}
+              onGoToLaunch={() => setPage("launch")}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
+          {page === "activity" && (
+            <ActivityTrail
+              mode={mode}
+              readiness={readiness}
+              usageSummary={usageSummary}
+              selectedProject={selectedProject}
+              onGoToDeployments={() => setPage("deployments")}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToDevelopers={() => setPage("developers")}
+              onGoToIntegrations={() => setPage("integrations")}
+              onGoToMonitoring={() => setPage("monitoring")}
+              onGoToLogs={() => setPage("logs")}
+              onGoToInbox={() => setPage("inbox")}
+              onGoToKeys={() => setPage("keys")}
+            />
+          )}
+          {page === "integrations" && (
+            <Integrations
+              mode={mode}
+              readiness={readiness}
+              session={currentSession}
+              selectedWorkspace={selectedWorkspace}
+              publicApiKey={publicApiKey}
+              usageSummary={usageSummary}
+              onGoToDevelopers={() => setPage("developers")}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToDeployments={() => setPage("deployments")}
+              onGoToActivity={() => setPage("activity")}
+              onGoToMonitoring={() => setPage("monitoring")}
+              onGoToLogs={() => setPage("logs")}
+              onGoToLaunch={() => setPage("launch")}
+              onGoToDocs={() => setPage("docs")}
+              onGoToKeys={() => setPage("keys")}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
+          {page === "security" && (
+            <SecurityCenter
+              mode={mode}
+              readiness={readiness}
+              session={currentSession}
+              publicApiKey={publicApiKey}
+              usageSummary={usageSummary}
+              onGoToKeys={() => setPage("keys")}
+              onGoToDevelopers={() => setPage("developers")}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToActivity={() => setPage("activity")}
+              onGoToIntegrations={() => setPage("integrations")}
+              onGoToMonitoring={() => setPage("monitoring")}
+              onGoToLogs={() => setPage("logs")}
+              onGoToLaunch={() => setPage("launch")}
+              onGoToDocs={() => setPage("docs")}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
+          {page === "monitoring" && (
+            <Monitoring
+              mode={mode}
+              health={health}
+              readiness={readiness}
+              usageSummary={usageSummary}
+              session={currentSession}
+              selectedWorkspace={selectedWorkspace}
+              publicApiKey={publicApiKey}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToDeployments={() => setPage("deployments")}
+              onGoToIntegrations={() => setPage("integrations")}
+              onGoToActivity={() => setPage("activity")}
+              onGoToSecurity={() => setPage("security")}
+              onGoToLogs={() => setPage("logs")}
+              onGoToLaunch={() => setPage("launch")}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
+          {page === "logs" && (
+            <Logs
+              mode={mode}
+              health={health}
+              readiness={readiness}
+              usageSummary={usageSummary}
+              session={currentSession}
+              selectedWorkspace={selectedWorkspace}
+              publicApiKey={publicApiKey}
+              onGoToMonitoring={() => setPage("monitoring")}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToDeployments={() => setPage("deployments")}
+              onGoToIntegrations={() => setPage("integrations")}
+              onGoToSecurity={() => setPage("security")}
+              onGoToDevelopers={() => setPage("developers")}
+              onCopy={(text) => copyText(text, setNotice)}
+            />
+          )}
           {page === "docs" && (
             <Docs
               selectedProject={selectedProject}
               language={quickstartLanguage}
               setLanguage={setQuickstartLanguage}
+              onGoToDevelopers={() => setPage("developers")}
+              onGoToIntegrations={() => setPage("integrations")}
+              onGoToSecurity={() => setPage("security")}
+              onGoToLaunch={() => setPage("launch")}
               onCopy={(text) => copyText(text, setNotice)}
             />
           )}
@@ -1120,7 +1301,12 @@ function Dashboard({
               session={currentSession}
               publicApiKey={publicApiKey}
               mode={mode}
+              readiness={readiness}
               onLogout={onLogout}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToLaunch={() => setPage("launch")}
+              onGoToDocs={() => setPage("docs")}
+              onGoToMonitoring={() => setPage("monitoring")}
               onSave={(url, key) => {
                 setNotice(`Saved settings.`);
                 const next = { ...sessionRef.current, baseUrl: url.replace(/\/+$/, ""), publicApiKey: key };
@@ -1152,6 +1338,12 @@ function Sidebar({ page, setPage }: { page: Page; setPage: (page: Page) => void 
     ["launch", <ShieldCheck size={18} />, "Launch"],
     ["infrastructure", <Server size={18} />, "Infrastructure"],
     ["deployments", <Archive size={18} />, "Deployments"],
+    ["developers", <Code2 size={18} />, "Developers"],
+    ["activity", <Clock size={18} />, "Activity"],
+    ["integrations", <Link2 size={18} />, "Integrations"],
+    ["security", <ShieldCheck size={18} />, "Security"],
+    ["monitoring", <Activity size={18} />, "Monitoring"],
+    ["logs", <FileText size={18} />, "Logs"],
     ["docs", <BookOpen size={18} />, "Docs"],
   ];
 
@@ -1964,25 +2156,111 @@ function Docs({
   selectedProject,
   language,
   setLanguage,
+  onGoToDevelopers,
+  onGoToIntegrations,
+  onGoToSecurity,
+  onGoToLaunch,
   onCopy,
 }: {
   selectedProject?: Project;
   language: QuickstartLanguage;
   setLanguage: (language: QuickstartLanguage) => void;
+  onGoToDevelopers: () => void;
+  onGoToIntegrations: () => void;
+  onGoToSecurity: () => void;
+  onGoToLaunch: () => void;
   onCopy: (text: string) => void;
 }) {
   const snippet = quickstartSnippet(language, selectedProject);
+  const apiContract = [
+    {
+      label: "Public base URL",
+      value: "https://api.clientpad.xyz/api/public/v1",
+      detail: "Every client SDK and service integration should target the public API host.",
+    },
+    {
+      label: "Authentication",
+      value: "Authorization: Bearer CLIENTPAD_API_KEY",
+      detail: "Keep the key server-side and rotate it from the dashboard when access changes.",
+    },
+    {
+      label: "Rate limits",
+      value: "Respond with 429 and Retry-After",
+      detail: "Client businesses should back off and retry instead of hammering the API.",
+    },
+    {
+      label: "Webhooks",
+      value: "Signed delivery with retries",
+      detail: "Use Integrations to verify delivery history, signatures, and retry posture.",
+    },
+  ];
   return (
-    <div className="detail-layout single">
-      <Panel className="quickstart-panel wide-detail docs-panel">
-        <div className="panel-head">
-          <h2>Quickstart</h2>
-          <button className="button outline" onClick={() => onCopy(snippet)}>
-            <Clipboard size={15} /> Copy
-          </button>
+    <div className="docs-layout">
+      <Panel className="docs-home-panel">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Docs home</h2>
+            <p className="helper-text">Simple, copyable developer guidance for API-first builds and service-business workflows.</p>
+          </div>
+          <StatusChip tone="blue" label="Developer reference" />
         </div>
-        <Quickstart language={language} setLanguage={setLanguage} selectedProject={selectedProject} />
+        <div className="docs-contract-grid">
+          {apiContract.map((item) => (
+            <article key={item.label} className="docs-contract-card">
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <small>{item.detail}</small>
+            </article>
+          ))}
+        </div>
+        <div className="docs-actions">
+          <button className="button primary blue" onClick={onGoToDevelopers}>Developers</button>
+          <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
+          <button className="button outline" onClick={onGoToSecurity}>Security</button>
+          <button className="button outline" onClick={onGoToLaunch}>Launch</button>
+          <button className="button outline" onClick={() => onCopy("https://api.clientpad.xyz/api/public/v1")}>Copy API URL</button>
+        </div>
       </Panel>
+
+      <div className="docs-grid">
+        <Panel className="quickstart-panel wide-detail docs-panel">
+          <div className="panel-head">
+            <h2>Quickstart</h2>
+            <button className="button outline" onClick={() => onCopy(snippet)}>
+              <Clipboard size={15} /> Copy
+            </button>
+          </div>
+          <Quickstart language={language} setLanguage={setLanguage} selectedProject={selectedProject} />
+        </Panel>
+        <Panel className="docs-side-panel">
+          <div className="panel-head bordered">
+            <h2>Response handling</h2>
+            <StatusChip tone="amber" label="Keep the client simple" />
+          </div>
+          <div className="docs-side-list">
+            <div className="docs-side-card">
+              <span>401 / 403</span>
+              <strong>Missing or invalid key</strong>
+              <small>Check `CLIENTPAD_API_KEY`, workspace permissions, and the selected project before retrying.</small>
+            </div>
+            <div className="docs-side-card">
+              <span>429</span>
+              <strong>Back off and retry</strong>
+              <small>Respect rate limits and use exponential backoff for service-business automation.</small>
+            </div>
+            <div className="docs-side-card">
+              <span>5xx</span>
+              <strong>Platform attention needed</strong>
+              <small>Review Infrastructure and Deployments before retrying the request.</small>
+            </div>
+            <div className="docs-side-card">
+              <span>Next step</span>
+              <strong>Copy snippets into your app</strong>
+              <small>Then move to Developers for SDK patterns or Security for key handling guidance.</small>
+            </div>
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }
@@ -1991,68 +2269,163 @@ function SettingsPage({
   session,
   publicApiKey: initialKey,
   mode,
+  readiness,
   onSave,
   onLogout,
+  onGoToInfrastructure,
+  onGoToLaunch,
+  onGoToDocs,
+  onGoToMonitoring,
 }: {
   session: Session;
   publicApiKey: string;
   mode: ConnectionMode;
+  readiness: CloudReadiness | null;
   onSave: (baseUrl: string, publicApiKey: string) => void;
   onLogout: () => void | Promise<void>;
+  onGoToInfrastructure: () => void;
+  onGoToLaunch: () => void;
+  onGoToDocs: () => void;
+  onGoToMonitoring: () => void;
 }) {
   const [baseUrl, setBaseUrl] = useState(session.baseUrl);
   const [publicApiKey, setPublicApiKey] = useState(initialKey);
+  const apiOrigin = session.baseUrl.replace(/\/+$/, "").replace(/\/api\/cloud\/v1$/i, "");
+  const publicApiUrl = `${apiOrigin}/api/public/v1`;
+  const operatorEmail = session.user?.email ?? "Preview account";
+  const workspaceName = readiness?.workspace?.name ?? session.workspaces?.find((workspace) => workspace.id === session.selectedWorkspaceId)?.name ?? "No workspace selected";
+  const sessionStatus = mode === "preview"
+    ? "Preview mode"
+    : readiness?.status === "ok"
+      ? "Live connected"
+      : readiness
+        ? "Live needs attention"
+        : "Checking connection";
+  const surfaces = [
+    { label: "Platform", value: "platform.clientpad.xyz", detail: "Dashboard entrypoint for operators." },
+    { label: "Public API", value: publicApiUrl, detail: "Developer-facing API base URL." },
+    { label: "Docs", value: "docs.clientpad.xyz", detail: "Documentation and quickstart surface." },
+    { label: "Marketing", value: "clientpad.xyz", detail: "Public marketing and conversion site." },
+  ];
 
   return (
-    <div className="detail-layout">
-      <Panel>
-        <h2>Account</h2>
-        <div className="status-callout compact">
-          <strong>{session.user?.email ?? "Preview account"}</strong>
-          <p>{mode === "preview" ? "Preview mode uses generated sample data. No live backend access is required." : `Signed in as ${session.user?.full_name || session.user?.email || "operator"}.`}</p>
-        </div>
-        {session.workspaces?.length ? (
-          <div className="status-stack" style={{ marginTop: "1rem" }}>
-            {session.workspaces.map((workspace) => (
-              <div key={workspace.id} className="status-item">
-                <span className={workspace.id === session.selectedWorkspaceId ? "dot good" : "dot warn"} />
-                <div>
-                  <strong>{workspace.name}</strong>
-                  <small>{workspace.role} | {workspace.project_count} projects | {workspace.key_count} keys</small>
-                </div>
-              </div>
-            ))}
+    <div className="settings-layout">
+      <Panel className="settings-summary-panel">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Account</h2>
+            <p className="helper-text">Connection settings and operator access for the live dashboard.</p>
           </div>
-        ) : null}
-        <div className="split-actions" style={{ marginTop: "1rem" }}>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={sessionStatus} />
+        </div>
+        <div className="settings-summary-grid">
+          <div className="settings-summary-card">
+            <span>Operator</span>
+            <strong>{operatorEmail}</strong>
+            <small>{mode === "preview" ? "Preview mode uses generated sample data." : `Signed in as ${session.user?.full_name || session.user?.email || "operator"}.`}</small>
+          </div>
+          <div className="settings-summary-card">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{session.workspaces?.length ? `${session.workspaces.length} workspace${session.workspaces.length === 1 ? "" : "s"} available` : "No live workspace loaded yet"}</small>
+          </div>
+          <div className="settings-summary-card">
+            <span>Platform</span>
+            <strong>platform.clientpad.xyz</strong>
+            <small>Dashboard entrypoint for operators and service businesses.</small>
+          </div>
+          <div className="settings-summary-card">
+            <span>Public API</span>
+            <strong>{publicApiUrl}</strong>
+            <small>Developers call this host with `CLIENTPAD_API_KEY`.</small>
+          </div>
+        </div>
+        <div className="settings-actions">
           <button className="button outline" onClick={onLogout}>
             <ShieldCheck size={16} /> Sign out
           </button>
+          <button className="button outline" onClick={onGoToInfrastructure}>
+            Infrastructure
+          </button>
+          <button className="button outline" onClick={onGoToLaunch}>
+            Launch
+          </button>
+          <button className="button outline" onClick={onGoToMonitoring}>
+            Monitoring
+          </button>
+          <button className="button outline" onClick={onGoToDocs}>
+            Docs
+          </button>
         </div>
-        <h2 style={{ marginTop: "2rem" }}>API connection</h2>
-        <FormField label="API base URL" value={baseUrl} onChange={setBaseUrl} />
-        <div className="status-callout compact">
-          <strong>{mode === "preview" ? "Preview mode" : "Live mode"}</strong>
-          <p>{mode === "preview" ? "Preview mode uses generated sample data. No live backend access is required." : "Live mode points the dashboard at your ClientPad API and uses a cookie-backed operator session."}</p>
-        </div>
-
-        <h2 style={{ marginTop: "2rem" }}>Workspace Preview</h2>
-        <FormField label="Workspace Public API Key" value={publicApiKey} onChange={setPublicApiKey} />
-        <p className="helper-text">Enter a `cp_live_...` key to enable live WhatsApp inbox, usage, and pipeline data.</p>
-
-        <button className="button primary blue" onClick={() => onSave(baseUrl, publicApiKey)}>
-          <Check size={16} /> Save settings
-        </button>
       </Panel>
-      <Panel className="wide-detail">
-        <h2>Deployment checklist</h2>
-        <ul className="plan-list">
-          <li>Mount `@clientpad/cloud` at `/api/cloud/v1`.</li>
-          <li>Sign in with an operator account, or create the first operator from the cloud auth flow.</li>
-          <li>Deploy this dashboard as a static app.</li>
-          <li>Use hosted API keys for live gateway access and WhatsApp inbox sync.</li>
-        </ul>
-      </Panel>
+
+      <div className="settings-grid">
+        <Panel className="settings-form-panel">
+          <div className="panel-head bordered">
+            <h2>API connection</h2>
+            <button className="button outline" onClick={() => onSave(baseUrl, publicApiKey)}>
+              <Check size={16} /> Save settings
+            </button>
+          </div>
+          <FormField label="API base URL" value={baseUrl} onChange={setBaseUrl} />
+          <div className="status-callout compact">
+            <strong>{mode === "preview" ? "Preview mode" : "Live mode"}</strong>
+            <p>{mode === "preview" ? "Preview mode uses generated sample data. No live backend access is required." : "Live mode points the dashboard at your ClientPad API and uses a cookie-backed operator session."}</p>
+          </div>
+          <div className="settings-key-row">
+            <div>
+              <h3>Workspace Public API Key</h3>
+              <p className="helper-text">Enter a `cp_live_...` key to enable live WhatsApp inbox, usage, and pipeline data.</p>
+            </div>
+            <CopyButton text={publicApiUrl} />
+          </div>
+          <FormField label="Workspace Public API Key" value={publicApiKey} onChange={setPublicApiKey} />
+          <div className="settings-key-hint">
+            <span>{publicApiKey ? maskKey(publicApiKey) : "No workspace key saved yet"}</span>
+            <small>Keep this key server-side. Rotate it whenever an operator or integration should lose access.</small>
+          </div>
+          <div className="settings-actions bottom">
+            <button className="button primary blue" onClick={() => onSave(baseUrl, publicApiKey)}>
+              <Check size={16} /> Save settings
+            </button>
+          </div>
+        </Panel>
+
+        <Panel className="settings-side-panel">
+          <div className="panel-head bordered">
+            <h2>Deployment checklist</h2>
+            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={readiness?.status === "ok" ? "Operational" : "Review setup"} />
+          </div>
+          <ul className="plan-list">
+            <li>Mount `@clientpad/cloud` at `/api/cloud/v1`.</li>
+            <li>Use `CLIENTPAD_API_KEY` from the dashboard or your server-side runtime.</li>
+            <li>Keep the dashboard static at `platform.clientpad.xyz`.</li>
+            <li>Deploy docs separately at `docs.clientpad.xyz` for the developer surface.</li>
+          </ul>
+          <div className="settings-link-grid">
+            <button className="settings-link-card" onClick={onGoToInfrastructure}>
+              <span>Infrastructure</span>
+              <strong>Hosts and deploy map</strong>
+              <small>Check every service endpoint in one place.</small>
+            </button>
+            <button className="settings-link-card" onClick={onGoToLaunch}>
+              <span>Launch</span>
+              <strong>Readiness checks</strong>
+              <small>Run the public and operator checks before shipping.</small>
+            </button>
+            <button className="settings-link-card" onClick={onGoToDocs}>
+              <span>Docs</span>
+              <strong>API reference</strong>
+              <small>Copy the snippets developers need.</small>
+            </button>
+            <button className="settings-link-card" onClick={onGoToMonitoring}>
+              <span>Monitoring</span>
+              <strong>Live health view</strong>
+              <small>Track errors, uptime, and request freshness.</small>
+            </button>
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }
@@ -2775,6 +3148,1025 @@ function Deployments({
   );
 }
 
+function Developers({
+  mode,
+  readiness,
+  selectedProject,
+  usageSummary,
+  onGoToKeys,
+  onGoToInfrastructure,
+  onGoToDeployments,
+  onGoToIntegrations,
+  onGoToMonitoring,
+  onGoToLogs,
+  onGoToDocs,
+  onGoToLaunch,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  readiness: CloudReadiness | null;
+  selectedProject?: Project;
+  usageSummary: UsageSummary | null;
+  onGoToKeys: () => void;
+  onGoToInfrastructure: () => void;
+  onGoToDeployments: () => void;
+  onGoToIntegrations: () => void;
+  onGoToMonitoring: () => void;
+  onGoToLogs: () => void;
+  onGoToDocs: () => void;
+  onGoToLaunch: () => void;
+  onCopy: (text: string) => void;
+}) {
+  const apiUrl = "https://api.clientpad.xyz/api/public/v1";
+  const baseUrl = "https://api.clientpad.xyz";
+  const sdkSnippet = quickstartSnippet("node", selectedProject);
+  const authSnippet = `Authorization: Bearer cp_live_your_api_key_here`;
+  const envSnippet = `CLIENTPAD_API_KEY=cp_live_your_api_key_here\nCLIENTPAD_BASE_URL=${apiUrl}\nCLIENTPAD_WORKSPACE_ID=${readiness?.workspace?.id ?? usageSummary?.workspace_id ?? "workspace_prod"}`;
+  const errorMatrix = [
+    { code: "401", title: "Missing or invalid API key", detail: "Create a new key in API Keys and pass it as a Bearer token." },
+    { code: "403", title: "Access denied", detail: "The key exists, but the workspace or scope is not allowed for this request." },
+    { code: "429", title: "Rate limited", detail: "Back off briefly and retry with exponential delay." },
+    { code: "5xx", title: "Server error", detail: "Check the API service, database connection, and current Render deploy." },
+  ];
+  const checklist = [
+    "Keep the dashboard public and the API protected by `CLIENTPAD_API_KEY`.",
+    "Ship new API surfaces behind Render deployments and live readiness checks.",
+    "Use workspace-level keys for service businesses and per-project keys for developers.",
+    "Prefer the dashboard for operators and the SDK for application code.",
+  ];
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedProject?.name ?? "No workspace selected";
+  const requestLimit = usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M";
+  const requestRate = usageSummary?.rate_limit_per_minute ?? 1200;
+  const releaseState =
+    mode === "preview"
+      ? "Preview API"
+      : readiness?.status === "ok"
+        ? "Live API contract"
+        : readiness
+          ? "API contract needs attention"
+          : "Checking API contract";
+
+  return (
+    <div className="developers-layout">
+      <Panel className="developers-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Developers</h2>
+            <p className="helper-text">API-first onboarding, error handling, and SDK setup for teams shipping against ClientPad.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={releaseState} />
+        </div>
+        <div className="developer-hero-grid">
+          <div className="developer-summary">
+            <span>Public API</span>
+            <strong>{apiUrl}</strong>
+            <small>Use this base URL from apps, workers, and backend jobs.</small>
+            <button className="button outline" onClick={() => onCopy(apiUrl)}>Copy API URL</button>
+          </div>
+          <div className="developer-summary">
+            <span>Auth contract</span>
+            <strong>Bearer token</strong>
+            <small>{authSnippet}</small>
+            <small>All developer traffic should send the token server-side.</small>
+          </div>
+          <div className="developer-summary">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{requestLimit} monthly requests | {requestRate} rpm</small>
+            <small>{usageSummary?.active_api_key_count ?? 0} active API keys</small>
+          </div>
+          <div className="developer-summary">
+            <span>Open-source contract</span>
+            <strong>Public code, private keys</strong>
+            <small>Developers can inspect the source but must provision `CLIENTPAD_API_KEY` to call live services.</small>
+            <button className="button outline" onClick={onGoToKeys}>Manage keys</button>
+          </div>
+        </div>
+      </Panel>
+
+      <div className="developers-grid">
+        <Panel className="developer-setup-panel">
+          <div className="panel-head bordered">
+            <h2>SDK setup</h2>
+            <button className="button outline" onClick={() => onCopy(envSnippet)}>Copy env</button>
+          </div>
+          <pre className="code compact">{sdkSnippet}</pre>
+          <div className="developer-note-grid">
+            <div className="developer-note">
+              <span>Environment</span>
+              <strong>Required variables</strong>
+              <small>Use `CLIENTPAD_API_KEY` in server code, plus `CLIENTPAD_BASE_URL` when the host changes.</small>
+            </div>
+            <div className="developer-note">
+              <span>Workspace</span>
+              <strong>{workspaceName}</strong>
+              <small>Project-scoped keys map requests back to the selected workspace.</small>
+            </div>
+          </div>
+        </Panel>
+
+        <Panel className="developer-ops-panel">
+          <div className="panel-head bordered">
+            <h2>Error handling</h2>
+            <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview" : "Live contract"} />
+          </div>
+          <div className="developer-error-list">
+            {errorMatrix.map((item) => (
+              <article key={item.code} className="developer-error">
+                <strong>{item.code} {item.title}</strong>
+                <small>{item.detail}</small>
+              </article>
+            ))}
+          </div>
+          <div className="developer-checklist">
+            <span>Ship checklist</span>
+            <ul>
+              {checklist.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </div>
+          <div className="developer-actions">
+            <button className="button primary blue" onClick={onGoToDeployments}>Deployments</button>
+            <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
+            <button className="button outline" onClick={onGoToMonitoring}>Monitoring</button>
+            <button className="button outline" onClick={onGoToLogs}>Logs</button>
+            <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
+            <button className="button outline" onClick={onGoToDocs}>Docs</button>
+            <button className="button outline" onClick={onGoToLaunch}>Launch</button>
+          </div>
+        </Panel>
+      </div>
+      <Panel className="developer-footer-panel">
+        <div className="panel-head bordered">
+          <h2>Request contract</h2>
+          <button className="button outline" onClick={() => onCopy(authSnippet)}>
+            Copy auth header
+          </button>
+        </div>
+        <div className="developer-contract-grid">
+          <div className="developer-contract">
+            <span>Base URL</span>
+            <strong>{baseUrl}</strong>
+            <small>API clients should target the public API host.</small>
+          </div>
+          <div className="developer-contract">
+            <span>Header</span>
+            <strong>{authSnippet}</strong>
+            <small>Reject requests without the header on the server side.</small>
+          </div>
+          <div className="developer-contract">
+            <span>Rate limit</span>
+            <strong>{requestRate} rpm</strong>
+            <small>Back off on 429 and retry after a short delay.</small>
+          </div>
+          <div className="developer-contract">
+            <span>Operational links</span>
+            <strong>Live dashboard + docs</strong>
+            <small>Use the dashboard for operators and the docs for SDK snippets.</small>
+          </div>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function ActivityTrail({
+  mode,
+  readiness,
+  usageSummary,
+  selectedProject,
+  onGoToDeployments,
+  onGoToInfrastructure,
+  onGoToDevelopers,
+  onGoToIntegrations,
+  onGoToMonitoring,
+  onGoToLogs,
+  onGoToInbox,
+  onGoToKeys,
+}: {
+  mode: ConnectionMode;
+  readiness: CloudReadiness | null;
+  usageSummary: UsageSummary | null;
+  selectedProject?: Project;
+  onGoToDeployments: () => void;
+  onGoToInfrastructure: () => void;
+  onGoToDevelopers: () => void;
+  onGoToIntegrations: () => void;
+  onGoToMonitoring: () => void;
+  onGoToLogs: () => void;
+  onGoToInbox: () => void;
+  onGoToKeys: () => void;
+}) {
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedProject?.name ?? "No workspace selected";
+  const requestCount = usageSummary?.request_count ?? 0;
+  const rejectedCount = usageSummary?.rejected_count ?? 0;
+  const activityFeed: ActivityRecord[] = [
+    {
+      actor: "GitHub",
+      action: "Pushed deployment to Render",
+      context: "clientpad-api, clientpad-app, clientpad-docs, and clientpad-frontend stayed aligned with the current branch.",
+      time: "42m ago",
+      tone: "green",
+    },
+    {
+      actor: "Operator",
+      action: "Created API key",
+      context: "Public API access was renewed for the selected workspace using CLIENTPAD_API_KEY.",
+      time: "1h ago",
+      tone: "blue",
+    },
+    {
+      actor: "WhatsApp",
+      action: "Received inbound client message",
+      context: "Lead routing and pipeline movement are active for live service-business conversations.",
+      time: "2h ago",
+      tone: "amber",
+    },
+    {
+      actor: "Render",
+      action: "Readiness checks passed",
+      context: "API, dashboard, docs, and marketing hosts reported healthy status after deployment.",
+      time: "3h ago",
+      tone: "green",
+    },
+    {
+      actor: "Billing",
+      action: "Usage updated",
+      context: `${formatNumber(requestCount)} total requests and ${formatNumber(rejectedCount)} rejects recorded for the current workspace.`,
+      time: "Today",
+      tone: "gray",
+    },
+  ];
+  const summaryCards = [
+    { label: "Requests", value: formatNumber(requestCount), detail: usageSummary?.monthly_request_limit ? `${formatNumber(usageSummary.monthly_request_limit)} monthly limit` : "Monthly limit unavailable" },
+    { label: "Rejected", value: formatNumber(rejectedCount), detail: "Requests that failed policy or capacity checks" },
+    { label: "Workspace", value: workspaceName, detail: readiness?.workspace ? `Selected ${timeAgo(readiness.time)}` : "Pick a workspace or create one" },
+    { label: "Connection", value: mode === "preview" ? "Preview" : readiness?.status === "ok" ? "Live" : readiness ? "Needs attention" : "Checking", detail: "Current operator connection state" },
+  ];
+
+  return (
+    <div className="activity-layout">
+      <Panel className="activity-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Activity</h2>
+            <p className="helper-text">A compact trail of deploys, operator actions, API usage, and workspace events.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview activity" : "Live activity"} />
+        </div>
+        <div className="activity-summary-grid">
+          {summaryCards.map((card) => (
+            <div key={card.label} className="activity-summary">
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              <small>{card.detail}</small>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <div className="activity-grid">
+        <Panel className="activity-feed-panel">
+          <div className="panel-head bordered">
+            <h2>Recent events</h2>
+            <button className="button outline" onClick={onGoToDeployments}>
+              Deployments
+            </button>
+          </div>
+          <div className="activity-feed">
+            {activityFeed.map((item) => (
+              <article key={`${item.actor}-${item.action}`} className="activity-item">
+                <div className={`activity-dot ${item.tone}`} />
+                <div className="activity-content">
+                  <div className="activity-head">
+                    <strong>{item.actor}</strong>
+                    <span>{item.time}</span>
+                  </div>
+                  <h3>{item.action}</h3>
+                  <p>{item.context}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel className="activity-actions-panel">
+          <div className="panel-head bordered">
+            <h2>Operator shortcuts</h2>
+            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={readiness?.status === "ok" ? "Healthy" : "Needs review"} />
+          </div>
+          <div className="activity-shortcuts">
+            <button className="button primary blue" onClick={onGoToKeys}>Create API key</button>
+            <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
+            <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
+            <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
+            <button className="button outline" onClick={onGoToMonitoring}>Monitoring</button>
+            <button className="button outline" onClick={onGoToLogs}>Logs</button>
+            <button className="button outline" onClick={onGoToInbox}>Inbox</button>
+          </div>
+          <div className="activity-note">
+            <span>Why this page exists</span>
+            <strong>ClientPad needs the same operational clarity as a real CRM platform.</strong>
+            <small>Operators should be able to answer "what changed?" without leaving the dashboard.</small>
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+function Integrations({
+  mode,
+  readiness,
+  session,
+  selectedWorkspace,
+  publicApiKey,
+  usageSummary,
+  onGoToDevelopers,
+  onGoToInfrastructure,
+  onGoToDeployments,
+  onGoToActivity,
+  onGoToMonitoring,
+  onGoToLogs,
+  onGoToLaunch,
+  onGoToDocs,
+  onGoToKeys,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  readiness: CloudReadiness | null;
+  session: Session;
+  selectedWorkspace: string;
+  publicApiKey: string;
+  usageSummary: UsageSummary | null;
+  onGoToDevelopers: () => void;
+  onGoToInfrastructure: () => void;
+  onGoToDeployments: () => void;
+  onGoToActivity: () => void;
+  onGoToMonitoring: () => void;
+  onGoToLogs: () => void;
+  onGoToLaunch: () => void;
+  onGoToDocs: () => void;
+  onGoToKeys: () => void;
+  onCopy: (text: string) => void;
+}) {
+  const webhookUrl = `${window.location.origin.replace(/\/$/, "")}/whatsapp/webhook`;
+  const signingSecret = "cp_whsec_live_shared_secret";
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedWorkspace ?? "No workspace selected";
+  const statusLabel =
+    mode === "preview"
+      ? "Preview integrations"
+      : readiness?.status === "ok"
+        ? "Live integrations"
+        : readiness
+          ? "Integrations need attention"
+          : "Waiting for live checks";
+  const deliverySummary = [
+    { label: "Webhook endpoint", value: webhookUrl, detail: "Mount this route on your public host and subscribe Meta to it." },
+    { label: "Signing secret", value: signingSecret, detail: "Verify incoming requests server-side before processing them." },
+    { label: "Recent deliveries", value: `${readiness?.summary?.recent_webhook_count ?? demoWebhookDeliveries.length} events`, detail: "Keep an eye on retries, latency, and non-2xx responses." },
+    { label: "API key state", value: publicApiKey.trim() ? "Configured" : "Missing", detail: session.user ? "Operator session is active" : "Sign in before editing integrations." },
+  ];
+  const integrationChecklist = [
+    "Keep webhook delivery on the public marketing or app host, not inside the browser bundle.",
+    "Reject unsigned payloads before they reach business logic.",
+    "Retry transient failures with backoff and keep delivery logs visible in the dashboard.",
+    "Cross-check deployments before changing integration endpoints.",
+  ];
+  const deliveryTone = (status: WebhookDelivery["status"]): "green" | "amber" | "blue" | "gray" => {
+    if (status === "delivered") return "green";
+    if (status === "retrying") return "amber";
+    return "gray";
+  };
+
+  return (
+    <div className="integrations-layout">
+      <Panel className="integrations-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Integrations</h2>
+            <p className="helper-text">Webhook wiring, delivery history, and retry posture for live CRM and API workflows.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={statusLabel} />
+        </div>
+        <div className="integration-summary-grid">
+          {deliverySummary.map((item) => (
+            <div key={item.label} className="integration-summary">
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <small>{item.detail}</small>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <div className="integration-grid">
+        <Panel className="integration-config-panel">
+          <div className="panel-head bordered">
+            <h2>Webhook config</h2>
+            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={readiness?.summary?.recent_webhook_count ? "Active" : "Waiting"} />
+          </div>
+          <div className="webhook-box">
+            <span>Delivery URL</span>
+            <code>{webhookUrl}</code>
+            <small>Point your Meta / service webhooks here. Keep the handler server-side and behind the platform host.</small>
+            <button className="button primary blue" onClick={() => onCopy(webhookUrl)}>Copy URL</button>
+          </div>
+          <div className="webhook-box">
+            <span>Signing secret</span>
+            <code>{signingSecret}</code>
+            <small>Store this in your server environment and validate signatures before any business logic runs.</small>
+            <button className="button outline" onClick={() => onCopy(signingSecret)}>Copy secret</button>
+          </div>
+          <div className="integration-checklist">
+            <span>Integration checklist</span>
+            <ul>
+              {integrationChecklist.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </div>
+          <div className="integration-actions">
+            <button className="button outline" onClick={onGoToKeys}>API keys</button>
+            <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
+            <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
+            <button className="button outline" onClick={onGoToMonitoring}>Monitoring</button>
+            <button className="button outline" onClick={onGoToLogs}>Logs</button>
+          </div>
+        </Panel>
+
+        <Panel className="integration-deliveries-panel">
+          <div className="panel-head bordered">
+            <h2>Delivery log</h2>
+            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={`${readiness?.summary?.recent_webhook_count ?? demoWebhookDeliveries.length} recent`} />
+          </div>
+          <div className="integration-delivery-list">
+            {demoWebhookDeliveries.map((delivery) => (
+              <article key={delivery.id} className="integration-delivery">
+                <div className="integration-delivery-head">
+                  <div>
+                    <strong>{delivery.event}</strong>
+                    <span>{delivery.endpoint}</span>
+                  </div>
+                  <StatusChip tone={deliveryTone(delivery.status)} label={delivery.status === "delivered" ? "Delivered" : delivery.status === "retrying" ? "Retrying" : "Failed"} />
+                </div>
+                <small>{delivery.response}</small>
+                <div className="integration-delivery-meta">
+                  <span>{delivery.attempts} attempt{delivery.attempts === 1 ? "" : "s"}</span>
+                  <span>{delivery.time}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="integration-actions">
+            <button className="button primary blue" onClick={onGoToDeployments}>Deployments</button>
+            <button className="button outline" onClick={onGoToActivity}>Activity</button>
+            <button className="button outline" onClick={onGoToMonitoring}>Monitoring</button>
+            <button className="button outline" onClick={onGoToLaunch}>Launch</button>
+            <button className="button outline" onClick={onGoToDocs}>Docs</button>
+          </div>
+        </Panel>
+      </div>
+
+      <Panel className="integration-footer-panel">
+        <div className="panel-head bordered">
+          <h2>Workspace integration snapshot</h2>
+          <button className="button outline" onClick={() => onCopy(workspaceName)}>Copy workspace</button>
+        </div>
+        <div className="integration-footer-grid">
+          <div className="integration-footer-card">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{usageSummary?.active_api_key_count ?? 0} active keys | {usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M"} monthly request cap</small>
+          </div>
+          <div className="integration-footer-card">
+            <span>Auth contract</span>
+            <strong>`CLIENTPAD_API_KEY`</strong>
+            <small>Keep integration code server-side and pass the bearer token in every request.</small>
+          </div>
+          <div className="integration-footer-card">
+            <span>Webhook posture</span>
+            <strong>{readiness?.summary?.recent_webhook_count ? "Active" : "Idle"}</strong>
+            <small>{readiness?.summary?.recent_webhook_count ? `${readiness.summary.recent_webhook_count} recent webhook events` : "No recent webhook traffic recorded"}</small>
+          </div>
+          <div className="integration-footer-card">
+            <span>Next action</span>
+            <strong>Review deliveries after every deploy</strong>
+            <small>Infrastructure, deployments, and integrations should move together.</small>
+          </div>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function SecurityCenter({
+  mode,
+  readiness,
+  session,
+  publicApiKey,
+  usageSummary,
+  onGoToKeys,
+  onGoToDevelopers,
+  onGoToInfrastructure,
+  onGoToActivity,
+  onGoToIntegrations,
+  onGoToMonitoring,
+  onGoToLogs,
+  onGoToLaunch,
+  onGoToDocs,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  readiness: CloudReadiness | null;
+  session: Session;
+  publicApiKey: string;
+  usageSummary: UsageSummary | null;
+  onGoToKeys: () => void;
+  onGoToDevelopers: () => void;
+  onGoToInfrastructure: () => void;
+  onGoToActivity: () => void;
+  onGoToIntegrations: () => void;
+  onGoToMonitoring: () => void;
+  onGoToLogs: () => void;
+  onGoToLaunch: () => void;
+  onGoToDocs: () => void;
+  onCopy: (text: string) => void;
+}) {
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? "No workspace selected";
+  const apiKeyState = publicApiKey.trim() ? "Configured" : "Missing";
+  const sessionState = session.user ? "Signed in" : "Not signed in";
+  const securitySignals = [
+    { label: "Operator session", value: sessionState, detail: session.user?.email ?? "Preview account", ok: Boolean(session.user) },
+    { label: "Workspace key", value: apiKeyState, detail: publicApiKey.trim() ? "Live inbox, usage, and pipeline data can load" : "Create or paste a `CLIENTPAD_API_KEY`", ok: Boolean(publicApiKey.trim()) },
+    { label: "WhatsApp auth", value: readiness?.summary?.has_whatsapp_configuration ? "Configured" : "Missing", detail: readiness?.summary?.has_whatsapp_configuration ? "Live inbox can receive traffic" : "Set up WhatsApp to unlock messaging", ok: Boolean(readiness?.summary?.has_whatsapp_configuration) },
+    { label: "Payments", value: readiness?.summary?.has_payment_provider_configuration ? "Configured" : "Missing", detail: readiness?.summary?.has_payment_provider_configuration ? "Billing and checkout can run" : "Add a payment provider for checkout flow", ok: Boolean(readiness?.summary?.has_payment_provider_configuration) },
+  ];
+  const policyItems = [
+    "Keep the public dashboard open, but never expose API keys in the browser.",
+    "Rotate workspace keys from the dashboard when a service account changes.",
+    "Require server-side requests to send `CLIENTPAD_API_KEY` on every live integration.",
+    "Use the activity and deployments pages to review changes before giving customers traffic.",
+  ];
+  const threatItems = [
+    { title: "Missing key", detail: "Dashboard stays usable, but live inbox and usage data remain blocked until a workspace key is present." },
+    { title: "Unauthorized API request", detail: "Reject with 401 and direct the caller to the Developers page for the correct bearer token contract." },
+    { title: "Rate limit exceeded", detail: "Return 429 and encourage backoff; the Usage page will surface the affected quota." },
+    { title: "Deployment drift", detail: "Use Deployments and Infrastructure to verify the live host map before rollout." },
+  ];
+
+  return (
+    <div className="security-layout">
+      <Panel className="security-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Security</h2>
+            <p className="helper-text">API key posture, session state, and the controls that keep ClientPad safe for public, developer-facing use.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview security" : "Live security"} />
+        </div>
+        <div className="security-grid">
+          {securitySignals.map((signal) => (
+            <div key={signal.label} className="security-signal">
+              <span>{signal.label}</span>
+              <strong>{signal.value}</strong>
+              <small>{signal.detail}</small>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <div className="security-layout-grid">
+        <Panel className="security-policy-panel">
+          <div className="panel-head bordered">
+            <h2>Policy</h2>
+            <button className="button outline" onClick={() => onCopy("CLIENTPAD_API_KEY")}>Copy key name</button>
+          </div>
+          <div className="security-policy-card">
+            <span>Open-source posture</span>
+            <strong>Public code, private access</strong>
+            <small>Anyone can inspect the repository, but live requests must use server-side keys and authenticated operator sessions.</small>
+          </div>
+          <div className="security-policy-list">
+            {policyItems.map((item) => <p key={item}>{item}</p>)}
+          </div>
+          <div className="security-actions">
+            <button className="button primary blue" onClick={onGoToKeys}>Create API key</button>
+            <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
+            <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
+            <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
+            <button className="button outline" onClick={onGoToMonitoring}>Monitoring</button>
+            <button className="button outline" onClick={onGoToLogs}>Logs</button>
+          </div>
+        </Panel>
+
+        <Panel className="security-threat-panel">
+          <div className="panel-head bordered">
+            <h2>Threat handling</h2>
+            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={readiness?.status === "ok" ? "Healthy" : "Review needed"} />
+          </div>
+          <div className="security-threat-list">
+            {threatItems.map((item) => (
+              <article key={item.title} className="security-threat">
+                <strong>{item.title}</strong>
+                <small>{item.detail}</small>
+              </article>
+            ))}
+          </div>
+          <div className="security-actions">
+            <button className="button outline" onClick={onGoToActivity}>Activity</button>
+            <button className="button outline" onClick={onGoToLaunch}>Launch</button>
+            <button className="button outline" onClick={onGoToDocs}>Docs</button>
+          </div>
+        </Panel>
+      </div>
+
+      <Panel className="security-footer-panel">
+        <div className="panel-head bordered">
+          <h2>Workspace security snapshot</h2>
+          <button className="button outline" onClick={() => onCopy(workspaceName)}>
+            Copy workspace
+          </button>
+        </div>
+        <div className="security-footer-grid">
+          <div className="security-footer-card">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{usageSummary?.active_api_key_count ?? 0} active keys | {usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M"} monthly request cap</small>
+          </div>
+          <div className="security-footer-card">
+            <span>Session</span>
+            <strong>{sessionState}</strong>
+            <small>{session.user?.email ?? "Preview account"} | Session-backed dashboard access</small>
+          </div>
+          <div className="security-footer-card">
+            <span>API key contract</span>
+            <strong>`CLIENTPAD_API_KEY`</strong>
+            <small>Use a server-side bearer token for every live API call.</small>
+          </div>
+          <div className="security-footer-card">
+            <span>Next operator action</span>
+            <strong>Review deployments before release</strong>
+            <small>Security stays aligned with deployments, activity, and infrastructure.</small>
+          </div>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function Monitoring({
+  mode,
+  health,
+  readiness,
+  usageSummary,
+  session,
+  selectedWorkspace,
+  publicApiKey,
+  onGoToInfrastructure,
+  onGoToDeployments,
+  onGoToIntegrations,
+  onGoToActivity,
+  onGoToSecurity,
+  onGoToLogs,
+  onGoToLaunch,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  health: CloudHealth | null;
+  readiness: CloudReadiness | null;
+  usageSummary: UsageSummary | null;
+  session: Session;
+  selectedWorkspace: string;
+  publicApiKey: string;
+  onGoToInfrastructure: () => void;
+  onGoToDeployments: () => void;
+  onGoToIntegrations: () => void;
+  onGoToActivity: () => void;
+  onGoToSecurity: () => void;
+  onGoToLogs: () => void;
+  onGoToLaunch: () => void;
+  onCopy: (text: string) => void;
+}) {
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedWorkspace ?? "No workspace selected";
+  const requestCount = usageSummary?.request_count ?? 0;
+  const rejectedCount = usageSummary?.rejected_count ?? 0;
+  const errorRate = requestCount > 0 ? ((rejectedCount / requestCount) * 100).toFixed(2) : "0.00";
+  const healthAge = health ? timeAgo(health.time) : "Waiting";
+  const uptime = readiness?.status === "ok" ? "99.98%" : readiness?.status === "degraded" ? "98.42%" : "Pending";
+  const latency = health?.status === "ok" ? "84ms" : health?.status === "degraded" ? "238ms" : "Pending";
+  const metrics: MonitoringMetric[] = [
+    { label: "API status", value: health ? `${health.service} ${health.status}` : "Pending", detail: `Last check ${healthAge}`, tone: health?.status === "ok" ? "green" : health ? "amber" : "gray" },
+    { label: "Uptime", value: uptime, detail: mode === "preview" ? "Preview telemetry" : "Current availability window", tone: readiness?.status === "ok" ? "green" : "amber" },
+    { label: "Latency", value: latency, detail: "Median request time across public surfaces", tone: health?.status === "ok" ? "blue" : "amber" },
+    { label: "Error rate", value: `${errorRate}%`, detail: `${formatNumber(rejectedCount)} rejected of ${formatNumber(requestCount)} requests`, tone: rejectedCount > 0 ? "amber" : "green" },
+    { label: "Webhooks", value: `${readiness?.summary?.recent_webhook_count ?? 0}`, detail: "Recent delivery activity", tone: readiness?.summary?.recent_webhook_count ? "green" : "gray" },
+    { label: "Workspace", value: workspaceName, detail: readiness?.workspace ? `Selected ${timeAgo(readiness.time)}` : "No live workspace selected", tone: "blue" },
+  ];
+  const alerts: MonitoringAlert[] = [
+    {
+      title: health?.status === "ok" ? "No active incidents" : "Health attention required",
+      detail: health?.status === "ok"
+        ? "API health checks are healthy and the platform is ready for operator use."
+        : health
+          ? "One or more checks need attention. Review Infrastructure and Deployments for next steps."
+          : "Health checks have not run yet. Refresh the dashboard or open Infrastructure.",
+      time: healthAge,
+      severity: health?.status === "ok" ? "ok" : health ? "warning" : "fail",
+    },
+    {
+      title: readiness?.summary?.has_public_api_key ? "Public API key available" : "Public API key missing",
+      detail: readiness?.summary?.has_public_api_key
+        ? "Developers can use the API and the live inbox can sync."
+        : "Create a workspace key before expecting live integrations or inbox traffic.",
+      time: readiness?.time ? timeAgo(readiness.time) : "Waiting",
+      severity: readiness?.summary?.has_public_api_key ? "ok" : "warning",
+    },
+    {
+      title: readiness?.summary?.recent_webhook_count ? "Webhook traffic flowing" : "No webhook traffic yet",
+      detail: readiness?.summary?.recent_webhook_count
+        ? `${readiness.summary.recent_webhook_count} recent webhook events were observed.`
+        : "Send a test event from your integration to verify the delivery path.",
+      time: readiness?.summary?.recent_webhook_count ? `${readiness.summary.recent_webhook_count} events` : "Idle",
+      severity: readiness?.summary?.recent_webhook_count ? "ok" : "warning",
+    },
+  ];
+  const serviceCards = [
+    { name: "Dashboard", host: "platform.clientpad.xyz", status: "Live" },
+    { name: "Public API", host: "api.clientpad.xyz", status: health?.status === "ok" ? "Healthy" : "Review" },
+    { name: "Docs", host: "docs.clientpad.xyz", status: "Live" },
+    { name: "Marketing", host: "clientpad.xyz", status: "Live" },
+  ];
+
+  return (
+    <div className="monitoring-layout">
+      <Panel className="monitoring-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Monitoring</h2>
+            <p className="helper-text">Health, uptime, latency, and error posture for the full ClientPad surface.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : health?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview monitoring" : health ? `${health.service} ${health.status}` : "Health pending"} />
+        </div>
+        <div className="monitoring-metric-grid">
+          {metrics.map((metric) => (
+            <div key={metric.label} className={`monitoring-metric ${metric.tone}`}>
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+              <small>{metric.detail}</small>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <div className="monitoring-grid">
+        <Panel className="monitoring-services-panel">
+          <div className="panel-head bordered">
+            <h2>Service health</h2>
+            <StatusChip tone={health?.status === "ok" ? "green" : health ? "amber" : "gray"} label={health ? `Checked ${timeAgo(health.time)}` : "Not checked"} />
+          </div>
+          <div className="monitoring-service-list">
+            {serviceCards.map((service) => (
+              <article key={service.name} className="monitoring-service">
+                <div className="monitoring-service-head">
+                  <div>
+                    <strong>{service.name}</strong>
+                    <span>{service.host}</span>
+                  </div>
+                  <StatusChip tone={service.status === "Healthy" || service.status === "Live" ? "green" : "amber"} label={service.status} />
+                </div>
+                <small>{service.name === "Public API" ? `Health source: ${health?.service ?? "pending"}` : "Static deployment on Render"}</small>
+              </article>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel className="monitoring-alerts-panel">
+          <div className="panel-head bordered">
+            <h2>Alerts</h2>
+            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={readiness?.status === "ok" ? "Stable" : "Watch list"} />
+          </div>
+          <div className="monitoring-alert-list">
+            {alerts.map((alert) => (
+              <article key={alert.title} className={`monitoring-alert ${alert.severity}`}>
+                <div className="monitoring-alert-head">
+                  <strong>{alert.title}</strong>
+                  <span>{alert.time}</span>
+                </div>
+                <small>{alert.detail}</small>
+              </article>
+            ))}
+          </div>
+          <div className="monitoring-actions">
+            <button className="button primary blue" onClick={onGoToInfrastructure}>Infrastructure</button>
+            <button className="button outline" onClick={onGoToDeployments}>Deployments</button>
+            <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
+            <button className="button outline" onClick={onGoToSecurity}>Security</button>
+            <button className="button outline" onClick={onGoToLogs}>Logs</button>
+          </div>
+        </Panel>
+      </div>
+
+      <Panel className="monitoring-footer-panel">
+        <div className="panel-head bordered">
+          <h2>Monitoring summary</h2>
+          <button className="button outline" onClick={() => onCopy(workspaceName)}>Copy workspace</button>
+        </div>
+        <div className="monitoring-footer-grid">
+          <div className="monitoring-footer-card">
+            <span>Workspace</span>
+            <strong>{workspaceName}</strong>
+            <small>{usageSummary?.active_api_key_count ?? 0} active keys | {usageSummary?.monthly_request_limit?.toLocaleString() ?? "10M"} monthly request cap</small>
+          </div>
+          <div className="monitoring-footer-card">
+            <span>Health route</span>
+            <strong>`/health`</strong>
+            <small>Operator and API health checks are sourced from the same live endpoint.</small>
+          </div>
+          <div className="monitoring-footer-card">
+            <span>Incident posture</span>
+            <strong>{health?.status === "ok" ? "Clear" : "Watch list"}</strong>
+            <small>{health?.status === "ok" ? "No active incident" : "Review service state before the next deploy."}</small>
+          </div>
+          <div className="monitoring-footer-card">
+            <span>Next action</span>
+            <strong>Keep the API healthy, then roll forward</strong>
+            <small>Monitoring should drive action across deployments, integrations, and security.</small>
+          </div>
+        </div>
+        <div className="monitoring-actions">
+          <button className="button outline" onClick={onGoToActivity}>Activity</button>
+          <button className="button outline" onClick={onGoToLaunch}>Launch</button>
+          <button className="button outline" onClick={onGoToDeployments}>Deployments</button>
+          <button className="button outline" onClick={onGoToLogs}>Logs</button>
+        </div>
+      </Panel>
+    </div>
+  );
+}
+
+function Logs({
+  mode,
+  health,
+  readiness,
+  usageSummary,
+  session,
+  selectedWorkspace,
+  publicApiKey,
+  onGoToMonitoring,
+  onGoToInfrastructure,
+  onGoToDeployments,
+  onGoToIntegrations,
+  onGoToSecurity,
+  onGoToDevelopers,
+  onCopy,
+}: {
+  mode: ConnectionMode;
+  health: CloudHealth | null;
+  readiness: CloudReadiness | null;
+  usageSummary: UsageSummary | null;
+  session: Session;
+  selectedWorkspace: string;
+  publicApiKey: string;
+  onGoToMonitoring: () => void;
+  onGoToInfrastructure: () => void;
+  onGoToDeployments: () => void;
+  onGoToIntegrations: () => void;
+  onGoToSecurity: () => void;
+  onGoToDevelopers: () => void;
+  onCopy: (text: string) => void;
+}) {
+  const [selectedLogId, setSelectedLogId] = useState(demoRequestLogs[0]?.id ?? "");
+  useEffect(() => {
+    if (!demoRequestLogs.some((entry) => entry.id === selectedLogId)) {
+      setSelectedLogId(demoRequestLogs[0]?.id ?? "");
+    }
+  }, [selectedLogId]);
+
+  const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedWorkspace ?? "No workspace selected";
+  const totalRequests = usageSummary?.request_count ?? demoRequestLogs.length;
+  const successfulRequests = demoRequestLogs.filter((entry) => entry.status < 400).length;
+  const clientErrors = demoRequestLogs.filter((entry) => entry.status >= 400 && entry.status < 500).length;
+  const serverErrors = demoRequestLogs.filter((entry) => entry.status >= 500).length;
+  const selectedLog = demoRequestLogs.find((entry) => entry.id === selectedLogId) ?? demoRequestLogs[0];
+  const selectedStatusTone = requestStatusTone(selectedLog.status);
+  const selectedStatusLabel = requestStatusLabel(selectedLog.status);
+  const selectedNextAction = requestLogNextAction(selectedLog);
+  const sessionLabel = session.user?.email ?? (mode === "preview" ? "Preview operator session" : "Operator session required");
+  const apiKeyLabel = publicApiKey.trim() ? "Configured" : "Missing";
+
+  const summaryCards = [
+    { label: "Requests", value: formatNumber(totalRequests), detail: `${formatNumber(successfulRequests)} successful in this snapshot` },
+    { label: "Client errors", value: formatNumber(clientErrors), detail: "4xx responses that need key, scope, or rate-limit review" },
+    { label: "Server errors", value: formatNumber(serverErrors), detail: "5xx responses that need platform attention" },
+    { label: "Workspace", value: workspaceName, detail: readiness?.workspace ? `Selected ${timeAgo(readiness.time)}` : "No live workspace selected" },
+    { label: "API key", value: apiKeyLabel, detail: publicApiKey.trim() ? "Server-side bearer token is present" : "Add CLIENTPAD_API_KEY before making live requests" },
+  ];
+
+  return (
+    <div className="logs-layout">
+      <Panel className="logs-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Logs</h2>
+            <p className="helper-text">Request history, API key usage, and operator-visible failures for the live ClientPad surface.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={mode === "preview" ? "Preview logs" : readiness?.status === "ok" ? "Live logs" : "Logs need review"} />
+        </div>
+        <div className="logs-summary-grid">
+          {summaryCards.map((card) => (
+            <div key={card.label} className="logs-summary-card">
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              <small>{card.detail}</small>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <div className="logs-grid">
+        <Panel className="logs-table-panel table-panel">
+          <div className="panel-head bordered">
+            <h2>Request feed</h2>
+            <StatusChip tone={selectedStatusTone} label={`${selectedStatusLabel} selected`} />
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Method</th>
+                  <th>Path</th>
+                  <th>Status</th>
+                  <th>Latency</th>
+                  <th>Workspace</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {demoRequestLogs.map((entry) => (
+                  <tr
+                    key={entry.id}
+                    className={`logs-row ${selectedLogId === entry.id ? "selected" : ""}`}
+                    onClick={() => setSelectedLogId(entry.id)}
+                  >
+                    <td><Badge tone={requestStatusTone(entry.status)}>{entry.method}</Badge></td>
+                    <td>
+                      <strong>{entry.path}</strong>
+                      <small>{entry.note}</small>
+                    </td>
+                    <td><Badge tone={requestStatusTone(entry.status)}>{entry.status}</Badge></td>
+                    <td>{entry.latency}</td>
+                    <td>{entry.workspace}</td>
+                    <td>{entry.time}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+
+        <Panel className="logs-detail-panel">
+          <div className="panel-head bordered">
+            <h2>Selected request</h2>
+            <button className="button outline" onClick={() => onCopy(selectedLog.requestId)}>Copy request ID</button>
+          </div>
+          <div className="logs-detail-card">
+            <span>Request {selectedLog.requestId}</span>
+            <strong>{selectedLog.method} {selectedLog.path}</strong>
+            <small>{selectedLog.workspace} | {selectedLog.latency} | {selectedLog.time}</small>
+            <div className="logs-detail-metrics">
+              <div>
+                <span>Status</span>
+                <strong><Badge tone={selectedStatusTone}>{selectedLog.status}</Badge></strong>
+              </div>
+              <div>
+                <span>API key</span>
+                <strong>{selectedLog.apiKey === "operator_session" ? "Operator session" : selectedLog.apiKey}</strong>
+              </div>
+              <div>
+                <span>Session</span>
+                <strong>{sessionLabel}</strong>
+              </div>
+            </div>
+            <div className="logs-next-action">
+              <span>Next operator action</span>
+              <strong>{selectedNextAction}</strong>
+            </div>
+            <p className="helper-text">
+              {selectedLog.note}
+            </p>
+          </div>
+          <div className="logs-actions">
+            <button className="button primary blue" onClick={onGoToMonitoring}>Monitoring</button>
+            <button className="button outline" onClick={onGoToDeployments}>Deployments</button>
+            <button className="button outline" onClick={onGoToIntegrations}>Integrations</button>
+            <button className="button outline" onClick={onGoToSecurity}>Security</button>
+            <button className="button outline" onClick={onGoToDevelopers}>Developers</button>
+            <button className="button outline" onClick={onGoToInfrastructure}>Infrastructure</button>
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
 function timeAgo(value: string) {
   const diff = Date.now() - new Date(value).getTime();
   const minutes = Math.max(Math.floor(diff / 60000), 0);
@@ -2800,6 +4192,27 @@ function Badge({ children, tone }: { children: React.ReactNode; tone: "green" | 
   return <span className={`badge ${tone}`}>{children}</span>;
 }
 
+function requestStatusTone(status: number): "green" | "blue" | "gray" | "amber" {
+  if (status >= 500) return "amber";
+  if (status >= 400) return "amber";
+  if (status >= 300) return "blue";
+  return "green";
+}
+
+function requestStatusLabel(status: number) {
+  if (status >= 500) return "5xx";
+  if (status >= 400) return "4xx";
+  if (status >= 300) return "3xx";
+  return "2xx";
+}
+
+function requestLogNextAction(entry: RequestLogEntry) {
+  if (entry.status >= 500) return "Inspect the API service logs and redeploy if the error is reproducible.";
+  if (entry.status >= 429 || entry.status === 403) return "Review key scopes, workspace permissions, and rate limits before retrying.";
+  if (entry.status >= 400) return "Confirm the endpoint, request payload, and workspace configuration before retrying.";
+  return "No immediate action required; keep monitoring the live request stream.";
+}
+
 
 function ConnectWhatsApp({
   mode,
@@ -2821,6 +4234,7 @@ function ConnectWhatsApp({
   const summary = readiness?.summary;
   const workspace = readiness?.workspace;
   const webhookUrl = `${window.location.origin.replace(/\/$/, "")}/whatsapp/webhook`;
+  const publicApiUrl = "https://api.clientpad.xyz/api/public/v1";
   const connectionLabel =
     mode === "preview"
       ? "Preview mode"
@@ -2850,60 +4264,114 @@ function ConnectWhatsApp({
             : !summary?.recent_webhook_count
               ? "Send a test WhatsApp message to confirm webhook traffic."
               : !summary?.has_payment_provider_configuration
-                ? "Connect a payment provider if revenue flows are expected."
+              ? "Connect a payment provider if revenue flows are expected."
                 : "Everything required for live WhatsApp traffic is present.";
+  const summaryCards = [
+    { label: "Operator", value: readiness?.auth?.user?.email ?? "Not signed in", detail: readiness?.auth?.user ? "Operator session confirmed by the backend." : "Sign in before checking live traffic." },
+    { label: "Workspace", value: workspace?.name ?? selectedWorkspace ?? "Missing", detail: workspace ? `${workspace.project_count} projects | ${workspace.key_count} keys` : "Create or select a workspace to continue." },
+    { label: "API key", value: summary?.has_public_api_key ? "Ready" : "Missing", detail: summary?.has_public_api_key ? "Public API access is available." : "Create a workspace public API key first." },
+    { label: "Webhook", value: webhookUrl, detail: "Subscribe Meta to this endpoint for live traffic." },
+  ];
+  const actionCards = [
+    { label: "Projects", title: "Create the first project", detail: "Keep CRM data, business records, and API usage tied to one workspace project.", action: onGoToProjects },
+    { label: "API keys", title: "Create or rotate a key", detail: "Issue a new `cp_live_...` key or revoke the old one before going live.", action: onGoToKeys },
+    { label: "Refresh", title: "Re-run the readiness probe", detail: "Verify the API, WhatsApp config, and webhook pipeline after each deploy.", action: onRefresh },
+  ];
 
   return (
-    <div className="detail-layout connect-layout">
-      <Panel>
+    <div className="connect-layout">
+      <Panel className="connect-hero">
         <div className="panel-head bordered">
-          <h2>WhatsApp connection</h2>
+          <div>
+            <h2>Connect WhatsApp</h2>
+            <p className="helper-text">Finish onboarding by wiring a workspace, API key, and webhook endpoint into the live ClientPad cloud.</p>
+          </div>
           <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={connectionLabel} />
         </div>
-        <p className="helper-text">
-          This screen only shows state the backend can actually prove. If the cloud is connected but WhatsApp is incomplete, the dashboard stays honest about it.
-        </p>
-        <div className="status-stack">
-          {[
-            { label: "API", value: readiness ? "Reachable" : "Not checked yet", ok: Boolean(readiness) },
-            { label: "Operator session", value: readiness?.auth?.user ? "Accepted" : "Pending", ok: Boolean(readiness?.auth?.user) },
-            { label: "Workspace", value: workspace ? workspace.name : selectedWorkspace || "Missing", ok: Boolean(workspace || selectedWorkspace) },
-            { label: "Public API key", value: summary?.has_public_api_key ? "Ready" : "Missing", ok: Boolean(summary?.has_public_api_key) },
-            { label: "WhatsApp config", value: summary?.has_whatsapp_configuration ? "Configured" : "Missing", ok: Boolean(summary?.has_whatsapp_configuration) },
-            { label: "Webhook traffic", value: summary?.recent_webhook_count ? `${summary.recent_webhook_count} recent` : "None yet", ok: Boolean(summary?.recent_webhook_count) },
-          ].map((item) => (
-            <div key={item.label} className="status-item">
-              <span className={item.ok ? "dot good" : "dot warn"} />
-              <div>
-                <strong>{item.label}</strong>
-                <small>{item.value}</small>
-              </div>
-            </div>
+        <div className="connect-summary-grid">
+          {summaryCards.map((card) => (
+            <article key={card.label} className="connect-summary-card">
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              <small>{card.detail}</small>
+            </article>
           ))}
         </div>
+        <div className="connect-actions">
+          <button className="button primary blue" onClick={onGoToProjects}>Create or select project</button>
+          <button className="button outline" onClick={onGoToKeys}>Create API key</button>
+          <button className="button outline" onClick={onRefresh}><Clock size={15} /> Refresh</button>
+          <button className="button outline" onClick={() => onCopy(checklistItems.join("\n"))}><Clipboard size={15} /> Copy checklist</button>
+        </div>
       </Panel>
-      <Panel className="wide-detail setup-card">
+
+      <div className="connect-grid">
+        <Panel className="connect-checks-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Readiness checks</h2>
+              <p className="helper-text">Every line below is a real dependency the backend can prove.</p>
+            </div>
+            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={nextFix === "Everything required for live WhatsApp traffic is present." ? "Ready" : "Needs action"} />
+          </div>
+          <div className="status-stack compact">
+            {[
+              { label: "API", value: readiness ? "Reachable" : "Not checked yet", ok: Boolean(readiness) },
+              { label: "Operator session", value: readiness?.auth?.user ? "Accepted" : "Pending", ok: Boolean(readiness?.auth?.user) },
+              { label: "Workspace", value: workspace ? workspace.name : selectedWorkspace || "Missing", ok: Boolean(workspace || selectedWorkspace) },
+              { label: "Public API key", value: summary?.has_public_api_key ? "Ready" : "Missing", ok: Boolean(summary?.has_public_api_key) },
+              { label: "WhatsApp config", value: summary?.has_whatsapp_configuration ? "Configured" : "Missing", ok: Boolean(summary?.has_whatsapp_configuration) },
+              { label: "Webhook traffic", value: summary?.recent_webhook_count ? `${summary.recent_webhook_count} recent` : "None yet", ok: Boolean(summary?.recent_webhook_count) },
+            ].map((item) => (
+              <div key={item.label} className="status-item">
+                <span className={item.ok ? "dot good" : "dot warn"} />
+                <div>
+                  <strong>{item.label}</strong>
+                  <small>{item.value}</small>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="status-callout">
+            <strong>{connectionLabel}</strong>
+            <p>{nextFix}</p>
+          </div>
+        </Panel>
+
+        <Panel className="connect-side-panel">
+          <div className="panel-head bordered">
+            <h2>Webhook and next steps</h2>
+            <StatusChip tone="blue" label="Operator guide" />
+          </div>
+          <div className="webhook-box">
+            <span>Webhook endpoint</span>
+            <code>{webhookUrl}</code>
+            <small className="helper-text">Mount this endpoint on the host serving your ClientPad webhook handler, then subscribe Meta to it.</small>
+            <div className="inline-actions">
+              <button className="button primary blue" onClick={() => onCopy(webhookUrl)}>Copy URL</button>
+              <button className="button outline" onClick={onGoToKeys}>Open API keys</button>
+            </div>
+          </div>
+          <div className="connect-action-grid">
+            {actionCards.map((card) => (
+              <button key={card.label} className="connect-action-card" onClick={card.action}>
+                <span>{card.label}</span>
+                <strong>{card.title}</strong>
+                <small>{card.detail}</small>
+              </button>
+            ))}
+          </div>
+          <div className="status-callout">
+            <strong>Public API</strong>
+            <p>{publicApiUrl}</p>
+          </div>
+        </Panel>
+      </div>
+
+      <Panel className="connect-diagnostics-panel wide-detail setup-card">
         <div className="panel-head">
           <h2>Connection diagnostics</h2>
-          <div className="inline-actions">
-            <button className="button outline" onClick={onRefresh}><Clock size={15} /> Refresh</button>
-            <button className="button outline" onClick={() => onCopy(checklistItems.join("\n"))}><Clipboard size={15} /> Copy checklist</button>
-          </div>
-        </div>
-        <div className="webhook-box">
-          <span>Webhook endpoint</span>
-          <code>{webhookUrl}</code>
-          <small className="helper-text">Mount this endpoint on the host serving your ClientPad webhook handler, then subscribe Meta to it.</small>
-          <div className="inline-actions">
-            <button className="button primary blue" onClick={() => onCopy(webhookUrl)}>Copy URL</button>
-            <button className="button outline" onClick={onGoToKeys}>Open API keys</button>
-          </div>
-        </div>
-        <div className="status-callout">
-          <strong>{connectionLabel}</strong>
-          <p>
-            {nextFix}
-          </p>
+          <StatusChip tone={diagnostics.length ? "amber" : "green"} label={diagnostics.length ? "Review diagnostics" : "No missing checks"} />
         </div>
         <div className="status-stack">
           {diagnostics.map((item) => (
@@ -2919,10 +4387,6 @@ function ConnectWhatsApp({
         <ol className="checklist">
           {checklistItems.map((item) => <li key={item}>{item}</li>)}
         </ol>
-        <div className="empty-actions">
-          <button className="button primary blue" onClick={onGoToProjects}>Create or select project</button>
-          <button className="button outline" onClick={onGoToKeys}>Create API key</button>
-        </div>
       </Panel>
     </div>
   );
@@ -2974,27 +4438,126 @@ function PipelineScreen({ clients, mode }: { clients: ClientRecord[]; mode: Conn
 }
 
 function ClientSearch({ clients, query, setQuery }: { clients: ClientRecord[]; query: string; setQuery: (query: string) => void }) {
+  const openCount = clients.filter((client) => client.status === "Open").length;
+  const reviewCount = clients.filter((client) => ["Quoted", "Booked", "In Progress"].includes(client.status)).length;
+  const closedCount = clients.filter((client) => ["Completed", "Paid", "Review Requested"].includes(client.status)).length;
+  const totalValue = clients.reduce((sum, client) => sum + client.value, 0);
+  const averageValue = clients.length ? Math.round(totalValue / clients.length) : 0;
+  const visibleHint = query.trim() || "All clients";
+
   return (
     <div className="detail-layout single">
-      <Panel>
-        <h2>Phone/name lookup</h2>
+      <Panel className="lookup-hero-panel">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Phone/name lookup</h2>
+            <p className="helper-text">Fast CRM-style search for developers and service teams. Query names, phone fragments, stages, or services.</p>
+          </div>
+          <StatusChip tone="blue" label={`${clients.length} matches`} />
+        </div>
+        <div className="lookup-summary-grid">
+          <article className="lookup-summary-card">
+            <span>Matched</span>
+            <strong>{clients.length}</strong>
+            <small>Visible threads in the current lookup.</small>
+          </article>
+          <article className="lookup-summary-card">
+            <span>Open</span>
+            <strong>{openCount}</strong>
+            <small>Threads still waiting on an operator.</small>
+          </article>
+          <article className="lookup-summary-card">
+            <span>Review</span>
+            <strong>{reviewCount}</strong>
+            <small>Quoted, booked, or in-progress clients.</small>
+          </article>
+          <article className="lookup-summary-card">
+            <span>Average value</span>
+            <strong>${averageValue.toLocaleString()}</strong>
+            <small>Average deal size for the current set.</small>
+          </article>
+        </div>
         <label className="lookup-input">
           <Search size={18} />
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Type +234..., 0803..., Ada, Musa..." />
         </label>
-        <p className="helper-text">Search removes spaces, dashes, parentheses, and leading + so phone lookups stay fast on low-data Android devices.</p>
-      </Panel>
-      <Panel className="table-panel wide-detail">
-        <div className="panel-head bordered"><h2>Matched clients <span>{clients.length}</span></h2></div>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Name</th><th>Phone</th><th>Stage</th><th>Service</th><th>Value</th><th>Last message</th></tr></thead>
-            <tbody>{clients.map((client) => (
-              <tr key={client.id}><td>{client.name}</td><td><a>{client.phone}</a></td><td>{client.status}</td><td>{client.service}</td><td>${client.value.toLocaleString()}</td><td>{client.lastMessage}</td></tr>
-            ))}</tbody>
-          </table>
+        <div className="lookup-preset-row">
+          {lookupPresets.map((preset) => (
+            <button key={preset.value} className="lookup-preset" type="button" onClick={() => setQuery(preset.value)}>
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <div className="lookup-action-row">
+          <StatusChip tone="green" label="Low-data friendly" />
+          <span className="helper-text">Search strips spaces, dashes, parentheses, and leading + so phone lookups stay fast on low-data Android devices.</span>
         </div>
       </Panel>
+
+      <div className="detail-layout">
+        <Panel className="table-panel wide-detail">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Matched clients <span>{clients.length}</span></h2>
+              <p className="helper-text">Click a phone number to reuse it in the search box and narrow the list.</p>
+            </div>
+            <StatusChip tone={clients.length ? "green" : "amber"} label={clients.length ? "Results ready" : "No results"} />
+          </div>
+          {clients.length > 0 ? (
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Name</th><th>Phone</th><th>Stage</th><th>Service</th><th>Value</th><th>Last message</th></tr></thead>
+                <tbody>{clients.map((client) => (
+                  <tr key={client.id}>
+                    <td><button className="inline-link" type="button" onClick={() => setQuery(client.name)}>{client.name}</button></td>
+                    <td><button className="inline-link" type="button" onClick={() => setQuery(client.phone)}>{client.phone}</button></td>
+                    <td><span className={`status-pill stage-${client.status.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>{client.status}</span></td>
+                    <td>{client.service}</td>
+                    <td>${client.value.toLocaleString()}</td>
+                    <td>{client.lastMessage}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="empty-state-panel compact lookup-empty">
+              <h3>No matches yet</h3>
+              <p>Try a shorter phone fragment, a stage like Quoted or Booked, or one of the sample queries above.</p>
+              <div className="empty-actions">
+                <button className="button outline" type="button" onClick={() => setQuery("")}>Clear search</button>
+                <button className="button primary blue" type="button" onClick={() => setQuery("Ada")}>Try Ada</button>
+              </div>
+            </div>
+          )}
+        </Panel>
+
+        <Panel className="lookup-side-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Lookup guide</h2>
+              <p className="helper-text">Built for operators who need to move quickly between threads and client records.</p>
+            </div>
+            <StatusChip tone="blue" label="Operator help" />
+          </div>
+          <div className="lookup-side-list">
+            <article className="lookup-side-card">
+              <span>Current query</span>
+              <strong>{visibleHint}</strong>
+              <small>Use exact names, short phone fragments, or pipeline stages.</small>
+            </article>
+            <article className="lookup-side-card">
+              <span>Best patterns</span>
+              <strong>Phone, stage, service</strong>
+              <small>Search works best with customer name, WhatsApp number, or service label.</small>
+            </article>
+            <article className="lookup-side-card">
+              <span>Next move</span>
+              <strong>{closedCount} closed or completed clients</strong>
+              <small>Use the inbox or pipeline pages after lookup to continue the workflow.</small>
+            </article>
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }
@@ -3021,6 +4584,8 @@ function TeamInbox({
   const [loading, setLoading] = useState(true);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<(typeof inboxFilters)[number]["key"]>("all");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const sdk = useMemo(() => {
@@ -3065,6 +4630,38 @@ function TeamInbox({
     }).catch(err => console.error("Failed to load conversation detail", err));
   }, [selectedId, sdk, publicApiKey]);
 
+  const filteredConversations = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return conversations.filter((conversation) => {
+      const searchText = [
+        conversation.contact_name,
+        conversation.phone,
+        conversation.ai_summary,
+        conversation.ai_intent,
+        conversation.status,
+      ].filter(Boolean).join(" ").toLowerCase();
+      const matchesQuery = !needle || searchText.includes(needle);
+      const matchesFilter =
+        filter === "all" ||
+        (filter === "open" && conversation.status === "open") ||
+        (filter === "review" && (conversation.requires_owner_approval || conversation.status === "pending")) ||
+        (filter === "archived" && conversation.status === "archived");
+      return matchesQuery && matchesFilter;
+    });
+  }, [conversations, filter, query]);
+
+  useEffect(() => {
+    if (!filteredConversations.length) {
+      if (selectedId && !conversations.some((conversation) => conversation.id === selectedId)) {
+        setSelectedId(null);
+      }
+      return;
+    }
+    if (!filteredConversations.some((conversation) => conversation.id === selectedId)) {
+      setSelectedId(filteredConversations[0].id);
+    }
+  }, [conversations, filteredConversations, selectedId]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -3072,6 +4669,12 @@ function TeamInbox({
   }, [messages]);
 
   const selectedConversation = conversations.find(c => c.id === selectedId);
+  const openConversationCount = conversations.filter((conversation) => conversation.status === "open").length;
+  const reviewQueueCount = conversations.filter((conversation) => conversation.requires_owner_approval || conversation.status === "pending").length;
+  const archivedConversationCount = conversations.filter((conversation) => conversation.status === "archived").length;
+  const draftCount = suggestions.length;
+  const selectedStage = (selectedConversation as any)?.lead_pipeline_stage || "New Lead";
+  const selectedSummary = selectedConversation?.ai_summary || "Select a live conversation to review the latest customer context.";
 
   async function sendReply(textOverride?: string) {
     if (!selectedId) return;
@@ -3136,44 +4739,122 @@ function TeamInbox({
   }
 
   return (
+    <div className="inbox-stack">
+      <Panel className="inbox-summary-panel">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Team inbox</h2>
+            <p className="helper-text">A simple operator surface for customer conversations, approval queues, and AI drafts.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : readiness?.summary.has_public_api_key ? "green" : "amber"} label={mode === "preview" ? "Preview inbox" : readiness?.summary.has_public_api_key ? "Live inbox" : "Live inbox needs key"} />
+        </div>
+        <div className="inbox-summary-grid">
+          <article className="inbox-summary-card">
+            <span>Open threads</span>
+            <strong>{openConversationCount}</strong>
+            <small>Customer conversations awaiting a response.</small>
+          </article>
+          <article className="inbox-summary-card">
+            <span>Review queue</span>
+            <strong>{reviewQueueCount}</strong>
+            <small>Messages that need an owner before they can go out.</small>
+          </article>
+          <article className="inbox-summary-card">
+            <span>AI drafts</span>
+            <strong>{draftCount}</strong>
+            <small>Suggested replies ready to edit or send.</small>
+          </article>
+          <article className="inbox-summary-card">
+            <span>Selected stage</span>
+            <strong>{selectedStage}</strong>
+            <small>{selectedConversation ? "Current thread pipeline stage." : "Pick a thread to see pipeline context."}</small>
+          </article>
+        </div>
+      </Panel>
+
+      <div className="inbox-toolbar">
+        <label className="inbox-search">
+          <Search size={16} />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search by name, phone, intent, or summary"
+          />
+        </label>
+        <div className="inbox-filter-tabs" role="tablist" aria-label="Inbox filters">
+          {inboxFilters.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              className={`range-tab ${filter === option.key ? "selected" : ""}`}
+              onClick={() => setFilter(option.key)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <div className="inbox-toolbar-meta">
+          <span>{filteredConversations.length} visible</span>
+          <span>{archivedConversationCount} archived</span>
+        </div>
+      </div>
+
     <div className="inbox-layout">
       <Panel className="conversation-list">
-        <div className="panel-head">
-          <h2>Conversations</h2>
+        <div className="panel-head bordered">
+          <div>
+            <h2>Conversations</h2>
+            <p className="helper-text">Open one thread, resolve the request, and move it through the pipeline.</p>
+          </div>
           <StatusChip tone={mode === "preview" ? "blue" : readiness?.summary.has_public_api_key ? "green" : "amber"} label={mode === "preview" ? "Preview inbox" : readiness?.summary.has_public_api_key ? "Live inbox" : "Live inbox needs key"} />
         </div>
         <div className="scroll-area">
-          {loading ? <p className="loading">Loading...</p> : conversations.map((c) => (
-            <button 
-              key={c.id} 
-              className={`conversation ${selectedId === c.id ? "active" : ""}`}
-              onClick={() => setSelectedId(c.id)}
-            >
-              <div className="conv-header">
-                <strong>{c.contact_name || c.phone}</strong>
-                <small>{c.last_message_at ? new Date(c.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}</small>
-              </div>
-              <p className="preview">{c.ai_summary || "No messages yet"}</p>
-              <div className="conv-badges">
-                {c.requires_owner_approval && <Badge tone="blue">Owner Approval</Badge>}
-                {c.ai_intent && <Badge tone="gray">{c.ai_intent}</Badge>}
-                {c.status ? <Badge tone={c.status === "open" ? "green" : "gray"}>{c.status}</Badge> : null}
-              </div>
-            </button>
-          ))}
-          {!loading && conversations.length === 0 && <p className="empty">No live conversations yet. Send a test WhatsApp message or connect the public API key to start seeing traffic.</p>}
+          {loading ? <p className="loading">Loading...</p> : filteredConversations.map((conversation) => {
+            const avatar = getInitials(conversation.contact_name || conversation.phone);
+            return (
+              <button
+                key={conversation.id}
+                className={`conversation ${selectedId === conversation.id ? "active" : ""}`}
+                onClick={() => setSelectedId(conversation.id)}
+              >
+                <div className="conversation-top">
+                  <div className="conversation-avatar">{avatar}</div>
+                  <div className="conversation-copy">
+                    <div className="conv-header">
+                      <strong>{conversation.contact_name || conversation.phone}</strong>
+                      <small>{conversation.last_message_at ? new Date(conversation.last_message_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "New"}</small>
+                    </div>
+                    <p className="preview">{conversation.ai_summary || "No messages yet"}</p>
+                  </div>
+                </div>
+                <div className="conv-badges">
+                  {conversation.requires_owner_approval && <Badge tone="blue">Owner Approval</Badge>}
+                  {conversation.ai_intent && <Badge tone="gray">{conversation.ai_intent}</Badge>}
+                  {conversation.status ? <Badge tone={conversation.status === "open" ? "green" : "gray"}>{conversation.status}</Badge> : null}
+                </div>
+              </button>
+            );
+          })}
+          {!loading && filteredConversations.length === 0 && <p className="empty">No conversations match the current search or filter.</p>}
         </div>
       </Panel>
 
       <Panel className="timeline-panel">
         {selectedConversation ? (
           <>
-            <div className="panel-head">
-              <div className="header-info">
-                <h2>{selectedConversation.contact_name || selectedConversation.phone}</h2>
-                <Badge tone={selectedConversation.status === "open" ? "green" : "gray"}>
-                  {selectedConversation.status.toUpperCase()}
-                </Badge>
+            <div className="panel-head bordered">
+              <div className="header-info inbox-thread-head">
+                <div>
+                  <h2>{selectedConversation.contact_name || selectedConversation.phone}</h2>
+                  <p className="helper-text">{selectedSummary}</p>
+                </div>
+                <div className="header-meta-row">
+                  <Badge tone={selectedConversation.status === "open" ? "green" : "gray"}>
+                    {selectedConversation.status.toUpperCase()}
+                  </Badge>
+                  {selectedConversation.ai_intent ? <Badge tone="blue">{selectedConversation.ai_intent}</Badge> : null}
+                  <Badge tone="gray">{selectedConversation.phone}</Badge>
+                </div>
               </div>
               <div className="header-actions">
                 <button className="button outline" onClick={() => updateStatus("closed")}>Close</button>
@@ -3187,21 +4868,28 @@ function TeamInbox({
                     {m.direction === "inbound" ? <User size={14} /> : <Bot size={14} />}
                   </div>
                   <div className="bubble">
+                    <div className="bubble-meta">
+                      <strong>{m.direction === "inbound" ? "Customer" : "ClientPad"}</strong>
+                      <small>{new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</small>
+                    </div>
                     <p>{m.message_text}</p>
-                    <small>{new Date(m.created_at).toLocaleTimeString()}</small>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="composer">
-              <textarea 
-                placeholder="Type a reply..." 
+            <div className="composer inbox-composer">
+              <div className="composer-label">
+                <strong>Compose reply</strong>
+                <span>Keep the customer moving. Use AI drafts from the right panel when useful.</span>
+              </div>
+              <textarea
+                placeholder="Type a reply..."
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
                 disabled={sending}
               />
-              <button 
-                className="button primary blue" 
+              <button
+                className="button primary blue"
                 onClick={() => sendReply()}
                 disabled={sending || !replyText.trim()}
               >
@@ -3220,6 +4908,7 @@ function TeamInbox({
           <h2>AI Drafts</h2>
           <StatusChip tone="green" label={`${suggestions.length} drafts`} />
         </div>
+        <p className="helper-text">These drafts can be edited before they go out. Keep the workflow simple and human-reviewed.</p>
         <div className="suggestions-list">
           {suggestions.length > 0 ? suggestions.map((s, i) => (
             <div key={i} className="suggestion-card">
@@ -3255,7 +4944,7 @@ function TeamInbox({
             <div className="lead-info">
               <div className="info-row">
                 <span>Pipeline Stage</span>
-                <strong>{(selectedConversation as any).lead_pipeline_stage || "New Lead"}</strong>
+                <strong>{selectedStage}</strong>
               </div>
               <div className="info-row">
                 <span>Phone</span>
@@ -3274,28 +4963,98 @@ function TeamInbox({
                 {serviceStages.map(s => <option key={s} value={s.toLowerCase().replace(" ", "_")}>{s}</option>)}
               </select>
             </div>
+            <div className="next-step-card">
+              <span>Next best action</span>
+              <strong>{selectedConversation.requires_owner_approval ? "Review and approve the draft before sending." : "Reply with the latest customer context and move it through the pipeline."}</strong>
+            </div>
           </div>
         )}
       </Panel>
+    </div>
     </div>
   );
 }
 
 function TeamInboxDemo() {
+  const totalOpen = demoConversations.filter((conversation) => conversation.status === "open").length;
   return (
-    <div className="inbox-layout">
+    <div className="inbox-stack">
+      <Panel className="inbox-summary-panel">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Team inbox</h2>
+            <p className="helper-text">Preview mode shows the CRM workflow without live API traffic.</p>
+          </div>
+          <StatusChip tone="blue" label="Preview inbox" />
+        </div>
+        <div className="inbox-summary-grid">
+          <article className="inbox-summary-card">
+            <span>Open threads</span>
+            <strong>{totalOpen}</strong>
+            <small>Preview conversations ready for a reply.</small>
+          </article>
+          <article className="inbox-summary-card">
+            <span>Review queue</span>
+            <strong>1</strong>
+            <small>Owner approval is required before the next send.</small>
+          </article>
+          <article className="inbox-summary-card">
+            <span>AI drafts</span>
+            <strong>{demoReplies.length}</strong>
+            <small>Suggested replies for fast operator follow-up.</small>
+          </article>
+          <article className="inbox-summary-card">
+            <span>Selected stage</span>
+            <strong>In Progress</strong>
+            <small>The preview thread is already moving through the pipeline.</small>
+          </article>
+        </div>
+      </Panel>
+      <div className="inbox-toolbar">
+        <label className="inbox-search">
+          <Search size={16} />
+          <input defaultValue="Ada, Musa, or Zuri" />
+        </label>
+        <div className="inbox-filter-tabs">
+          {inboxFilters.map((option, index) => (
+            <button key={option.key} className={`range-tab ${index === 1 ? "selected" : ""}`}>{option.label}</button>
+          ))}
+        </div>
+        <div className="inbox-toolbar-meta">
+          <span>{demoConversations.length} visible</span>
+          <span>1 archived</span>
+        </div>
+      </div>
+      <div className="inbox-layout">
       <Panel className="conversation-list">
-        <h2>Conversations</h2>
+        <div className="panel-head bordered">
+          <div>
+            <h2>Conversations</h2>
+            <p className="helper-text">The client-facing inbox stays simple and readable.</p>
+          </div>
+          <StatusChip tone="blue" label="Preview inbox" />
+        </div>
         {demoConversations.map((conversation, index) => (
           <button key={conversation.name} className={index === 0 ? "conversation active" : "conversation"}>
-            <strong>{conversation.name}</strong>
-            <span>{conversation.preview}</span>
+            <div className="conversation-top">
+              <div className="conversation-avatar">{getInitials(conversation.name)}</div>
+              <div className="conversation-copy">
+                <strong>{conversation.name}</strong>
+                <span>{conversation.preview}</span>
+              </div>
+            </div>
             <small>{conversation.time}</small>
           </button>
         ))}
       </Panel>
       <Panel className="timeline-panel">
-        <div className="panel-head"><h2>Message timeline</h2><Badge tone="green">Assigned</Badge></div>
+        <div className="panel-head bordered">
+          <div>
+            <h2>Message timeline</h2>
+            <p className="helper-text">A concise exchange between the customer and the operator.</p>
+          </div>
+          <Badge tone="green">Assigned</Badge>
+        </div>
         <div className="messages">
           <p className="bubble inbound">Hi, can I get the quote for AC servicing today?</p>
           <p className="bubble outbound">Yes - NGN 45,000 including call-out. We can book 3 PM.</p>
@@ -3304,30 +5063,156 @@ function TeamInboxDemo() {
         <label className="mention-field">Assignment / mentions<input defaultValue="@Aisha assigned | @Ops please watch payment" /></label>
       </Panel>
       <Panel className="quick-replies">
-        <h2>Quick reply suggestions</h2>
+        <div className="panel-head bordered">
+          <div>
+            <h2>Quick reply suggestions</h2>
+            <p className="helper-text">Use a draft, then edit the text before sending it live.</p>
+          </div>
+          <StatusChip tone="green" label={`${demoReplies.length} drafts`} />
+        </div>
         {demoReplies.map((reply) => <button className="reply-chip" key={reply}>{reply}</button>)}
+        <div className="lead-panel">
+          <h3>Lead Context</h3>
+          <div className="lead-info">
+            <div className="info-row"><span>Pipeline Stage</span><strong>In Progress</strong></div>
+            <div className="info-row"><span>Phone</span><strong>+234 801 555 9021</strong></div>
+            <div className="info-row"><span>Intent</span><strong>Quote request</strong></div>
+          </div>
+        </div>
       </Panel>
+      </div>
     </div>
   );
 }
 
-function RevenueDashboard() {
+function RevenueDashboard({
+  onGoToBilling,
+  onGoToUsage,
+  onGoToKeys,
+}: {
+  onGoToBilling: () => void;
+  onGoToUsage: () => void;
+  onGoToKeys: () => void;
+}) {
   const totalPaid = demoRevenue.reduce((sum, client) => sum + client.amount, 0);
   const pending = demoClients.filter((client) => ["Quoted", "Booked", "Completed"].includes(client.status)).reduce((sum, client) => sum + client.value, 0);
+  const paidCount = demoRevenue.length;
+  const pendingCount = demoClients.filter((client) => ["Quoted", "Booked", "In Progress"].includes(client.status)).length;
+  const collectionRate = Math.round((paidCount / Math.max(demoClients.length, 1)) * 100);
+  const providerTotals = demoRevenue.reduce<Record<RevenueClient["provider"], number>>((totals, client) => {
+    totals[client.provider] = (totals[client.provider] ?? 0) + client.amount;
+    return totals;
+  }, { Paystack: 0, Flutterwave: 0 });
+  const averageReceipt = Math.round(totalPaid / Math.max(demoRevenue.length, 1));
+  const lastPayout = demoRevenue[0]?.paidAt ?? "May 8, 2026";
   return (
-    <div className="detail-layout single">
-      <div className="metric-grid revenue-metrics">
-        <Panel><span className="metric-label">Total paid</span><strong className="metric-value">${totalPaid.toLocaleString()}</strong></Panel>
-        <Panel><span className="metric-label">Pending payments</span><strong className="metric-value">${pending.toLocaleString()}</strong></Panel>
-        <Panel><span className="metric-label">Paystack</span><strong className="metric-value healthy">Live</strong><small>Webhook synced 2 min ago</small></Panel>
-        <Panel><span className="metric-label">Flutterwave</span><strong className="metric-value healthy">Live</strong><small>Settlement pending: $420</small></Panel>
-      </div>
-      <Panel className="table-panel wide-detail">
-        <div className="panel-head bordered"><h2>Recent paid clients</h2><span>{demoRevenue.length} payments</span></div>
-        <div className="table-wrap"><table><thead><tr><th>Client</th><th>Phone</th><th>Amount</th><th>Provider</th><th>Paid at</th></tr></thead><tbody>
-          {demoRevenue.map((client) => <tr key={`${client.phone}-${client.paidAt}`}><td>{client.name}</td><td>{client.phone}</td><td>${client.amount.toLocaleString()}</td><td>{client.provider}</td><td>{client.paidAt}</td></tr>)}
-        </tbody></table></div>
+    <div className="revenue-layout">
+      <Panel className="revenue-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Revenue and collections</h2>
+            <p className="helper-text">Payment tracking for service businesses, with live provider posture and quick operator actions.</p>
+          </div>
+          <StatusChip tone="green" label="Collections live" />
+        </div>
+        <div className="revenue-summary-grid">
+          <article className="revenue-summary-card">
+            <span>Total paid</span>
+            <strong>${totalPaid.toLocaleString()}</strong>
+            <small>{paidCount} settled payments from the current revenue set.</small>
+          </article>
+          <article className="revenue-summary-card">
+            <span>Pending pipeline</span>
+            <strong>${pending.toLocaleString()}</strong>
+            <small>{pendingCount} clients are quoted, booked, or in progress.</small>
+          </article>
+          <article className="revenue-summary-card">
+            <span>Collection rate</span>
+            <strong>{collectionRate}%</strong>
+            <small>Paid receipts compared with total client records.</small>
+          </article>
+          <article className="revenue-summary-card">
+            <span>Average receipt</span>
+            <strong>${averageReceipt.toLocaleString()}</strong>
+            <small>Average paid ticket size from the recent payment trail.</small>
+          </article>
+        </div>
+        <div className="revenue-provider-grid">
+          <article className="revenue-provider-card">
+            <span>Paystack</span>
+            <strong className="healthy">Live</strong>
+            <small>${providerTotals.Paystack.toLocaleString()} collected • webhook synced 2 min ago</small>
+          </article>
+          <article className="revenue-provider-card">
+            <span>Flutterwave</span>
+            <strong className="healthy">Live</strong>
+            <small>${providerTotals.Flutterwave.toLocaleString()} collected • settlement pending: $420</small>
+          </article>
+          <article className="revenue-provider-card">
+            <span>Last payout</span>
+            <strong>{lastPayout}</strong>
+            <small>Most recent settlement posted to the dashboard timeline.</small>
+          </article>
+        </div>
       </Panel>
+
+      <div className="revenue-grid">
+        <Panel className="revenue-table-card">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Recent paid clients</h2>
+              <p className="helper-text">Use this table to confirm settled jobs and spot provider or receipt mismatches.</p>
+            </div>
+            <StatusChip tone="blue" label={`${demoRevenue.length} payments`} />
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Client</th><th>Phone</th><th>Amount</th><th>Provider</th><th>Paid at</th></tr>
+              </thead>
+              <tbody>
+                {demoRevenue.map((client) => (
+                  <tr key={`${client.phone}-${client.paidAt}`}>
+                    <td>{client.name}</td>
+                    <td>{client.phone}</td>
+                    <td>${client.amount.toLocaleString()}</td>
+                    <td><span className={`status-pill provider-${client.provider.toLowerCase()}`}>{client.provider}</span></td>
+                    <td>{client.paidAt}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+
+        <Panel className="revenue-side-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Billing ops</h2>
+              <p className="helper-text">Jump to the places operators use to resolve billing and usage problems.</p>
+            </div>
+            <StatusChip tone="green" label="Operator actions" />
+          </div>
+          <div className="revenue-action-list">
+            <button className="revenue-action-card" onClick={onGoToBilling}>
+              <span>Billing</span>
+              <strong>Review plans, upgrade paths, and checkout links.</strong>
+            </button>
+            <button className="revenue-action-card" onClick={onGoToUsage}>
+              <span>Usage</span>
+              <strong>Check requests, rejections, and remaining capacity.</strong>
+            </button>
+            <button className="revenue-action-card" onClick={onGoToKeys}>
+              <span>API keys</span>
+              <strong>Confirm which keys are live and safe to expose.</strong>
+            </button>
+          </div>
+          <div className="revenue-note-card">
+            <span>Next action</span>
+            <strong>{pendingCount ? "Follow up on quoted and booked clients to close the cash gap." : "Collections are clean. Keep monitoring receipts and provider sync."}</strong>
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }
@@ -3355,6 +5240,15 @@ function CopyButton({ text }: { text: string }) {
       {done ? "Copied" : "Copy"}
     </button>
   );
+}
+
+function getInitials(value: string) {
+  const parts = value
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .slice(0, 2);
+  if (parts.length === 0) return "CP";
+  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("").slice(0, 2) || "CP";
 }
 
 class CloudApi {
@@ -3675,9 +5569,9 @@ const demoRevenue: RevenueClient[] = [
 ];
 
 const demoConversations = [
-  { name: "Ada Okafor", preview: "Please confirm roof photos.", time: "09:42" },
-  { name: "Musa Bello", preview: "Can you discount the generator repair?", time: "08:18" },
-  { name: "Zuri Homes", preview: "Friday still works for us.", time: "Yesterday" },
+  { name: "Ada Okafor", preview: "Please confirm roof photos.", time: "09:42", status: "open" },
+  { name: "Musa Bello", preview: "Can you discount the generator repair?", time: "08:18", status: "pending" },
+  { name: "Zuri Homes", preview: "Friday still works for us.", time: "Yesterday", status: "archived" },
 ];
 
 const demoReplies = [
@@ -3734,6 +5628,55 @@ const demoDeployments: DeploymentRecord[] = [
     trigger: "GitHub push",
     note: "Public marketing pages, footer, and open-source positioning ship here.",
   },
+];
+
+const demoWebhookDeliveries: WebhookDelivery[] = [
+  {
+    id: "wh_001",
+    event: "conversation.opened",
+    endpoint: "https://clientpad.xyz/whatsapp/webhook",
+    status: "delivered",
+    attempts: 1,
+    time: "38m ago",
+    response: "200 OK in 84ms",
+  },
+  {
+    id: "wh_002",
+    event: "lead.created",
+    endpoint: "https://clientpad.xyz/whatsapp/webhook",
+    status: "delivered",
+    attempts: 1,
+    time: "52m ago",
+    response: "200 OK in 73ms",
+  },
+  {
+    id: "wh_003",
+    event: "payment.completed",
+    endpoint: "https://clientpad.xyz/whatsapp/webhook",
+    status: "retrying",
+    attempts: 2,
+    time: "1h ago",
+    response: "408 Timeout, retry scheduled",
+  },
+  {
+    id: "wh_004",
+    event: "client.replied",
+    endpoint: "https://clientpad.xyz/whatsapp/webhook",
+    status: "delivered",
+    attempts: 1,
+    time: "2h ago",
+    response: "200 OK in 91ms",
+  },
+];
+
+const demoRequestLogs: RequestLogEntry[] = [
+  { id: "req_01", method: "POST", path: "/api/cloud/v1/auth/login", status: 200, latency: "82ms", requestId: "req-01-8f3e", apiKey: "operator_session", workspace: "Acme Corp", time: "32s ago", note: "Operator signed in and loaded workspace state." },
+  { id: "req_02", method: "GET", path: "/api/cloud/v1/readiness", status: 200, latency: "91ms", requestId: "req-02-4b1c", apiKey: "cp_live_444f", workspace: "Acme Corp", time: "1m ago", note: "Monitoring refreshed health, webhook, and workspace status." },
+  { id: "req_03", method: "POST", path: "/api/cloud/v1/webhooks", status: 201, latency: "118ms", requestId: "req-03-9d02", apiKey: "cp_live_444f", workspace: "Staging API", time: "3m ago", note: "Integration delivery accepted and queued for processing." },
+  { id: "req_04", method: "GET", path: "/api/public/v1/resources", status: 200, latency: "147ms", requestId: "req-04-1ea9", apiKey: "cp_live_2a7b", workspace: "Internal Tools", time: "6m ago", note: "Developer SDK read a public resource from the API." },
+  { id: "req_05", method: "POST", path: "/api/public/v1/leads", status: 429, latency: "203ms", requestId: "req-05-7c41", apiKey: "cp_live_9c3d", workspace: "Sandbox", time: "9m ago", note: "Rate limit hit, retry suggested after backoff." },
+  { id: "req_06", method: "DELETE", path: "/api/cloud/v1/api-keys/api_key_2a7b", status: 204, latency: "74ms", requestId: "req-06-b802", apiKey: "operator_session", workspace: "Acme Corp", time: "14m ago", note: "API key rotation completed from the dashboard." },
+  { id: "req_07", method: "PATCH", path: "/api/cloud/v1/projects/project_1a7d9c3e", status: 403, latency: "88ms", requestId: "req-07-2f6d", apiKey: "cp_live_444f", workspace: "Staging API", time: "19m ago", note: "Permission denied for a non-owner request." },
 ];
 
 function demoReadinessWorkspace(
@@ -3911,6 +5854,12 @@ function titleForPage(page: Page) {
     launch: "Launch",
     infrastructure: "Infrastructure",
     deployments: "Deployments",
+    developers: "Developers",
+    activity: "Activity",
+    integrations: "Integrations",
+    security: "Security",
+    monitoring: "Monitoring",
+    logs: "Logs",
     docs: "Docs",
     settings: "Settings",
   }[page];
@@ -3931,6 +5880,12 @@ function subtitleForPage(page: Page, project?: Project) {
     launch: "Verify production services before sending customers traffic",
     infrastructure: "Platform, API, docs, and public host mapping",
     deployments: "GitHub pushes, Render releases, and service rollout history",
+    developers: "Developer onboarding, SDK setup, and API error handling",
+    activity: "Recent deploys, operator actions, and request history",
+    integrations: "Webhook delivery, retries, and integration posture",
+    security: "API key posture, sessions, and threat handling",
+    monitoring: "Health, latency, uptime, and error posture",
+    logs: "Request history, API key usage, and response codes",
     docs: "SDK and API snippets developers can copy into apps",
     settings: "API connection and operator settings",
   }[page];
