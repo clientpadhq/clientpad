@@ -339,6 +339,13 @@ const inboxFilters = [
   { key: "review", label: "Review" },
   { key: "archived", label: "Archived" },
 ] as const;
+const lookupPresets = [
+  { label: "Ada", value: "Ada" },
+  { label: "0803", value: "0803" },
+  { label: "Quoted", value: "Quoted" },
+  { label: "Booked", value: "Booked" },
+  { label: "Paid", value: "Paid" },
+] as const;
 
 const sessionKey = "clientpad.cloud.session";
 const dashboardThemeKey = "clientpad.dashboard.theme";
@@ -4425,27 +4432,126 @@ function PipelineScreen({ clients, mode }: { clients: ClientRecord[]; mode: Conn
 }
 
 function ClientSearch({ clients, query, setQuery }: { clients: ClientRecord[]; query: string; setQuery: (query: string) => void }) {
+  const openCount = clients.filter((client) => client.status === "Open").length;
+  const reviewCount = clients.filter((client) => ["Quoted", "Booked", "In Progress"].includes(client.status)).length;
+  const closedCount = clients.filter((client) => ["Completed", "Paid", "Review Requested"].includes(client.status)).length;
+  const totalValue = clients.reduce((sum, client) => sum + client.value, 0);
+  const averageValue = clients.length ? Math.round(totalValue / clients.length) : 0;
+  const visibleHint = query.trim() || "All clients";
+
   return (
     <div className="detail-layout single">
-      <Panel>
-        <h2>Phone/name lookup</h2>
+      <Panel className="lookup-hero-panel">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Phone/name lookup</h2>
+            <p className="helper-text">Fast CRM-style search for developers and service teams. Query names, phone fragments, stages, or services.</p>
+          </div>
+          <StatusChip tone="blue" label={`${clients.length} matches`} />
+        </div>
+        <div className="lookup-summary-grid">
+          <article className="lookup-summary-card">
+            <span>Matched</span>
+            <strong>{clients.length}</strong>
+            <small>Visible threads in the current lookup.</small>
+          </article>
+          <article className="lookup-summary-card">
+            <span>Open</span>
+            <strong>{openCount}</strong>
+            <small>Threads still waiting on an operator.</small>
+          </article>
+          <article className="lookup-summary-card">
+            <span>Review</span>
+            <strong>{reviewCount}</strong>
+            <small>Quoted, booked, or in-progress clients.</small>
+          </article>
+          <article className="lookup-summary-card">
+            <span>Average value</span>
+            <strong>${averageValue.toLocaleString()}</strong>
+            <small>Average deal size for the current set.</small>
+          </article>
+        </div>
         <label className="lookup-input">
           <Search size={18} />
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Type +234..., 0803..., Ada, Musa..." />
         </label>
-        <p className="helper-text">Search removes spaces, dashes, parentheses, and leading + so phone lookups stay fast on low-data Android devices.</p>
-      </Panel>
-      <Panel className="table-panel wide-detail">
-        <div className="panel-head bordered"><h2>Matched clients <span>{clients.length}</span></h2></div>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Name</th><th>Phone</th><th>Stage</th><th>Service</th><th>Value</th><th>Last message</th></tr></thead>
-            <tbody>{clients.map((client) => (
-              <tr key={client.id}><td>{client.name}</td><td><a>{client.phone}</a></td><td>{client.status}</td><td>{client.service}</td><td>${client.value.toLocaleString()}</td><td>{client.lastMessage}</td></tr>
-            ))}</tbody>
-          </table>
+        <div className="lookup-preset-row">
+          {lookupPresets.map((preset) => (
+            <button key={preset.value} className="lookup-preset" type="button" onClick={() => setQuery(preset.value)}>
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <div className="lookup-action-row">
+          <StatusChip tone="green" label="Low-data friendly" />
+          <span className="helper-text">Search strips spaces, dashes, parentheses, and leading + so phone lookups stay fast on low-data Android devices.</span>
         </div>
       </Panel>
+
+      <div className="detail-layout">
+        <Panel className="table-panel wide-detail">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Matched clients <span>{clients.length}</span></h2>
+              <p className="helper-text">Click a phone number to reuse it in the search box and narrow the list.</p>
+            </div>
+            <StatusChip tone={clients.length ? "green" : "amber"} label={clients.length ? "Results ready" : "No results"} />
+          </div>
+          {clients.length > 0 ? (
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Name</th><th>Phone</th><th>Stage</th><th>Service</th><th>Value</th><th>Last message</th></tr></thead>
+                <tbody>{clients.map((client) => (
+                  <tr key={client.id}>
+                    <td><button className="inline-link" type="button" onClick={() => setQuery(client.name)}>{client.name}</button></td>
+                    <td><button className="inline-link" type="button" onClick={() => setQuery(client.phone)}>{client.phone}</button></td>
+                    <td><span className={`status-pill stage-${client.status.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>{client.status}</span></td>
+                    <td>{client.service}</td>
+                    <td>${client.value.toLocaleString()}</td>
+                    <td>{client.lastMessage}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="empty-state-panel compact lookup-empty">
+              <h3>No matches yet</h3>
+              <p>Try a shorter phone fragment, a stage like Quoted or Booked, or one of the sample queries above.</p>
+              <div className="empty-actions">
+                <button className="button outline" type="button" onClick={() => setQuery("")}>Clear search</button>
+                <button className="button primary blue" type="button" onClick={() => setQuery("Ada")}>Try Ada</button>
+              </div>
+            </div>
+          )}
+        </Panel>
+
+        <Panel className="lookup-side-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Lookup guide</h2>
+              <p className="helper-text">Built for operators who need to move quickly between threads and client records.</p>
+            </div>
+            <StatusChip tone="blue" label="Operator help" />
+          </div>
+          <div className="lookup-side-list">
+            <article className="lookup-side-card">
+              <span>Current query</span>
+              <strong>{visibleHint}</strong>
+              <small>Use exact names, short phone fragments, or pipeline stages.</small>
+            </article>
+            <article className="lookup-side-card">
+              <span>Best patterns</span>
+              <strong>Phone, stage, service</strong>
+              <small>Search works best with customer name, WhatsApp number, or service label.</small>
+            </article>
+            <article className="lookup-side-card">
+              <span>Next move</span>
+              <strong>{closedCount} closed or completed clients</strong>
+              <small>Use the inbox or pipeline pages after lookup to continue the workflow.</small>
+            </article>
+          </div>
+        </Panel>
+      </div>
     </div>
   );
 }
