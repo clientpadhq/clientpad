@@ -1122,7 +1122,17 @@ function Dashboard({
               onCopy={(text) => copyText(text, setNotice)}
             />
           )}
-          {page === "usage" && <Usage usage={usage} keys={filteredKeys} selectedProject={selectedProject} usageSummary={usageSummary} />}
+          {page === "usage" && (
+            <Usage
+              usage={usage}
+              keys={filteredKeys}
+              selectedProject={selectedProject}
+              usageSummary={usageSummary}
+              onGoToBilling={() => setPage("billing")}
+              onGoToKeys={() => setPage("keys")}
+              onGoToProjects={() => setPage("projects")}
+            />
+          )}
           {page === "billing" && (
             <Billing
               plans={plans}
@@ -1897,32 +1907,136 @@ function Keys({
   );
 }
 
-function Usage({ usage, keys, selectedProject, usageSummary }: { usage: UsageRow[]; keys: ApiKeyRecord[]; selectedProject?: Project; usageSummary: UsageSummary | null }) {
+function Usage({
+  usage,
+  keys,
+  selectedProject,
+  usageSummary,
+  onGoToBilling,
+  onGoToKeys,
+  onGoToProjects,
+}: {
+  usage: UsageRow[];
+  keys: ApiKeyRecord[];
+  selectedProject?: Project;
+  usageSummary: UsageSummary | null;
+  onGoToBilling: () => void;
+  onGoToKeys: () => void;
+  onGoToProjects: () => void;
+}) {
+  const totalRequests = usageSummary?.request_count ?? usage.reduce((sum, row) => sum + row.request_count, 0);
+  const totalRejected = usageSummary?.rejected_count ?? usage.reduce((sum, row) => sum + row.rejected_count, 0);
+  const activeKeys = usageSummary?.active_api_key_count ?? keys.length;
+  const remainingRequests = usageSummary?.remaining_requests ?? 0;
+  const requestLimit = usageSummary?.monthly_request_limit ?? 10_000_000;
+  const rejectionRate = Math.max(Math.round((totalRejected / Math.max(totalRequests, 1)) * 10000) / 100, 0);
+  const planName = usageSummary?.plan_name ?? "Billing ready";
+  const periodLabel = usageSummary?.month ?? "Current month";
   return (
-    <div className="detail-layout single">
-      <Panel className="api-requests wide-detail">
-        <div className="panel-head">
-          <h2>{selectedProject?.name ?? "Workspace"} usage</h2>
+    <div className="usage-layout">
+      <Panel className="usage-hero">
+        <div className="panel-head bordered">
+          <div>
+            <h2>{selectedProject?.name ?? "Workspace"} usage</h2>
+            <p className="helper-text">Request volume, rejection posture, and capacity for the active developer workspace.</p>
+          </div>
           <div className="inline-actions">
-            <StatusChip tone="green" label={usageSummary?.plan_name ? `${usageSummary.plan_name} plan` : "Billing ready"} />
-            <StatusChip tone="blue" label={usageSummary?.month ?? "Current month"} />
+            <StatusChip tone="green" label={`${planName} plan`} />
+            <StatusChip tone="blue" label={periodLabel} />
           </div>
         </div>
         <div className="usage-summary-grid">
-          <div className="usage-summary-item"><span>Requests</span><strong>{formatNumber(usageSummary?.request_count ?? usage.reduce((sum, row) => sum + row.request_count, 0))}</strong></div>
-          <div className="usage-summary-item"><span>Rejected</span><strong>{formatNumber(usageSummary?.rejected_count ?? usage.reduce((sum, row) => sum + row.rejected_count, 0))}</strong></div>
-          <div className="usage-summary-item"><span>API keys</span><strong>{formatNumber(usageSummary?.active_api_key_count ?? keys.length)}</strong></div>
-          <div className="usage-summary-item"><span>Remaining</span><strong>{usageSummary?.remaining_requests?.toLocaleString() ?? "Unlimited"}</strong></div>
+          <article className="usage-summary-item">
+            <span>Requests</span>
+            <strong>{formatNumber(totalRequests)}</strong>
+            <small>Live or demo traffic crossing the public API.</small>
+          </article>
+          <article className="usage-summary-item">
+            <span>Rejected</span>
+            <strong>{formatNumber(totalRejected)}</strong>
+            <small>{rejectionRate}% rejection rate across the active window.</small>
+          </article>
+          <article className="usage-summary-item">
+            <span>API keys</span>
+            <strong>{formatNumber(activeKeys)}</strong>
+            <small>Live keys attached to this workspace.</small>
+          </article>
+          <article className="usage-summary-item">
+            <span>Remaining</span>
+            <strong>{remainingRequests.toLocaleString() ?? "Unlimited"}</strong>
+            <small>{formatNumber(Math.max(requestLimit - totalRequests, 0))} requests left in the current quota.</small>
+          </article>
         </div>
-        <LineChart />
-      </Panel>
-      <Panel className="table-panel wide-detail">
-        <div className="panel-head bordered">
-          <h2>Usage activity</h2>
-          <span>{usage.reduce((sum, row) => sum + row.rejected_count, 0)} rejected</span>
+        <div className="usage-provider-row">
+          <article className="usage-provider-card">
+            <span>Quota</span>
+            <strong>{requestLimit.toLocaleString()} / month</strong>
+            <small>Plan ceiling for the active billing period.</small>
+          </article>
+          <article className="usage-provider-card">
+            <span>Rate limit</span>
+            <strong>{usageSummary?.rate_limit_per_minute ?? 500}/min</strong>
+            <small>Practical throughput guard for client traffic.</small>
+          </article>
+          <article className="usage-provider-card">
+            <span>Usage mode</span>
+            <strong>{usageSummary?.billing_mode === "cloud_paid" ? "Paid" : "Free"}</strong>
+            <small>Billing posture for the current workspace and API keys.</small>
+          </article>
         </div>
-        {keys.length > 0 ? <KeysTable keys={keys} showUsage /> : <div className="empty-state-panel compact"><h3>No usage yet</h3><p>Issue API keys and send traffic through the public API to start collecting usage data.</p></div>}
       </Panel>
+
+      <div className="usage-grid">
+        <Panel className="api-requests wide-detail usage-chart-card">
+          <div className="panel-head">
+            <div>
+              <h2>Request activity</h2>
+              <p className="helper-text">Traffic trend and rejection posture for the selected workspace.</p>
+            </div>
+            <StatusChip tone="green" label="API traffic" />
+          </div>
+          <LineChart />
+        </Panel>
+
+        <Panel className="usage-side-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Operator actions</h2>
+              <p className="helper-text">Move between the pages that resolve usage and capacity issues.</p>
+            </div>
+            <StatusChip tone="blue" label="Shortcuts" />
+          </div>
+          <div className="usage-action-list">
+            <button className="usage-action-card" type="button" onClick={onGoToBilling}>
+              <span>Billing</span>
+              <strong>Inspect plan limits, checkout, and portal access.</strong>
+            </button>
+            <button className="usage-action-card" type="button" onClick={onGoToKeys}>
+              <span>API keys</span>
+              <strong>Review which keys are active and what they can do.</strong>
+            </button>
+            <button className="usage-action-card" type="button" onClick={onGoToProjects}>
+              <span>Projects</span>
+              <strong>Confirm which projects are driving the most traffic.</strong>
+            </button>
+          </div>
+          <div className="usage-note-card">
+            <span>Risk signal</span>
+            <strong>{rejectionRate > 2 ? "Investigate rejected requests and the latest key activity." : "Usage is healthy. Keep tracking the quota and live key mix."}</strong>
+          </div>
+        </Panel>
+
+        <Panel className="table-panel wide-detail usage-table-card">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Usage activity</h2>
+              <p className="helper-text">The same data that powers the top summary cards, broken down by API key.</p>
+            </div>
+            <StatusChip tone={totalRejected ? "amber" : "green"} label={`${totalRejected} rejected`} />
+          </div>
+          {keys.length > 0 ? <KeysTable keys={keys} showUsage /> : <div className="empty-state-panel compact"><h3>No usage yet</h3><p>Issue API keys and send traffic through the public API to start collecting usage data.</p></div>}
+        </Panel>
+      </div>
     </div>
   );
 }
