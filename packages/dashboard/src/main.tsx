@@ -727,9 +727,6 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
             <strong>What happens next</strong>
             <p>{mode === "preview" ? "Open the sample dashboard, then move into Projects, Keys, and Docs." : authMode === "register" ? "Create the first operator, workspace, project, and starter API key in one pass." : "Use the same dashboard to manage CRM workflows, billing, usage, and API keys."}</p>
           </div>
-          <div className="mini-toolbar" />
-          <div className="mini-chart" />
-          <div className="mini-rows" />
         </div>
       </aside>
     </main>
@@ -795,7 +792,7 @@ function KeyReveal({ registrationKey, onLogin }: { registrationKey: string; onLo
             <article className="preview-host-card">
               <span>API key</span>
               <strong>{registrationKey.slice(0, 12)}...</strong>
-              <small>Copy it now. It won’t be shown again.</small>
+              <small>Copy it now. It won't be shown again.</small>
             </article>
             <article className="preview-host-card">
               <span>Next step</span>
@@ -817,9 +814,6 @@ function KeyReveal({ registrationKey, onLogin }: { registrationKey: string; onLo
             <strong>Use this bundle to start fast</strong>
             <p>Your account, workspace, project, and API key were created together. The public API lives at <code>https://api.clientpad.xyz/api/public/v1</code>.</p>
           </div>
-          <div className="mini-toolbar" />
-          <div className="mini-chart" />
-          <div className="mini-rows" />
         </div>
       </aside>
     </main>
