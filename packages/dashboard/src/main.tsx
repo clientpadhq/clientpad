@@ -1958,6 +1958,13 @@ function Projects({
   const developmentCount = projects.filter((project) => project.environment === "development").length;
   const totalRequests = usageSummary?.request_count ?? usage.reduce((sum, row) => sum + row.request_count, 0);
   const activeKeys = usageSummary?.active_api_key_count ?? 0;
+  const projectHealth = projects.length > 0 ? "Workspace active" : "No projects yet";
+  const projectNextAction = projects.length > 0
+    ? productionCount > 0
+      ? "Keep the production workspace linked to its API keys and usage plan."
+      : "Promote a staging or development project into production when ready."
+    : "Create the first workspace project to activate API keys, usage tracking, and live WhatsApp workflows.";
+  const workspacePlan = usageSummary?.plan_name ?? "Free";
 
   return (
     <div className="projects-layout">
@@ -2002,7 +2009,29 @@ function Projects({
           </article>
           <article className="projects-metric-card">
             <span>Selected plan</span>
-            <strong>{usageSummary?.plan_name ?? "Free"}</strong>
+            <strong>{workspacePlan}</strong>
+          </article>
+        </div>
+        <div className="projects-diagnostics-grid">
+          <article className="projects-diagnostic-card">
+            <span>Workspace health</span>
+            <strong>{projectHealth}</strong>
+            <small>{projects.length > 0 ? "Projects are linked to the current workspace." : "No projects are attached to this workspace yet."}</small>
+          </article>
+          <article className="projects-diagnostic-card">
+            <span>Environment mix</span>
+            <strong>{productionCount > 0 ? "Production ready" : "Pre-production only"}</strong>
+            <small>{productionCount > 0 ? `${productionCount} production project${productionCount === 1 ? "" : "s"} are live.` : "Only staging and development projects exist so far."}</small>
+          </article>
+          <article className="projects-diagnostic-card">
+            <span>API posture</span>
+            <strong>`CLIENTPAD_API_KEY`</strong>
+            <small>Project traffic, usage, and CRM workflows stay server-side.</small>
+          </article>
+          <article className="projects-diagnostic-card">
+            <span>Next action</span>
+            <strong>{projectNextAction}</strong>
+            <small>Move into Billing, Usage, or API keys once the project is ready.</small>
           </article>
         </div>
       </Panel>
@@ -2060,6 +2089,12 @@ function Projects({
           <div className="projects-note-card">
             <span>Why it matters</span>
             <strong>Projects keep the CRM, API usage, and WhatsApp workflows attached to one business.</strong>
+          </div>
+          <div className="projects-action-row">
+            <button className="button outline" type="button" onClick={onGoToBilling}>Billing</button>
+            <button className="button outline" type="button" onClick={onGoToUsage}>Usage</button>
+            <button className="button outline" type="button" onClick={onGoToKeys}>API keys</button>
+            <button className="button outline" type="button" onClick={() => setPage("infrastructure")}>Infrastructure</button>
           </div>
         </Panel>
 

@@ -4227,6 +4227,12 @@ td small {
   gap: 12px;
 }
 
+.projects-diagnostics-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .projects-summary-card,
 .projects-metric-card,
 .projects-action-card,
@@ -4261,6 +4267,36 @@ td small {
 .projects-metric-card strong,
 .projects-action-card strong,
 .projects-note-card strong {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.projects-diagnostic-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--brand) 4%, var(--panel));
+}
+
+.projects-diagnostic-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.projects-diagnostic-card strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.projects-diagnostic-card small {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.45;
@@ -4328,6 +4364,12 @@ td small {
   color: var(--ink);
   font-size: 13px;
   font-weight: 700;
+}
+
+.projects-action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .projects-table-panel {
