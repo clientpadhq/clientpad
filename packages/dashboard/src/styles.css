@@ -4309,6 +4309,8 @@ td small {
   .keys-grid { grid-template-columns: 1fr; }
   .billing-hero-grid { grid-template-columns: 1fr; }
   .billing-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pipeline-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pipeline-action-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .revenue-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .revenue-provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .revenue-grid { grid-template-columns: 1fr; }
@@ -4336,6 +4338,9 @@ td small {
   .billing-summary-grid { grid-template-columns: 1fr; }
   .billing-action-row { flex-direction: column; }
   .billing-action-row .button { width: 100%; }
+  .pipeline-summary-grid,
+  .pipeline-action-row,
+  .pipeline-metrics { grid-template-columns: 1fr; }
   .revenue-summary-grid,
   .revenue-provider-grid { grid-template-columns: 1fr; }
   .usage-provider-row { grid-template-columns: 1fr; }
@@ -4902,6 +4907,55 @@ td small {
   gap: 16px;
 }
 
+.pipeline-hero {
+  display: grid;
+  gap: 16px;
+}
+
+.pipeline-summary-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.pipeline-summary-card,
+.pipeline-action-card,
+.pipeline-note-card {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+
+.pipeline-summary-card span,
+.pipeline-action-card span,
+.pipeline-note-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.pipeline-summary-card strong,
+.pipeline-action-card strong,
+.pipeline-note-card strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.pipeline-summary-card small,
+.pipeline-note-card small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .pipeline-metrics {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -4925,6 +4979,21 @@ td small {
 .pipeline-metric span {
   font-size: 12px;
   color: #667386;
+}
+
+.pipeline-action-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pipeline-action-card {
+  text-align: left;
+  cursor: pointer;
+}
+
+.pipeline-note-card {
+  background: color-mix(in srgb, var(--brand) 4%, var(--panel-2));
 }
 
 .empty-state-panel {

@@ -1155,7 +1155,16 @@ function Dashboard({
               onRefresh={() => refresh(selectedWorkspace).catch((error) => setNotice(error.message))}
             />
           )}
-          {page === "pipeline" && <PipelineScreen clients={filterClients(demoClients, query)} mode={mode} />}
+          {page === "pipeline" && (
+            <PipelineScreen
+              clients={filterClients(demoClients, query)}
+              mode={mode}
+              onGoToInbox={() => setPage("inbox")}
+              onGoToClients={() => setPage("clients")}
+              onGoToKeys={() => setPage("keys")}
+              onGoToUsage={() => setPage("usage")}
+            />
+          )}
           {page === "clients" && <ClientSearch clients={filterClients(demoClients, query)} query={query} setQuery={setQuery} />}
           {page === "inbox" && (
             <TeamInbox
@@ -4964,14 +4973,63 @@ function ConnectWhatsApp({
   );
 }
 
-function PipelineScreen({ clients, mode }: { clients: ClientRecord[]; mode: ConnectionMode }) {
+function PipelineScreen({
+  clients,
+  mode,
+  onGoToInbox,
+  onGoToClients,
+  onGoToKeys,
+  onGoToUsage,
+}: {
+  clients: ClientRecord[];
+  mode: ConnectionMode;
+  onGoToInbox: () => void;
+  onGoToClients: () => void;
+  onGoToKeys: () => void;
+  onGoToUsage: () => void;
+}) {
   const counts = Object.fromEntries(serviceStages.map((stage) => [stage, clients.filter((client) => client.status === stage).length]));
+  const openCount = counts["Open"] ?? 0;
+  const quotedCount = counts["Quoted"] ?? 0;
+  const bookedCount = counts["Booked"] ?? 0;
+  const progressCount = counts["In Progress"] ?? 0;
+  const closedCount = (counts["Completed"] ?? 0) + (counts["Paid"] ?? 0) + (counts["Review Requested"] ?? 0);
+  const pipelineValue = clients.reduce((sum, client) => sum + client.value, 0);
+  const busiestStage = serviceStages.reduce((best, stage) => {
+    const stageCount = counts[stage] ?? 0;
+    return stageCount > (counts[best] ?? 0) ? stage : best;
+  }, serviceStages[0]);
   return (
     <div className="pipeline-stack">
-      <Panel className="pipeline-summary">
+      <Panel className="pipeline-summary pipeline-hero">
         <div className="panel-head bordered">
-          <h2>Pipeline status</h2>
-          <StatusChip tone={mode === "preview" ? "blue" : "green"} label={mode === "preview" ? "Preview data" : "Live pipeline"} />
+          <div>
+            <h2>Pipeline control</h2>
+            <p className="helper-text">Simple CRM flow for developers and service businesses, with every stage mapped to the same API-backed workspace.</p>
+          </div>
+          <StatusChip tone={mode === "preview" ? "blue" : "green"} label={mode === "preview" ? "Preview pipeline" : "Live pipeline"} />
+        </div>
+        <div className="pipeline-summary-grid">
+          <article className="pipeline-summary-card">
+            <span>Open leads</span>
+            <strong>{openCount}</strong>
+            <small>New work waiting on first contact or qualification.</small>
+          </article>
+          <article className="pipeline-summary-card">
+            <span>Quoted</span>
+            <strong>{quotedCount}</strong>
+            <small>Opportunities waiting on approval or follow-up.</small>
+          </article>
+          <article className="pipeline-summary-card">
+            <span>Booked</span>
+            <strong>{bookedCount}</strong>
+            <small>Confirmed work that still needs delivery or payment.</small>
+          </article>
+          <article className="pipeline-summary-card">
+            <span>Pipeline value</span>
+            <strong>${pipelineValue.toLocaleString()}</strong>
+            <small>Live or preview deal value across the current board.</small>
+          </article>
         </div>
         <div className="pipeline-metrics">
           {serviceStages.map((stage) => (
@@ -4980,6 +5038,29 @@ function PipelineScreen({ clients, mode }: { clients: ClientRecord[]; mode: Conn
               <span>{stage}</span>
             </div>
           ))}
+        </div>
+        <div className="pipeline-action-row">
+          <button className="pipeline-action-card" type="button" onClick={onGoToInbox}>
+            <span>Inbox</span>
+            <strong>Move conversations into the pipeline when they need a human reply.</strong>
+          </button>
+          <button className="pipeline-action-card" type="button" onClick={onGoToClients}>
+            <span>Lookup</span>
+            <strong>Find a client by name, phone fragment, or service label.</strong>
+          </button>
+          <button className="pipeline-action-card" type="button" onClick={onGoToKeys}>
+            <span>API keys</span>
+            <strong>Keep server-side access aligned with the workspace.</strong>
+          </button>
+          <button className="pipeline-action-card" type="button" onClick={onGoToUsage}>
+            <span>Usage</span>
+            <strong>Check request volume and capacity before a handoff.</strong>
+          </button>
+        </div>
+        <div className="pipeline-note-card">
+          <span>Next move</span>
+          <strong>{openCount ? "Work the open queue first, then move booked leads into delivery." : "Pipeline is clean. Keep watch on the busiest stage and follow up on quoted work."}</strong>
+          <small>{busiestStage} currently has the most activity | {mode === "preview" ? "preview dataset" : "live workspace"}</small>
         </div>
       </Panel>
       <div className="pipeline-board">
