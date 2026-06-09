@@ -4999,21 +4999,15 @@ function ConnectWhatsApp({
     { label: "API key", value: summary?.has_public_api_key ? "Ready" : "Missing", detail: summary?.has_public_api_key ? "Public API access is available." : "Create a workspace public API key first." },
     { label: "Webhook", value: webhookUrl, detail: "Subscribe Meta to this endpoint for live traffic." },
   ];
-  const actionCards = [
-    { label: "Projects", title: "Create the first project", detail: "Keep CRM data, business records, and API usage tied to one workspace project.", action: onGoToProjects },
-    { label: "API keys", title: "Create or rotate a key", detail: "Issue a new `cp_live_...` key or revoke the old one before going live.", action: onGoToKeys },
-    { label: "Refresh", title: "Re-run the readiness probe", detail: "Verify the API, WhatsApp config, and webhook pipeline after each deploy.", action: onRefresh },
-  ];
-  const surfaceCards = [
-    { label: "Platform", value: "platform.clientpad.xyz", detail: "Operator dashboard and CRM control plane." },
-    { label: "Public API", value: publicApiUrl, detail: "Developers call the API with `CLIENTPAD_API_KEY`." },
-    { label: "Docs", value: "docs.clientpad.xyz", detail: "Copy the API contract and error handling guidance." },
-    { label: "Marketing", value: "clientpad.xyz", detail: "Public site and service-business landing pages." },
-  ];
+    const actionCards = [
+      { label: "Projects", title: "Create the first project", detail: "Keep CRM data, business records, and API usage tied to one workspace project.", action: onGoToProjects },
+      { label: "API keys", title: "Create or rotate a key", detail: "Issue a new `cp_live_...` key or revoke the old one before going live.", action: onGoToKeys },
+      { label: "Refresh", title: "Re-run the readiness probe", detail: "Verify the API, WhatsApp config, and webhook pipeline after each deploy.", action: onRefresh },
+    ];
 
-  return (
-    <div className="connect-layout">
-      <Panel className="connect-hero">
+    return (
+      <div className="connect-layout">
+        <Panel className="connect-hero">
         <div className="panel-head bordered">
           <div>
             <h2>Connect WhatsApp</h2>
@@ -5021,29 +5015,25 @@ function ConnectWhatsApp({
           </div>
           <StatusChip tone={mode === "preview" ? "blue" : readiness?.status === "ok" ? "green" : "amber"} label={connectionLabel} />
         </div>
-        <div className="connect-summary-grid">
-          {summaryCards.map((card) => (
-            <article key={card.label} className="connect-summary-card">
-              <span>{card.label}</span>
-              <strong>{card.value}</strong>
-              <small>{card.detail}</small>
-            </article>
-          ))}
-        </div>
-        <div className="connect-surface-grid">
-          {surfaceCards.map((card) => (
-            <article key={card.label} className="connect-surface-card">
-              <span>{card.label}</span>
-              <strong>{card.value}</strong>
-              <small>{card.detail}</small>
-            </article>
-          ))}
-        </div>
-        <div className="connect-actions">
-          <button className="button primary blue" onClick={onGoToProjects}>Create or select project</button>
-          <button className="button outline" onClick={onGoToKeys}>Create API key</button>
-          <button className="button outline" onClick={onRefresh}><Clock size={15} /> Refresh</button>
-          <button className="button outline" onClick={() => onCopy(checklistItems.join("\n"))}><Clipboard size={15} /> Copy checklist</button>
+          <div className="connect-summary-grid">
+            {summaryCards.map((card) => (
+              <article key={card.label} className="connect-summary-card">
+                <span>{card.label}</span>
+                <strong>{card.value}</strong>
+                <small>{card.detail}</small>
+              </article>
+            ))}
+          </div>
+          <div className="connect-path-card">
+            <span>Setup path</span>
+            <strong>1. Create or select a project. 2. Issue the public API key. 3. Point Meta to the webhook endpoint.</strong>
+            <small>Keep the API key server-side, then re-run readiness checks after each deploy.</small>
+          </div>
+          <div className="connect-actions">
+            <button className="button primary blue" onClick={onGoToProjects}>Create or select project</button>
+            <button className="button outline" onClick={onGoToKeys}>Create API key</button>
+            <button className="button outline" onClick={onRefresh}><Clock size={15} /> Refresh</button>
+            <button className="button outline" onClick={() => onCopy(checklistItems.join("\n"))}><Clipboard size={15} /> Copy checklist</button>
         </div>
       </Panel>
 
@@ -5085,20 +5075,24 @@ function ConnectWhatsApp({
             <h2>Webhook and next steps</h2>
             <StatusChip tone="blue" label="Operator guide" />
           </div>
-          <div className="webhook-box">
-            <span>Webhook endpoint</span>
-            <code>{webhookUrl}</code>
-            <small className="helper-text">Mount this endpoint on the host serving your ClientPad webhook handler, then subscribe Meta to it.</small>
-            <div className="inline-actions">
-              <button className="button primary blue" onClick={() => onCopy(webhookUrl)}>Copy URL</button>
-              <button className="button outline" onClick={onGoToKeys}>Open API keys</button>
+            <div className="webhook-box">
+              <span>Webhook endpoint</span>
+              <code>{webhookUrl}</code>
+              <small className="helper-text">Mount this endpoint on the host serving your ClientPad webhook handler, then subscribe Meta to it.</small>
+              <div className="inline-actions">
+                <button className="button primary blue" onClick={() => onCopy(webhookUrl)}>Copy URL</button>
+                <button className="button outline" onClick={onGoToKeys}>Open API keys</button>
+              </div>
             </div>
-          </div>
-          <div className="connect-action-grid">
-            {actionCards.map((card) => (
-              <button key={card.label} className="connect-action-card" onClick={card.action}>
-                <span>{card.label}</span>
-                <strong>{card.title}</strong>
+            <div className="status-callout compact">
+              <strong>Where to work</strong>
+              <p>Use platform.clientpad.xyz for operators, api.clientpad.xyz for developers, and docs.clientpad.xyz for quickstart and errors.</p>
+            </div>
+            <div className="connect-action-grid">
+              {actionCards.map((card) => (
+                <button key={card.label} className="connect-action-card" onClick={card.action}>
+                  <span>{card.label}</span>
+                  <strong>{card.title}</strong>
                 <small>{card.detail}</small>
               </button>
             ))}

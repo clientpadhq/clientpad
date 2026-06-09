@@ -3123,7 +3123,6 @@ td small {
   .overview-layout, .detail-layout { grid-template-columns: 1fr; }
   .billing-panel, .quickstart-panel, .active-projects, .api-keys { grid-column: auto; }
   .billing-grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
-  .connect-surface-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 760px) {
@@ -3186,7 +3185,6 @@ td small {
   .security-grid { grid-template-columns: 1fr; }
   .security-footer-grid { grid-template-columns: 1fr; }
   .security-actions { flex-direction: column; }
-  .connect-surface-grid { grid-template-columns: 1fr; }
   .nav-label {
     display: none;
   }
@@ -3274,33 +3272,28 @@ td small {
   font-size: 13px;
   line-height: 1.5;
 }
-.connect-surface-grid {
+.connect-path-card {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-}
-.connect-surface-card {
-  display: grid;
-  gap: 5px;
-  padding: 12px;
+  gap: 6px;
+  padding: 14px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: color-mix(in srgb, var(--panel) 92%, transparent);
 }
-.connect-surface-card span {
+.connect-path-card span {
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.connect-surface-card strong {
+.connect-path-card strong {
   color: var(--ink);
   font-size: 14px;
-  line-height: 1.35;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
-.connect-surface-card small {
+.connect-path-card small {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.45;
