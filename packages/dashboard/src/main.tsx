@@ -4792,6 +4792,12 @@ function ConnectWhatsApp({
     { label: "API keys", title: "Create or rotate a key", detail: "Issue a new `cp_live_...` key or revoke the old one before going live.", action: onGoToKeys },
     { label: "Refresh", title: "Re-run the readiness probe", detail: "Verify the API, WhatsApp config, and webhook pipeline after each deploy.", action: onRefresh },
   ];
+  const surfaceCards = [
+    { label: "Platform", value: "platform.clientpad.xyz", detail: "Operator dashboard and CRM control plane." },
+    { label: "Public API", value: publicApiUrl, detail: "Developers call the API with `CLIENTPAD_API_KEY`." },
+    { label: "Docs", value: "docs.clientpad.xyz", detail: "Copy the API contract and error handling guidance." },
+    { label: "Marketing", value: "clientpad.xyz", detail: "Public site and service-business landing pages." },
+  ];
 
   return (
     <div className="connect-layout">
@@ -4806,6 +4812,15 @@ function ConnectWhatsApp({
         <div className="connect-summary-grid">
           {summaryCards.map((card) => (
             <article key={card.label} className="connect-summary-card">
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              <small>{card.detail}</small>
+            </article>
+          ))}
+        </div>
+        <div className="connect-surface-grid">
+          {surfaceCards.map((card) => (
+            <article key={card.label} className="connect-surface-card">
               <span>{card.label}</span>
               <strong>{card.value}</strong>
               <small>{card.detail}</small>
