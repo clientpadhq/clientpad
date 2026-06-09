@@ -2678,19 +2678,16 @@ function LaunchReadiness({
       detail: "Render API service and docs domain stay separate.",
     },
   ];
-  const launchActions = [
-    { label: "Infrastructure", detail: "Review hosts, routes, and service mapping.", onClick: onGoToInfrastructure },
-    { label: "Monitoring", detail: "Inspect uptime, error rate, and request health.", onClick: onGoToMonitoring },
-    { label: "Docs", detail: "Open API reference and quickstart guidance.", onClick: onGoToDocs },
-    { label: "Connection settings", detail: "Adjust base URL and key settings.", onClick: onGoToSettings },
-  ];
-  const externalTargets = [
-    { label: "Marketing", url: "https://clientpad.xyz" },
-    { label: "Docs", url: "https://docs.clientpad.xyz" },
-    { label: "Dashboard", url: "https://platform.clientpad.xyz" },
-    { label: "API health", url: "https://api.clientpad.xyz/health" },
-    { label: "llms.txt", url: "https://clientpad.xyz/llms.txt" },
-  ];
+    const launchActions = [
+      { label: "Infrastructure", detail: "Review hosts, routes, and service mapping.", onClick: onGoToInfrastructure },
+      { label: "Monitoring", detail: "Inspect uptime, error rate, and request health.", onClick: onGoToMonitoring },
+      { label: "Docs", detail: "Open API reference and quickstart guidance.", onClick: onGoToDocs },
+    ];
+    const launchPath = [
+      "Set DATABASE_URL, API_KEY_PEPPER, and CLIENTPAD_CLOUD_ADMIN_TOKEN on the API service.",
+      "Deploy the API, then run the readiness probe until all required checks pass.",
+      "Point platform.clientpad.xyz, docs.clientpad.xyz, and clientpad.xyz at the Render services.",
+    ];
 
   return (
     <div className="launch-layout">
@@ -2715,23 +2712,30 @@ function LaunchReadiness({
           <strong>{okCount}/{checks.length}</strong>
           <span>{warningCount} warnings | {failCount} failures</span>
         </div>
-        <div className="launch-action-grid">
-          {launchActions.map((action) => (
-            <button key={action.label} className="launch-action-card" type="button" onClick={action.onClick}>
-              <span>{action.label}</span>
-              <strong>{action.detail}</strong>
+          <div className="launch-action-grid">
+            {launchActions.map((action) => (
+              <button key={action.label} className="launch-action-card" type="button" onClick={action.onClick}>
+                <span>{action.label}</span>
+                <strong>{action.detail}</strong>
+              </button>
+            ))}
+          </div>
+          <div className="launch-path-card">
+            <span>Publish path</span>
+            <strong>Set the API env vars, deploy the service, then point the public hosts at Render.</strong>
+            <ul>
+              {launchPath.map((step) => <li key={step}>{step}</li>)}
+            </ul>
+          </div>
+          <div className="status-banner-actions">
+            <button className="button primary blue" onClick={runChecks} disabled={running}>
+              <ShieldCheck size={16} /> {running ? "Checking..." : "Run checks"}
             </button>
-          ))}
-        </div>
-        <div className="status-banner-actions">
-          <button className="button primary blue" onClick={runChecks} disabled={running}>
-            <ShieldCheck size={16} /> {running ? "Checking..." : "Run checks"}
-          </button>
-          <button className="button outline" onClick={onGoToSettings}>
-            <Settings size={16} /> Connection settings
-          </button>
-        </div>
-      </Panel>
+            <button className="button outline" onClick={onGoToSettings}>
+              <Settings size={16} /> Connection settings
+            </button>
+          </div>
+        </Panel>
 
       <Panel className="launch-checks-panel">
         <div className="panel-head bordered">
@@ -2753,24 +2757,9 @@ function LaunchReadiness({
         </div>
       </Panel>
 
-      <Panel className="launch-links-panel">
-        <div className="panel-head bordered">
-          <h2>Public targets</h2>
-          <span className="status-muted">Open after deploy</span>
-        </div>
-        <div className="launch-targets">
-          {externalTargets.map((target) => (
-            <a key={target.url} className="launch-target" href={target.url} target="_blank" rel="noopener noreferrer">
-              <span>{target.label}</span>
-              <small>{target.url}</small>
-              <ExternalLink size={15} />
-            </a>
-          ))}
-        </div>
-      </Panel>
-    </div>
-  );
-}
+      </div>
+    );
+  }
 
 function Docs({
   selectedProject,
