@@ -2171,6 +2171,47 @@ button { cursor: pointer; }
   gap: 10px;
 }
 
+.settings-surfaces {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-surface-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.settings-surface-card {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
+.settings-surface-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.settings-surface-card strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.settings-surface-card small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .settings-summary-card {
   display: grid;
   gap: 6px;
@@ -4643,6 +4684,7 @@ td small {
   .launch-layout { grid-template-columns: 1fr; }
   .launch-overview-grid,
   .launch-action-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .settings-surface-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 760px) {
@@ -4651,7 +4693,8 @@ td small {
   .usage-summary-grid,
   .pipeline-metrics,
   .launch-overview-grid,
-  .launch-action-grid { grid-template-columns: 1fr; }
+  .launch-action-grid,
+  .settings-surface-grid { grid-template-columns: 1fr; }
   .status-banner-actions,
   .empty-actions { width: 100%; }
   .status-banner-actions .button,

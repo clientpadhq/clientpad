@@ -2747,6 +2747,21 @@ function SettingsPage({
             Docs
           </button>
         </div>
+        <div className="settings-surfaces">
+          <div className="panel-head bordered compact-head">
+            <h2>Live surfaces</h2>
+            <StatusChip tone="blue" label="Host map" />
+          </div>
+          <div className="settings-surface-grid">
+            {surfaces.map((surface) => (
+              <article key={surface.label} className="settings-surface-card">
+                <span>{surface.label}</span>
+                <strong>{surface.value}</strong>
+                <small>{surface.detail}</small>
+              </article>
+            ))}
+          </div>
+        </div>
       </Panel>
 
       <div className="settings-grid">
