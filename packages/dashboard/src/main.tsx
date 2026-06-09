@@ -2118,6 +2118,13 @@ function Keys({
   const latestPlanLabel = latestKey?.billing_mode === "cloud_paid" ? "Paid" : "Free";
   const latestScopes = latestKey?.scopes?.length ?? 0;
   const latestKeyName = latestKey?.name ?? "No API key yet";
+  const keyHealth = latestKey && activeCount > 0 ? "Live" : latestKey ? "Paused" : "Missing";
+  const keyNextAction = latestKey
+    ? activeCount > 0
+      ? "Copy the latest key and wire it server-side."
+      : "Reactivate or rotate the paused key before production traffic."
+    : "Create the first server-side API key to unlock live traffic.";
+  const authHeader = latestKey ? `Authorization: Bearer ${maskKey(latestKey.key)}` : "Authorization: Bearer cp_live_...";
 
   return (
     <div className="keys-layout">
@@ -2149,6 +2156,28 @@ function Keys({
             <span>Scope count</span>
             <strong>{latestScopes}</strong>
             <small>{latestPlanLabel} posture | server-side `CLIENTPAD_API_KEY` only.</small>
+          </article>
+        </div>
+        <div className="keys-diagnostics-grid">
+          <article className="keys-diagnostic-card">
+            <span>Key health</span>
+            <strong>{keyHealth}</strong>
+            <small>{latestKey ? "The latest API key is present in the workspace." : "No live API key has been created yet."}</small>
+          </article>
+          <article className="keys-diagnostic-card">
+            <span>Auth contract</span>
+            <strong>`CLIENTPAD_API_KEY`</strong>
+            <small>Always use the key server-side and never expose it in client bundles.</small>
+          </article>
+          <article className="keys-diagnostic-card">
+            <span>Latest header</span>
+            <strong>{authHeader}</strong>
+            <small>Use this header when calling the public API.</small>
+          </article>
+          <article className="keys-diagnostic-card">
+            <span>Next action</span>
+            <strong>{keyNextAction}</strong>
+            <small>Move into Usage, Billing, or Projects after the key is created.</small>
           </article>
         </div>
       </Panel>
@@ -2197,14 +2226,19 @@ function Keys({
               <small>Keep it server-side and never expose it in client-side bundles.</small>
             </article>
             <article className="keys-side-card">
-              <span>Masked latest key</span>
-              <strong>{latestKey ? maskKey(latestKey.key) : "cp_live_demo"}</strong>
-              <small>Copy the latest key from the table when you're ready to connect a live app.</small>
+              <span>Rotation posture</span>
+              <strong>{latestKey ? `${activeCount} active / ${pausedCount} paused` : "No keys yet"}</strong>
+              <small>{latestKey ? "Pause or rotate keys from the API key table when needed." : "Create the first key to establish a rotation path."}</small>
             </article>
             <article className="keys-side-card">
               <span>Next actions</span>
               <strong>Billing, usage, and projects</strong>
               <small>After creating a key, check usage, plan limits, and the linked project.</small>
+            </article>
+            <article className="keys-side-card">
+              <span>Latest key</span>
+              <strong>{latestKey ? maskKey(latestKey.key) : "cp_live_demo"}</strong>
+              <small>{latestKey ? "Copy the latest key from the table when you're ready to connect a live app." : "Create a key to reveal the masked value here."}</small>
             </article>
           </div>
           <div className="keys-action-row">
@@ -2212,6 +2246,10 @@ function Keys({
             <button className="button outline" onClick={onGoToUsage}>Usage</button>
             <button className="button outline" onClick={onGoToProjects}>Projects</button>
             <button className="button primary blue" onClick={() => onCopy(latestKey?.key ?? "cp_live_demo")}>Copy latest</button>
+          </div>
+          <div className="keys-note-card">
+            <span>Developer note</span>
+            <strong>{keyNextAction}</strong>
           </div>
         </Panel>
 

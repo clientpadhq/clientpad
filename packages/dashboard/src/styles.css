@@ -4124,6 +4124,46 @@ td small {
   line-height: 1.45;
 }
 
+.keys-diagnostics-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.keys-diagnostic-card,
+.keys-note-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--brand) 4%, var(--panel));
+}
+
+.keys-diagnostic-card span,
+.keys-note-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.keys-diagnostic-card strong,
+.keys-note-card strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.keys-diagnostic-card small,
+.keys-note-card small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .keys-grid {
   display: grid;
   grid-template-columns: minmax(320px, 0.92fr) minmax(320px, 0.88fr) minmax(0, 1.2fr);
@@ -4470,6 +4510,7 @@ td small {
   .projects-metric-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .projects-grid { grid-template-columns: 1fr; }
   .keys-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .keys-diagnostics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .keys-grid { grid-template-columns: 1fr; }
   .billing-hero-grid { grid-template-columns: 1fr; }
   .billing-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -4501,10 +4542,13 @@ td small {
   .projects-summary-grid,
   .projects-metric-row { grid-template-columns: 1fr; }
   .keys-summary-grid { grid-template-columns: 1fr; }
+  .keys-diagnostics-grid { grid-template-columns: 1fr; }
   .billing-grid { grid-template-columns: 1fr; }
   .billing-summary-grid { grid-template-columns: 1fr; }
   .billing-action-row { flex-direction: column; }
   .billing-action-row .button { width: 100%; }
+  .keys-action-row { flex-direction: column; }
+  .keys-action-row .button { width: 100%; }
   .pipeline-summary-grid,
   .pipeline-action-row,
   .pipeline-metrics { grid-template-columns: 1fr; }
