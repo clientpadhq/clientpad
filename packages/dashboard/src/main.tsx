@@ -1120,6 +1120,10 @@ function Dashboard({
               keys={filteredKeys}
               onCreate={createKey}
               onCopy={(text) => copyText(text, setNotice)}
+              onGoToBilling={() => setPage("billing")}
+              onGoToUsage={() => setPage("usage")}
+              onGoToProjects={() => setPage("projects")}
+              onGoToLaunch={() => setPage("launch")}
             />
           )}
           {page === "usage" && (
@@ -1859,11 +1863,19 @@ function Keys({
   keys,
   onCreate,
   onCopy,
+  onGoToBilling,
+  onGoToUsage,
+  onGoToProjects,
+  onGoToLaunch,
 }: {
   workspaceId: string;
   keys: ApiKeyRecord[];
   onCreate: (input: KeyFormState) => Promise<void>;
   onCopy: (text: string) => void;
+  onGoToBilling: () => void;
+  onGoToUsage: () => void;
+  onGoToProjects: () => void;
+  onGoToLaunch: () => void;
 }) {
   const [form, setForm] = useState<KeyFormState>({
     workspace_id: workspaceId,
@@ -1873,36 +1885,120 @@ function Keys({
   });
 
   useEffect(() => setForm((prev) => ({ ...prev, workspace_id: workspaceId })), [workspaceId]);
+  const latestKey = keys[0] ?? null;
+  const activeCount = keys.filter((key) => key.status === "active").length;
+  const pausedCount = keys.filter((key) => key.status === "paused").length;
+  const latestPlanLabel = latestKey?.billing_mode === "cloud_paid" ? "Paid" : "Free";
+  const latestScopes = latestKey?.scopes?.length ?? 0;
+  const latestKeyName = latestKey?.name ?? "No API key yet";
 
   return (
-    <div className="detail-layout">
-      <Panel>
-        <h2>Create API key</h2>
-        <FormField label="Workspace ID" value={form.workspace_id} onChange={(value) => setForm({ ...form, workspace_id: value })} />
-        <FormField label="Key name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
-        <FormField label="Scopes" value={form.scopes} onChange={(value) => setForm({ ...form, scopes: value })} />
-        <label className="field">
-          Plan
-          <select value={form.plan_code} onChange={(event) => setForm({ ...form, plan_code: event.target.value })}>
-            <option value="free">Free</option>
-            <option value="developer">Developer</option>
-            <option value="pro">Pro</option>
-            <option value="business">Business</option>
-          </select>
-        </label>
-        <button className="button primary blue" onClick={() => onCreate(form)}>
-          <KeyRound size={16} /> Create API key
-        </button>
-      </Panel>
-      <Panel className="table-panel wide-detail">
+    <div className="keys-layout">
+      <Panel className="keys-hero">
         <div className="panel-head bordered">
-          <h2>All API Keys</h2>
-          <button className="button outline" onClick={() => onCopy(keys[0]?.key ?? "cp_live_demo")}>
-            <Clipboard size={15} /> Copy latest
-          </button>
+          <div>
+            <h2>API keys</h2>
+            <p className="helper-text">Create, copy, and manage the server-side credentials developers use to access ClientPad.</p>
+          </div>
+          <StatusChip tone={latestKey ? "green" : "amber"} label={latestKey ? "Live key posture" : "No live keys"} />
         </div>
-        {keys.length > 0 ? <KeysTable keys={keys} /> : <div className="empty-state-panel compact"><h3>No API keys yet</h3><p>Create a key to let the dashboard load live inbox, usage, and pipeline data.</p></div>}
+        <div className="keys-summary-grid">
+          <article className="keys-summary-card">
+            <span>Active</span>
+            <strong>{activeCount}</strong>
+            <small>Keys currently allowed to call the API.</small>
+          </article>
+          <article className="keys-summary-card">
+            <span>Paused</span>
+            <strong>{pausedCount}</strong>
+            <small>Keys that have been temporarily disabled.</small>
+          </article>
+          <article className="keys-summary-card">
+            <span>Latest key</span>
+            <strong>{latestKeyName}</strong>
+            <small>{latestKey ? maskKey(latestKey.key) : "Create a key to reveal the masked value here."}</small>
+          </article>
+          <article className="keys-summary-card">
+            <span>Scope count</span>
+            <strong>{latestScopes}</strong>
+            <small>{latestPlanLabel} posture • server-side `CLIENTPAD_API_KEY` only.</small>
+          </article>
+        </div>
       </Panel>
+
+      <div className="keys-grid">
+        <Panel className="keys-form-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Create API key</h2>
+              <p className="helper-text">Use a short name and the narrowest scopes needed for the app or service integration.</p>
+            </div>
+            <StatusChip tone="blue" label="Key builder" />
+          </div>
+          <FormField label="Workspace ID" value={form.workspace_id} onChange={(value) => setForm({ ...form, workspace_id: value })} />
+          <FormField label="Key name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
+          <FormField label="Scopes" value={form.scopes} onChange={(value) => setForm({ ...form, scopes: value })} />
+          <label className="field">
+            Plan
+            <select value={form.plan_code} onChange={(event) => setForm({ ...form, plan_code: event.target.value })}>
+              <option value="free">Free</option>
+              <option value="developer">Developer</option>
+              <option value="pro">Pro</option>
+              <option value="business">Business</option>
+            </select>
+          </label>
+          <div className="keys-form-actions">
+            <button className="button primary blue" onClick={() => onCreate(form)}>
+              <KeyRound size={16} /> Create API key
+            </button>
+            <button className="button outline" onClick={() => onGoToLaunch()}>Launch</button>
+          </div>
+        </Panel>
+
+        <Panel className="keys-side-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Developer posture</h2>
+              <p className="helper-text">What to tell teams when they integrate ClientPad into a backend or service workflow.</p>
+            </div>
+            <StatusChip tone="green" label={latestKey ? "Ready" : "Need key"} />
+          </div>
+          <div className="keys-side-list">
+            <article className="keys-side-card">
+              <span>Auth contract</span>
+              <strong>`CLIENTPAD_API_KEY`</strong>
+              <small>Keep it server-side and never expose it in client-side bundles.</small>
+            </article>
+            <article className="keys-side-card">
+              <span>Masked latest key</span>
+              <strong>{latestKey ? maskKey(latestKey.key) : "cp_live_demo"}</strong>
+              <small>Copy the latest key from the table when you’re ready to connect a live app.</small>
+            </article>
+            <article className="keys-side-card">
+              <span>Next actions</span>
+              <strong>Billing, usage, and projects</strong>
+              <small>After creating a key, check usage, plan limits, and the linked project.</small>
+            </article>
+          </div>
+          <div className="keys-action-row">
+            <button className="button outline" onClick={onGoToBilling}>Billing</button>
+            <button className="button outline" onClick={onGoToUsage}>Usage</button>
+            <button className="button outline" onClick={onGoToProjects}>Projects</button>
+            <button className="button primary blue" onClick={() => onCopy(latestKey?.key ?? "cp_live_demo")}>Copy latest</button>
+          </div>
+        </Panel>
+
+        <Panel className="table-panel wide-detail keys-table-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>All API Keys</h2>
+              <p className="helper-text">Review the keys that power developer access and CRM automation.</p>
+            </div>
+            <StatusChip tone={keys.length ? "green" : "amber"} label={`${keys.length} keys`} />
+          </div>
+          {keys.length > 0 ? <KeysTable keys={keys} /> : <div className="empty-state-panel compact"><h3>No API keys yet</h3><p>Create a key to let the dashboard load live inbox, usage, and pipeline data.</p></div>}
+        </Panel>
+      </div>
     </div>
   );
 }
