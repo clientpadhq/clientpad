@@ -4715,31 +4715,58 @@ function Logs({
   onCopy: (text: string) => void;
 }) {
   const [selectedLogId, setSelectedLogId] = useState(demoRequestLogs[0]?.id ?? "");
+  const [logQuery, setLogQuery] = useState("");
+  const [logFilter, setLogFilter] = useState<"all" | "success" | "client" | "server">("all");
+
+  const filteredLogs = useMemo(() => {
+    const normalizedQuery = normalizeLookup(logQuery);
+    return demoRequestLogs.filter((entry) => {
+      const matchesQuery = !normalizedQuery
+        || [entry.method, entry.path, String(entry.status), entry.workspace, entry.note, entry.apiKey, entry.requestId]
+          .some((value) => normalizeLookup(value).includes(normalizedQuery));
+      const matchesFilter = logFilter === "all"
+        || (logFilter === "success" && entry.status < 300)
+        || (logFilter === "client" && entry.status >= 400 && entry.status < 500)
+        || (logFilter === "server" && entry.status >= 500);
+      return matchesQuery && matchesFilter;
+    });
+  }, [logFilter, logQuery]);
+
+  const visibleLogs = filteredLogs.length ? filteredLogs : demoRequestLogs;
+
   useEffect(() => {
-    if (!demoRequestLogs.some((entry) => entry.id === selectedLogId)) {
-      setSelectedLogId(demoRequestLogs[0]?.id ?? "");
+    if (!visibleLogs.some((entry) => entry.id === selectedLogId)) {
+      setSelectedLogId(visibleLogs[0]?.id ?? demoRequestLogs[0]?.id ?? "");
     }
-  }, [selectedLogId]);
+  }, [selectedLogId, visibleLogs]);
 
   const workspaceName = readiness?.workspace?.name ?? usageSummary?.workspace_name ?? selectedWorkspace ?? "No workspace selected";
   const totalRequests = usageSummary?.request_count ?? demoRequestLogs.length;
   const successfulRequests = demoRequestLogs.filter((entry) => entry.status < 400).length;
   const clientErrors = demoRequestLogs.filter((entry) => entry.status >= 400 && entry.status < 500).length;
   const serverErrors = demoRequestLogs.filter((entry) => entry.status >= 500).length;
-  const selectedLog = demoRequestLogs.find((entry) => entry.id === selectedLogId) ?? demoRequestLogs[0];
+  const selectedLog = visibleLogs.find((entry) => entry.id === selectedLogId) ?? visibleLogs[0] ?? demoRequestLogs[0];
   const selectedStatusTone = requestStatusTone(selectedLog.status);
   const selectedStatusLabel = requestStatusLabel(selectedLog.status);
   const selectedNextAction = requestLogNextAction(selectedLog);
   const sessionLabel = session.user?.email ?? (mode === "preview" ? "Preview operator session" : "Operator session required");
   const apiKeyLabel = publicApiKey.trim() ? "Configured" : "Missing";
+  const visibleCount = filteredLogs.length;
 
   const summaryCards = [
     { label: "Requests", value: formatNumber(totalRequests), detail: `${formatNumber(successfulRequests)} successful in this snapshot` },
+    { label: "Visible", value: formatNumber(visibleCount || demoRequestLogs.length), detail: logQuery || logFilter !== "all" ? "Filtered request stream" : "All requests visible" },
     { label: "Client errors", value: formatNumber(clientErrors), detail: "4xx responses that need key, scope, or rate-limit review" },
     { label: "Server errors", value: formatNumber(serverErrors), detail: "5xx responses that need platform attention" },
     { label: "Workspace", value: workspaceName, detail: readiness?.workspace ? `Selected ${timeAgo(readiness.time)}` : "No live workspace selected" },
     { label: "API key", value: apiKeyLabel, detail: publicApiKey.trim() ? "Server-side bearer token is present" : "Add CLIENTPAD_API_KEY before making live requests" },
   ];
+  const filterOptions = [
+    { key: "all", label: "All", hint: "Every request" },
+    { key: "success", label: "2xx", hint: "Successful requests" },
+    { key: "client", label: "4xx", hint: "Client-side issues" },
+    { key: "server", label: "5xx", hint: "Server errors" },
+  ] as const;
 
   return (
     <div className="logs-layout">
@@ -4764,43 +4791,79 @@ function Logs({
 
       <div className="logs-grid">
         <Panel className="logs-table-panel table-panel">
-          <div className="panel-head bordered">
-            <h2>Request feed</h2>
+          <div className="panel-head bordered logs-table-head">
+            <div>
+              <h2>Request feed</h2>
+              <p className="helper-text">Search by path, workspace, status, request ID, or API key to narrow the stream.</p>
+            </div>
             <StatusChip tone={selectedStatusTone} label={`${selectedStatusLabel} selected`} />
           </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Method</th>
-                  <th>Path</th>
-                  <th>Status</th>
-                  <th>Latency</th>
-                  <th>Workspace</th>
-                  <th>Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {demoRequestLogs.map((entry) => (
-                  <tr
-                    key={entry.id}
-                    className={`logs-row ${selectedLogId === entry.id ? "selected" : ""}`}
-                    onClick={() => setSelectedLogId(entry.id)}
-                  >
-                    <td><Badge tone={requestStatusTone(entry.status)}>{entry.method}</Badge></td>
-                    <td>
-                      <strong>{entry.path}</strong>
-                      <small>{entry.note}</small>
-                    </td>
-                    <td><Badge tone={requestStatusTone(entry.status)}>{entry.status}</Badge></td>
-                    <td>{entry.latency}</td>
-                    <td>{entry.workspace}</td>
-                    <td>{entry.time}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="logs-toolbar">
+            <label className="logs-search">
+              <Search size={16} />
+              <input
+                value={logQuery}
+                onChange={(event) => setLogQuery(event.target.value)}
+                placeholder="Search requests, workspaces, or IDs"
+              />
+            </label>
+            <div className="logs-filter-group" role="tablist" aria-label="Request filters">
+              {filterOptions.map((option) => (
+                <button
+                  key={option.key}
+                  className={`logs-filter-pill ${logFilter === option.key ? "active" : ""}`}
+                  onClick={() => setLogFilter(option.key)}
+                  aria-pressed={logFilter === option.key}
+                  title={option.hint}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
+          {visibleLogs.length ? (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Method</th>
+                    <th>Path</th>
+                    <th>Status</th>
+                    <th>Latency</th>
+                    <th>Workspace</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleLogs.map((entry) => (
+                    <tr
+                      key={entry.id}
+                      className={`logs-row ${selectedLogId === entry.id ? "selected" : ""}`}
+                      onClick={() => setSelectedLogId(entry.id)}
+                    >
+                      <td><Badge tone={requestStatusTone(entry.status)}>{entry.method}</Badge></td>
+                      <td>
+                        <strong>{entry.path}</strong>
+                        <small>{entry.note}</small>
+                      </td>
+                      <td><Badge tone={requestStatusTone(entry.status)}>{entry.status}</Badge></td>
+                      <td>{entry.latency}</td>
+                      <td>{entry.workspace}</td>
+                      <td>{entry.time}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="logs-empty-state">
+              <strong>No request logs match this filter.</strong>
+              <p>Clear the search or switch to All to review the latest operator traffic.</p>
+              <button className="button outline" onClick={() => { setLogQuery(""); setLogFilter("all"); }}>
+                Reset filters
+              </button>
+            </div>
+          )}
         </Panel>
 
         <Panel className="logs-detail-panel">

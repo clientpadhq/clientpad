@@ -2073,6 +2073,91 @@ button { cursor: pointer; }
   line-height: 1.5;
 }
 
+.logs-table-head {
+  align-items: start;
+  gap: 12px;
+}
+
+.logs-toolbar {
+  display: grid;
+  gap: 10px;
+}
+
+.logs-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-2) 88%, transparent);
+}
+
+.logs-search svg {
+  color: var(--muted);
+  flex: none;
+}
+
+.logs-search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+  min-width: 0;
+}
+
+.logs-search input::placeholder {
+  color: var(--muted);
+}
+
+.logs-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.logs-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-2) 94%, transparent);
+  color: var(--muted);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.logs-filter-pill.active {
+  border-color: color-mix(in srgb, var(--brand) 32%, var(--line));
+  background: color-mix(in srgb, var(--brand) 10%, var(--panel));
+  color: var(--ink);
+}
+
+.logs-empty-state {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel-2) 90%, transparent);
+}
+
+.logs-empty-state strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.logs-empty-state p {
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
 .logs-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.75fr);
@@ -3090,6 +3175,8 @@ td small {
   .logs-summary-grid { grid-template-columns: 1fr; }
   .logs-detail-metrics { grid-template-columns: 1fr; }
   .logs-actions { flex-direction: column; }
+  .logs-filter-group { flex-direction: column; }
+  .logs-filter-pill { width: 100%; }
   .docs-contract-grid { grid-template-columns: 1fr; }
   .docs-actions { flex-direction: column; }
   .settings-summary-grid { grid-template-columns: 1fr; }
