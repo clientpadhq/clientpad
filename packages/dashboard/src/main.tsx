@@ -5927,6 +5927,10 @@ function RevenueDashboard({
   }, { Paystack: 0, Flutterwave: 0 });
   const averageReceipt = Math.round(totalPaid / Math.max(demoRevenue.length, 1));
   const lastPayout = demoRevenue[0]?.paidAt ?? "May 8, 2026";
+  const revenueHealth = pendingCount > 1 ? "Follow up" : "Stable";
+  const revenueNextAction = pendingCount > 1
+    ? "Follow up on quoted and booked clients to close the cash gap."
+    : "Collections are clean. Keep monitoring receipts and provider sync.";
   return (
     <div className="revenue-layout">
       <Panel className="revenue-hero">
@@ -5974,6 +5978,28 @@ function RevenueDashboard({
             <span>Last payout</span>
             <strong>{lastPayout}</strong>
             <small>Most recent settlement posted to the dashboard timeline.</small>
+          </article>
+        </div>
+        <div className="revenue-diagnostics-grid">
+          <article className="revenue-diagnostic-card">
+            <span>Collection health</span>
+            <strong>{revenueHealth}</strong>
+            <small>{pendingCount > 1 ? `${pendingCount} clients still need follow-up.` : "Receipts are moving cleanly through the current window."}</small>
+          </article>
+          <article className="revenue-diagnostic-card">
+            <span>Pipeline value</span>
+            <strong>${pending.toLocaleString()}</strong>
+            <small>Quoted, booked, and completed work not yet fully cash-closed.</small>
+          </article>
+          <article className="revenue-diagnostic-card">
+            <span>Provider mix</span>
+            <strong>{providerTotals.Paystack > providerTotals.Flutterwave ? "Paystack-led" : "Balanced"}</strong>
+            <small>{providerTotals.Paystack.toLocaleString()} vs {providerTotals.Flutterwave.toLocaleString()} across live receipts.</small>
+          </article>
+          <article className="revenue-diagnostic-card">
+            <span>Next action</span>
+            <strong>{revenueNextAction}</strong>
+            <small>Use billing, usage, and keys to resolve mismatches or slow settlement.</small>
           </article>
         </div>
       </Panel>
@@ -6031,7 +6057,12 @@ function RevenueDashboard({
           </div>
           <div className="revenue-note-card">
             <span>Next action</span>
-            <strong>{pendingCount ? "Follow up on quoted and booked clients to close the cash gap." : "Collections are clean. Keep monitoring receipts and provider sync."}</strong>
+            <strong>{revenueNextAction}</strong>
+          </div>
+          <div className="revenue-action-row">
+            <button className="button outline" onClick={onGoToBilling}>Billing</button>
+            <button className="button outline" onClick={onGoToUsage}>Usage</button>
+            <button className="button outline" onClick={onGoToKeys}>API keys</button>
           </div>
         </Panel>
       </div>

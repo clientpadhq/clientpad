@@ -3974,6 +3974,42 @@ td small {
   font-weight: 740;
 }
 
+.revenue-diagnostics-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.revenue-diagnostic-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--brand) 4%, var(--panel));
+}
+
+.revenue-diagnostic-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.revenue-diagnostic-card strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.revenue-diagnostic-card small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .revenue-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
@@ -4031,6 +4067,12 @@ td small {
   color: var(--ink);
   font-size: 13px;
   font-weight: 700;
+}
+
+.revenue-action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .keys-layout {
@@ -4435,6 +4477,7 @@ td small {
   .pipeline-action-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .revenue-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .revenue-provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .revenue-diagnostics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .revenue-grid { grid-template-columns: 1fr; }
   .usage-provider-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .usage-diagnostics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -4467,6 +4510,9 @@ td small {
   .pipeline-metrics { grid-template-columns: 1fr; }
   .revenue-summary-grid,
   .revenue-provider-grid { grid-template-columns: 1fr; }
+  .revenue-diagnostics-grid { grid-template-columns: 1fr; }
+  .revenue-action-row { flex-direction: column; }
+  .revenue-action-row .button { width: 100%; }
   .usage-provider-row { grid-template-columns: 1fr; }
   .usage-diagnostics-grid { grid-template-columns: 1fr; }
   .lookup-summary-grid { grid-template-columns: 1fr; }
