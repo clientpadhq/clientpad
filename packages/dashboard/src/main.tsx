@@ -508,6 +508,17 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
   const [authStatus, setAuthStatus] = useState<CloudAuthStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const platformCards = [
+    { label: "Platform", value: "platform.clientpad.xyz", detail: "Operator dashboard and CRM control plane." },
+    { label: "Public API", value: "api.clientpad.xyz", detail: "Developers use CLIENTPAD_API_KEY server-side." },
+    { label: "Docs", value: "docs.clientpad.xyz", detail: "Static docs with the docs root rewrite." },
+    { label: "Marketing", value: "clientpad.xyz", detail: "Public site and service-business landing pages." },
+  ];
+  const productCards = [
+    { label: "Open source", value: "Public code", detail: "Operators can audit the entire stack." },
+    { label: "Access control", value: "Private keys", detail: "Live traffic uses `CLIENTPAD_API_KEY`." },
+    { label: "Service teams", value: "CRM workflows", detail: "Projects, inbox, billing, and pipeline stay connected." },
+  ];
 
   useEffect(() => {
     let cancelled = false;
@@ -594,6 +605,19 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
     <main className="login-shell">
       <section className="login-panel">
         <Logo />
+        <div className="login-kicker">
+          <StatusChip tone={mode === "preview" ? "blue" : "green"} label={mode === "preview" ? "Preview platform" : "Live platform"} />
+          <span>API-first CRM infrastructure for developers and service businesses.</span>
+        </div>
+        <div className="login-summary-grid">
+          {productCards.map((card) => (
+            <article key={card.label} className="login-summary-card">
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              <small>{card.detail}</small>
+            </article>
+          ))}
+        </div>
         <div className="mode-switch">
           {(["preview", "live"] as ConnectionMode[]).map((item) => (
             <button key={item} type="button" className={mode === item ? "selected" : ""} onClick={() => setMode(item)}>
@@ -690,6 +714,19 @@ function Login({ onLogin, notice }: { onLogin: (session: Session) => void; notic
             <span>{mode === "preview" ? "Sample data" : authMode === "register" ? "First operator setup" : "Live operator view"}</span>
             <strong>{mode === "preview" ? "Safe to explore" : authMode === "register" ? "Claim this deployment" : "Connected to a real ClientPad API"}</strong>
           </div>
+          <div className="preview-host-grid">
+            {platformCards.map((card) => (
+              <article key={card.label} className="preview-host-card">
+                <span>{card.label}</span>
+                <strong>{card.value}</strong>
+                <small>{card.detail}</small>
+              </article>
+            ))}
+          </div>
+          <div className="preview-note">
+            <strong>What happens next</strong>
+            <p>{mode === "preview" ? "Open the sample dashboard, then move into Projects, Keys, and Docs." : authMode === "register" ? "Create the first operator, workspace, project, and starter API key in one pass." : "Use the same dashboard to manage CRM workflows, billing, usage, and API keys."}</p>
+          </div>
           <div className="mini-toolbar" />
           <div className="mini-chart" />
           <div className="mini-rows" />
@@ -707,6 +744,27 @@ function KeyReveal({ registrationKey, onLogin }: { registrationKey: string; onLo
     <main className="login-shell">
       <section className="login-panel">
         <Logo />
+        <div className="login-kicker">
+          <StatusChip tone="green" label="Starter bundle created" />
+          <span>Your first operator, workspace, project, and API key are ready.</span>
+        </div>
+        <div className="login-summary-grid">
+          <article className="login-summary-card">
+            <span>Public API</span>
+            <strong>api.clientpad.xyz</strong>
+            <small>Call it server-side with `CLIENTPAD_API_KEY`.</small>
+          </article>
+          <article className="login-summary-card">
+            <span>Docs</span>
+            <strong>docs.clientpad.xyz</strong>
+            <small>Copy the quickstart and error-handling snippets.</small>
+          </article>
+          <article className="login-summary-card">
+            <span>Dashboard</span>
+            <strong>platform.clientpad.xyz</strong>
+            <small>Operators manage projects, usage, and CRM workflows here.</small>
+          </article>
+        </div>
         <h1>Your starter API key is ready</h1>
         <p style={{ maxWidth: 480 }}>This key boots up your workspace, project, and usage tracking. Copy it now &mdash; it will never be shown again.</p>
         <div className="key-reveal-box">
@@ -733,8 +791,31 @@ function KeyReveal({ registrationKey, onLogin }: { registrationKey: string; onLo
             <span>Starter bundle created</span>
             <strong>Workspace &mdash; Project &mdash; API key</strong>
           </div>
-          <div style={{ padding: "1rem", fontSize: "0.85rem", color: "var(--muted)" }}>
-            <p>Your account, workspace, project, and API key were created together. Use the SDK or curl with this key to call the public API at <code style={{ fontSize: "0.75rem" }}>https://api.clientpad.xyz/api/public/v1</code>.</p>
+          <div className="preview-host-grid">
+            <article className="preview-host-card">
+              <span>API key</span>
+              <strong>{registrationKey.slice(0, 12)}...</strong>
+              <small>Copy it now. It won’t be shown again.</small>
+            </article>
+            <article className="preview-host-card">
+              <span>Next step</span>
+              <strong>Open dashboard</strong>
+              <small>Use the key to explore Projects, Keys, Usage, and Docs.</small>
+            </article>
+            <article className="preview-host-card">
+              <span>Public API</span>
+              <strong>api.clientpad.xyz</strong>
+              <small>Send requests from your server, not the browser.</small>
+            </article>
+            <article className="preview-host-card">
+              <span>Workflow</span>
+              <strong>CRM infrastructure</strong>
+              <small>Keep the public site open source and the API locked by key.</small>
+            </article>
+          </div>
+          <div className="preview-note">
+            <strong>Use this bundle to start fast</strong>
+            <p>Your account, workspace, project, and API key were created together. The public API lives at <code>https://api.clientpad.xyz/api/public/v1</code>.</p>
           </div>
           <div className="mini-toolbar" />
           <div className="mini-chart" />
