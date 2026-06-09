@@ -1167,14 +1167,23 @@ function Dashboard({
           )}
           {page === "clients" && <ClientSearch clients={filterClients(demoClients, query)} query={query} setQuery={setQuery} />}
           {page === "inbox" && (
-            <TeamInbox
-              session={currentSession}
-              publicApiKey={publicApiKey}
-              mode={mode}
-              onGoToSettings={() => setPage("settings")}
-              onGoToKeys={() => setPage("keys")}
-              readiness={readiness}
-            />
+            mode === "preview" ? (
+              <TeamInboxDemo
+                onGoToSettings={() => setPage("settings")}
+                onGoToKeys={() => setPage("keys")}
+                onGoToLaunch={() => setPage("launch")}
+                onGoToPipeline={() => setPage("pipeline")}
+              />
+            ) : (
+              <TeamInbox
+                session={currentSession}
+                publicApiKey={publicApiKey}
+                mode={mode}
+                onGoToSettings={() => setPage("settings")}
+                onGoToKeys={() => setPage("keys")}
+                readiness={readiness}
+              />
+            )
           )}
           {page === "revenue" && (
             <RevenueDashboard
@@ -5695,8 +5704,19 @@ function TeamInbox({
   );
 }
 
-function TeamInboxDemo() {
+function TeamInboxDemo({
+  onGoToSettings,
+  onGoToKeys,
+  onGoToLaunch,
+  onGoToPipeline,
+}: {
+  onGoToSettings: () => void;
+  onGoToKeys: () => void;
+  onGoToLaunch: () => void;
+  onGoToPipeline: () => void;
+}) {
   const totalOpen = demoConversations.filter((conversation) => conversation.status === "open").length;
+  const reviewCount = 1;
   return (
     <div className="inbox-stack">
       <Panel className="inbox-summary-panel">
@@ -5715,7 +5735,7 @@ function TeamInboxDemo() {
           </article>
           <article className="inbox-summary-card">
             <span>Review queue</span>
-            <strong>1</strong>
+            <strong>{reviewCount}</strong>
             <small>Owner approval is required before the next send.</small>
           </article>
           <article className="inbox-summary-card">
@@ -5730,6 +5750,28 @@ function TeamInboxDemo() {
           </article>
         </div>
       </Panel>
+
+      <Panel className="inbox-alert-panel">
+        <div className="panel-head bordered">
+          <div>
+            <h2>Preview diagnostics</h2>
+            <p className="helper-text">Everything below is demo data until a live `CLIENTPAD_API_KEY` is connected.</p>
+          </div>
+          <StatusChip tone="amber" label="Demo mode" />
+        </div>
+        <div className="inbox-alert-body">
+          <AlertCircle size={18} />
+          <div>
+            <strong>This inbox is intentionally sample-only.</strong>
+            <p>Use it to review the layout, then move to the live inbox when the workspace API key and WhatsApp connection are ready.</p>
+          </div>
+          <div className="inbox-alert-actions">
+            <button className="button outline" type="button" onClick={onGoToLaunch}>Launch checks</button>
+            <button className="button primary blue" type="button" onClick={onGoToKeys}>API keys</button>
+          </div>
+        </div>
+      </Panel>
+
       <div className="inbox-toolbar">
         <label className="inbox-search">
           <Search size={16} />
@@ -5745,61 +5787,88 @@ function TeamInboxDemo() {
           <span>1 archived</span>
         </div>
       </div>
+
       <div className="inbox-layout">
-      <Panel className="conversation-list">
-        <div className="panel-head bordered">
-          <div>
-            <h2>Conversations</h2>
-            <p className="helper-text">The client-facing inbox stays simple and readable.</p>
-          </div>
-          <StatusChip tone="blue" label="Preview inbox" />
-        </div>
-        {demoConversations.map((conversation, index) => (
-          <button key={conversation.name} className={index === 0 ? "conversation active" : "conversation"}>
-            <div className="conversation-top">
-              <div className="conversation-avatar">{getInitials(conversation.name)}</div>
-              <div className="conversation-copy">
-                <strong>{conversation.name}</strong>
-                <span>{conversation.preview}</span>
-              </div>
+        <Panel className="conversation-list">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Conversations</h2>
+              <p className="helper-text">The client-facing inbox stays simple and readable.</p>
             </div>
-            <small>{conversation.time}</small>
-          </button>
-        ))}
-      </Panel>
-      <Panel className="timeline-panel">
-        <div className="panel-head bordered">
-          <div>
-            <h2>Message timeline</h2>
-            <p className="helper-text">A concise exchange between the customer and the operator.</p>
+            <StatusChip tone="blue" label="Preview inbox" />
           </div>
-          <Badge tone="green">Assigned</Badge>
-        </div>
-        <div className="messages">
-          <p className="bubble inbound">Hi, can I get the quote for AC servicing today?</p>
-          <p className="bubble outbound">Yes - NGN 45,000 including call-out. We can book 3 PM.</p>
-          <p className="bubble inbound">Great, please book it and send payment link.</p>
-        </div>
-        <label className="mention-field">Assignment / mentions<input defaultValue="@Aisha assigned | @Ops please watch payment" /></label>
-      </Panel>
-      <Panel className="quick-replies">
-        <div className="panel-head bordered">
-          <div>
-            <h2>Quick reply suggestions</h2>
-            <p className="helper-text">Use a draft, then edit the text before sending it live.</p>
+          {demoConversations.map((conversation, index) => (
+            <button key={conversation.name} className={index === 0 ? "conversation active" : "conversation"}>
+              <div className="conversation-top">
+                <div className="conversation-avatar">{getInitials(conversation.name)}</div>
+                <div className="conversation-copy">
+                  <strong>{conversation.name}</strong>
+                  <span>{conversation.preview}</span>
+                </div>
+              </div>
+              <small>{conversation.time}</small>
+            </button>
+          ))}
+        </Panel>
+        <Panel className="timeline-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Message timeline</h2>
+              <p className="helper-text">A concise exchange between the customer and the operator.</p>
+            </div>
+            <Badge tone="green">Assigned</Badge>
           </div>
-          <StatusChip tone="green" label={`${demoReplies.length} drafts`} />
-        </div>
-        {demoReplies.map((reply) => <button className="reply-chip" key={reply}>{reply}</button>)}
-        <div className="lead-panel">
-          <h3>Lead Context</h3>
-          <div className="lead-info">
-            <div className="info-row"><span>Pipeline Stage</span><strong>In Progress</strong></div>
-            <div className="info-row"><span>Phone</span><strong>+234 801 555 9021</strong></div>
-            <div className="info-row"><span>Intent</span><strong>Quote request</strong></div>
+          <div className="messages">
+            <p className="bubble inbound">Hi, can I get the quote for AC servicing today?</p>
+            <p className="bubble outbound">Yes - NGN 45,000 including call-out. We can book 3 PM.</p>
+            <p className="bubble inbound">Great, please book it and send payment link.</p>
           </div>
-        </div>
-      </Panel>
+          <label className="mention-field">Assignment / mentions<input defaultValue="@Aisha assigned | @Ops please watch payment" /></label>
+        </Panel>
+        <Panel className="quick-replies">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Quick reply suggestions</h2>
+              <p className="helper-text">Use a draft, then edit the text before sending it live.</p>
+            </div>
+            <StatusChip tone="green" label={`${demoReplies.length} drafts`} />
+          </div>
+          <div className="inbox-context-grid">
+            <article className="inbox-context-card">
+              <span>Public API</span>
+              <strong>Ready for live traffic</strong>
+              <small>Switch to the live inbox when `CLIENTPAD_API_KEY` is active.</small>
+            </article>
+            <article className="inbox-context-card">
+              <span>WhatsApp</span>
+              <strong>Preview conversation flow</strong>
+              <small>Conversation replies, drafts, and stage changes are visible in the same layout.</small>
+            </article>
+            <article className="inbox-context-card">
+              <span>Pipeline</span>
+              <strong>In Progress</strong>
+              <small>The selected preview thread already lives in the active delivery stage.</small>
+            </article>
+            <article className="inbox-context-card">
+              <span>Next move</span>
+              <strong>Open pipeline board</strong>
+              <small>Use the board to move leads across the CRM workflow.</small>
+            </article>
+          </div>
+          {demoReplies.map((reply) => <button className="reply-chip" key={reply}>{reply}</button>)}
+          <div className="lead-panel">
+            <h3>Lead Context</h3>
+            <div className="lead-info">
+              <div className="info-row"><span>Pipeline Stage</span><strong>In Progress</strong></div>
+              <div className="info-row"><span>Phone</span><strong>+234 801 555 9021</strong></div>
+              <div className="info-row"><span>Intent</span><strong>Quote request</strong></div>
+            </div>
+            <div className="inbox-action-row">
+              <button className="button outline" type="button" onClick={onGoToPipeline}>Pipeline</button>
+              <button className="button outline" type="button" onClick={onGoToSettings}>Settings</button>
+            </div>
+          </div>
+        </Panel>
       </div>
     </div>
   );
