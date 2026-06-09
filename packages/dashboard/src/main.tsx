@@ -2562,6 +2562,7 @@ function Docs({
   onCopy: (text: string) => void;
 }) {
   const snippet = quickstartSnippet(language, selectedProject);
+  const workspaceName = selectedProject?.name ?? "No project selected";
   const apiContract = [
     {
       label: "Public base URL",
@@ -2583,6 +2584,12 @@ function Docs({
       value: "Signed delivery with retries",
       detail: "Use Integrations to verify delivery history, signatures, and retry posture.",
     },
+  ];
+  const liveSurfaces = [
+    { label: "Platform", value: "platform.clientpad.xyz", detail: "Operator dashboard and CRM control plane." },
+    { label: "Public API", value: "api.clientpad.xyz", detail: "Developer API contract with CLIENTPAD_API_KEY." },
+    { label: "Docs", value: "docs.clientpad.xyz", detail: "Static docs surface with the docs root rewrite." },
+    { label: "Marketing", value: "clientpad.xyz", detail: "Public site and service-business landing pages." },
   ];
   return (
     <div className="docs-layout">
@@ -2621,6 +2628,28 @@ function Docs({
             </button>
           </div>
           <Quickstart language={language} setLanguage={setLanguage} selectedProject={selectedProject} />
+          <div className="docs-live-surface">
+            <div className="panel-head bordered compact-head">
+              <h2>Live surfaces</h2>
+              <StatusChip tone="blue" label="Host map" />
+            </div>
+            <div className="docs-live-grid">
+              {liveSurfaces.map((surface) => (
+                <article key={surface.label} className="docs-live-card">
+                  <span>{surface.label}</span>
+                  <strong>{surface.value}</strong>
+                  <small>{surface.detail}</small>
+                </article>
+              ))}
+            </div>
+            <div className="docs-live-footer">
+              <div>
+                <span>Selected project</span>
+                <strong>{workspaceName}</strong>
+              </div>
+              <button className="button outline" onClick={onGoToLaunch}>Run launch checks</button>
+            </div>
+          </div>
         </Panel>
         <Panel className="docs-side-panel">
           <div className="panel-head bordered">
