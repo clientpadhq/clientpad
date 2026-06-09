@@ -4301,6 +4301,42 @@ td small {
   line-height: 1.45;
 }
 
+.usage-diagnostics-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.usage-diagnostic-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--brand) 4%, var(--panel));
+}
+
+.usage-diagnostic-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.usage-diagnostic-card strong {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.usage-diagnostic-card small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .usage-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.22fr) minmax(320px, 0.78fr);
@@ -4359,6 +4395,12 @@ td small {
   font-weight: 700;
 }
 
+.usage-action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .usage-table-card {
   min-width: 0;
   overflow: hidden;
@@ -4395,6 +4437,7 @@ td small {
   .revenue-provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .revenue-grid { grid-template-columns: 1fr; }
   .usage-provider-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .usage-diagnostics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .usage-grid { grid-template-columns: 1fr; }
   .lookup-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inbox-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -4425,6 +4468,7 @@ td small {
   .revenue-summary-grid,
   .revenue-provider-grid { grid-template-columns: 1fr; }
   .usage-provider-row { grid-template-columns: 1fr; }
+  .usage-diagnostics-grid { grid-template-columns: 1fr; }
   .lookup-summary-grid { grid-template-columns: 1fr; }
   .lookup-preset-row { gap: 6px; }
   .inbox-summary-grid { grid-template-columns: 1fr; }
@@ -4439,6 +4483,8 @@ td small {
   .inbox-alert-actions .button,
   .inbox-action-row .button { width: 100%; }
   .inbox-context-grid { grid-template-columns: 1fr; }
+  .usage-action-row { flex-direction: column; }
+  .usage-action-row .button { width: 100%; }
   .pipeline-board { grid-template-columns: repeat(7, minmax(190px, 78vw)); }
   .webhook-box { grid-template-columns: 1fr; }
   .qr-card { width: 140px; grid-template-columns: repeat(7, 14px); }

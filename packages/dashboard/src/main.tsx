@@ -2255,6 +2255,12 @@ function Usage({
   const rejectionRate = Math.max(Math.round((totalRejected / Math.max(totalRequests, 1)) * 10000) / 100, 0);
   const planName = usageSummary?.plan_name ?? "Billing ready";
   const periodLabel = usageSummary?.month ?? "Current month";
+  const usageHealth = rejectionRate > 2 ? "Investigate" : remainingRequests < requestLimit * 0.15 ? "Watch quota" : "Healthy";
+  const usageNextAction = rejectionRate > 2
+    ? "Investigate rejected requests and the latest key activity."
+    : remainingRequests < requestLimit * 0.15
+      ? "Review billing limits before the current quota runs low."
+      : "Keep tracking the quota and live key mix.";
   return (
     <div className="usage-layout">
       <Panel className="usage-hero">
@@ -2307,6 +2313,28 @@ function Usage({
             <small>Billing posture for the current workspace and API keys.</small>
           </article>
         </div>
+        <div className="usage-diagnostics-grid">
+          <article className="usage-diagnostic-card">
+            <span>Health</span>
+            <strong>{usageHealth}</strong>
+            <small>{rejectionRate > 2 ? "Rejected requests are above the healthy threshold." : "Traffic and quota usage are in a healthy band."}</small>
+          </article>
+          <article className="usage-diagnostic-card">
+            <span>Request runway</span>
+            <strong>{formatNumber(Math.max(requestLimit - totalRequests, 0))}</strong>
+            <small>{remainingRequests < requestLimit * 0.15 ? "Quota is getting low." : "Enough headroom to keep operating."}</small>
+          </article>
+          <article className="usage-diagnostic-card">
+            <span>Active keys</span>
+            <strong>{formatNumber(activeKeys)}</strong>
+            <small>{activeKeys > 0 ? "Keys are powering the current workspace." : "Create a key before sending live traffic."}</small>
+          </article>
+          <article className="usage-diagnostic-card">
+            <span>Next action</span>
+            <strong>{usageNextAction}</strong>
+            <small>Use the billing, keys, and projects pages to resolve quota or traffic issues.</small>
+          </article>
+        </div>
       </Panel>
 
       <div className="usage-grid">
@@ -2345,7 +2373,12 @@ function Usage({
           </div>
           <div className="usage-note-card">
             <span>Risk signal</span>
-            <strong>{rejectionRate > 2 ? "Investigate rejected requests and the latest key activity." : "Usage is healthy. Keep tracking the quota and live key mix."}</strong>
+            <strong>{usageNextAction}</strong>
+          </div>
+          <div className="usage-action-row">
+            <button className="button outline" type="button" onClick={onGoToBilling}>Billing</button>
+            <button className="button outline" type="button" onClick={onGoToKeys}>API keys</button>
+            <button className="button outline" type="button" onClick={onGoToProjects}>Projects</button>
           </div>
         </Panel>
 
