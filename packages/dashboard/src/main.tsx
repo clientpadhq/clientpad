@@ -2931,20 +2931,20 @@ function SettingsPage({
   const apiOrigin = session.baseUrl.replace(/\/+$/, "").replace(/\/api\/cloud\/v1$/i, "");
   const publicApiUrl = `${apiOrigin}/api/public/v1`;
   const operatorEmail = session.user?.email ?? "Preview account";
-  const workspaceName = readiness?.workspace?.name ?? session.workspaces?.find((workspace) => workspace.id === session.selectedWorkspaceId)?.name ?? "No workspace selected";
-  const sessionStatus = mode === "preview"
-    ? "Preview mode"
-    : readiness?.status === "ok"
-      ? "Live connected"
-      : readiness
-        ? "Live needs attention"
-        : "Checking connection";
-  const surfaces = [
-    { label: "Platform", value: "platform.clientpad.xyz", detail: "Dashboard entrypoint for operators." },
-    { label: "Public API", value: publicApiUrl, detail: "Developer-facing API base URL." },
-    { label: "Docs", value: "docs.clientpad.xyz", detail: "Documentation and quickstart surface." },
-    { label: "Marketing", value: "clientpad.xyz", detail: "Public marketing and conversion site." },
-  ];
+    const workspaceName = readiness?.workspace?.name ?? session.workspaces?.find((workspace) => workspace.id === session.selectedWorkspaceId)?.name ?? "No workspace selected";
+    const sessionStatus = mode === "preview"
+      ? "Preview mode"
+      : readiness?.status === "ok"
+        ? "Live connected"
+        : readiness
+          ? "Live needs attention"
+          : "Checking connection";
+    const connectionContract = [
+      { label: "Platform", value: "platform.clientpad.xyz", detail: "Operator dashboard and CRM control plane." },
+      { label: "Public API", value: publicApiUrl, detail: "Developers call this host with `CLIENTPAD_API_KEY`." },
+      { label: "Docs", value: "docs.clientpad.xyz", detail: "Quickstart, errors, and API reference." },
+      { label: "Workspace", value: workspaceName, detail: "Current operator workspace bound to the saved key." },
+    ];
 
   return (
     <div className="settings-layout">
@@ -2995,22 +2995,26 @@ function SettingsPage({
             Docs
           </button>
         </div>
-        <div className="settings-surfaces">
-          <div className="panel-head bordered compact-head">
-            <h2>Live surfaces</h2>
-            <StatusChip tone="blue" label="Host map" />
+          <div className="settings-contract-panel">
+            <div className="panel-head bordered compact-head">
+              <h2>Connection contract</h2>
+              <StatusChip tone="blue" label="API-first setup" />
+            </div>
+            <div className="settings-contract-grid">
+              {connectionContract.map((item) => (
+                <article key={item.label} className="settings-contract-card">
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                  <small>{item.detail}</small>
+                </article>
+              ))}
+            </div>
+            <div className="settings-contract-note">
+              <strong>Keep it simple</strong>
+              <p>Save the API base URL and workspace key here, then use the same values server-side when calling the ClientPad API.</p>
+            </div>
           </div>
-          <div className="settings-surface-grid">
-            {surfaces.map((surface) => (
-              <article key={surface.label} className="settings-surface-card">
-                <span>{surface.label}</span>
-                <strong>{surface.value}</strong>
-                <small>{surface.detail}</small>
-              </article>
-            ))}
-          </div>
-        </div>
-      </Panel>
+        </Panel>
 
       <div className="settings-grid">
         <Panel className="settings-form-panel">
@@ -3044,42 +3048,41 @@ function SettingsPage({
           </div>
         </Panel>
 
-        <Panel className="settings-side-panel">
-          <div className="panel-head bordered">
-            <h2>Deployment checklist</h2>
-            <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={readiness?.status === "ok" ? "Operational" : "Review setup"} />
-          </div>
-          <ul className="plan-list">
-            <li>Mount `@clientpad/cloud` at `/api/cloud/v1`.</li>
-            <li>Use `CLIENTPAD_API_KEY` from the dashboard or your server-side runtime.</li>
-            <li>Keep the dashboard static at `platform.clientpad.xyz`.</li>
-            <li>Deploy docs separately at `docs.clientpad.xyz` for the developer surface.</li>
-          </ul>
-          <div className="settings-link-grid">
-            <button className="settings-link-card" onClick={onGoToInfrastructure}>
-              <span>Infrastructure</span>
-              <strong>Hosts and deploy map</strong>
-              <small>Check every service endpoint in one place.</small>
-            </button>
-            <button className="settings-link-card" onClick={onGoToLaunch}>
-              <span>Launch</span>
-              <strong>Readiness checks</strong>
-              <small>Run the public and operator checks before shipping.</small>
-            </button>
-            <button className="settings-link-card" onClick={onGoToDocs}>
-              <span>Docs</span>
-              <strong>API reference</strong>
-              <small>Copy the snippets developers need.</small>
-            </button>
-            <button className="settings-link-card" onClick={onGoToMonitoring}>
-              <span>Monitoring</span>
-              <strong>Live health view</strong>
-              <small>Track errors, uptime, and request freshness.</small>
-            </button>
-          </div>
-        </Panel>
+          <Panel className="settings-side-panel">
+            <div className="panel-head bordered">
+              <h2>Operator checklist</h2>
+              <StatusChip tone={readiness?.status === "ok" ? "green" : "amber"} label={readiness?.status === "ok" ? "Operational" : "Review setup"} />
+            </div>
+            <ul className="plan-list">
+              <li>Mount `@clientpad/cloud` at `/api/cloud/v1`.</li>
+              <li>Use `CLIENTPAD_API_KEY` from the dashboard or your server-side runtime.</li>
+              <li>Keep the dashboard static at `platform.clientpad.xyz`.</li>
+            </ul>
+            <div className="settings-action-grid">
+              <button className="settings-link-card" onClick={onGoToInfrastructure}>
+                <span>Infrastructure</span>
+                <strong>Hosts and deploy map</strong>
+                <small>Confirm the API, docs, and public hosts are aligned.</small>
+              </button>
+              <button className="settings-link-card" onClick={onGoToLaunch}>
+                <span>Launch</span>
+                <strong>Readiness checks</strong>
+                <small>Run the public and operator checks before shipping.</small>
+              </button>
+              <button className="settings-link-card" onClick={onGoToDocs}>
+                <span>Docs</span>
+                <strong>API reference</strong>
+                <small>Copy the snippets developers need.</small>
+              </button>
+              <button className="settings-link-card" onClick={onGoToMonitoring}>
+                <span>Monitoring</span>
+                <strong>Live health view</strong>
+                <small>Track errors, uptime, and request freshness.</small>
+              </button>
+            </div>
+          </Panel>
+        </div>
       </div>
-    </div>
   );
 }
 

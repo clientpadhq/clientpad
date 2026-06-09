@@ -2418,13 +2418,14 @@ button { cursor: pointer; }
   gap: 12px;
 }
 
-.settings-surface-grid {
+.settings-contract-grid,
+.settings-action-grid {
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.settings-surface-card {
+.settings-contract-card {
   display: grid;
   gap: 4px;
   padding: 14px;
@@ -2433,24 +2434,23 @@ button { cursor: pointer; }
   background: color-mix(in srgb, var(--panel) 92%, transparent);
 }
 
-.settings-surface-card span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+.settings-contract-note {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--brand) 16%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--brand) 4%, var(--panel));
 }
 
-.settings-surface-card strong {
+.settings-contract-note strong {
   color: var(--ink);
   font-size: 14px;
-  line-height: 1.35;
-  word-break: break-word;
 }
 
-.settings-surface-card small {
+.settings-contract-note p {
+  margin: 0;
   color: var(--muted);
-  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -2534,12 +2534,6 @@ button { cursor: pointer; }
   background: color-mix(in srgb, var(--brand) 4%, var(--panel));
 }
 
-.settings-link-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
 .settings-link-card {
   display: grid;
   gap: 6px;
@@ -2548,10 +2542,6 @@ button { cursor: pointer; }
   border-radius: 10px;
   background: color-mix(in srgb, var(--panel) 94%, transparent);
   text-align: left;
-}
-
-.settings-link-card:hover {
-  background: color-mix(in srgb, var(--brand) 5%, var(--panel));
 }
 
 .overview-layout {
@@ -3181,7 +3171,7 @@ td small {
   .settings-summary-grid { grid-template-columns: 1fr; }
   .settings-actions { flex-direction: column; }
   .settings-key-row { flex-direction: column; }
-  .settings-link-grid { grid-template-columns: 1fr; }
+  .settings-action-grid { grid-template-columns: 1fr; }
   .security-grid { grid-template-columns: 1fr; }
   .security-footer-grid { grid-template-columns: 1fr; }
   .security-actions { flex-direction: column; }
@@ -5410,7 +5400,6 @@ td small {
   .launch-layout { grid-template-columns: 1fr; }
   .launch-overview-grid,
   .launch-action-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .settings-surface-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .docs-live-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -5421,8 +5410,7 @@ td small {
   .pipeline-metrics,
   .launch-overview-grid,
   .launch-action-grid,
-  .settings-surface-grid,
-  .docs-live-grid { grid-template-columns: 1fr; }
+    .docs-live-grid { grid-template-columns: 1fr; }
   .status-banner-actions,
   .empty-actions { width: 100%; }
   .status-banner-actions .button,
