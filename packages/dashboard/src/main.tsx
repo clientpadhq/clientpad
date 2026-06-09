@@ -1237,6 +1237,8 @@ function Dashboard({
               usageSummary={usageSummary}
               onCheckout={startCheckout}
               onManageBilling={openBillingPortal}
+              onGoToUsage={() => setPage("usage")}
+              onGoToKeys={() => setPage("keys")}
               billingAction={billingAction}
             />
           )}
@@ -2128,7 +2130,7 @@ function Keys({
           <article className="keys-summary-card">
             <span>Scope count</span>
             <strong>{latestScopes}</strong>
-            <small>{latestPlanLabel} posture • server-side `CLIENTPAD_API_KEY` only.</small>
+            <small>{latestPlanLabel} posture | server-side `CLIENTPAD_API_KEY` only.</small>
           </article>
         </div>
       </Panel>
@@ -2179,7 +2181,7 @@ function Keys({
             <article className="keys-side-card">
               <span>Masked latest key</span>
               <strong>{latestKey ? maskKey(latestKey.key) : "cp_live_demo"}</strong>
-              <small>Copy the latest key from the table when you’re ready to connect a live app.</small>
+              <small>Copy the latest key from the table when you're ready to connect a live app.</small>
             </article>
             <article className="keys-side-card">
               <span>Next actions</span>
@@ -2351,6 +2353,8 @@ function Billing({
   usageSummary,
   onCheckout,
   onManageBilling,
+  onGoToUsage,
+  onGoToKeys,
   billingAction,
 }: {
   plans: Plan[];
@@ -2359,20 +2363,58 @@ function Billing({
   usageSummary: UsageSummary | null;
   onCheckout: (code: string) => Promise<void> | void;
   onManageBilling: () => Promise<void> | void;
+  onGoToUsage: () => void;
+  onGoToKeys: () => void;
   billingAction: string | null;
 }) {
+  const selectedPlan = plans.find((plan) => plan.code === selectedPlanCode) ?? plans[0] ?? null;
+  const monthlyRequestLimit = selectedPlan?.monthly_request_limit ?? usageSummary?.monthly_request_limit ?? 10_000_000;
+  const rateLimit = selectedPlan?.rate_limit_per_minute ?? usageSummary?.rate_limit_per_minute ?? 500;
+  const includedProjects = selectedPlan?.included_projects ?? 0;
+  const planName = selectedPlan?.name ?? usageSummary?.plan_name ?? "Free";
+  const planMode = usageSummary?.billing_mode === "cloud_paid" ? "Paid" : "Free";
   const canManageBilling = Boolean(usageSummary && usageSummary.plan_code && usageSummary.plan_code !== "free");
   return (
     <div className="billing-grid">
-      <Panel className="billing-summary">
-        <div className="panel-head"><h2>Current cloud usage</h2><Badge tone="green">{usageSummary ? "Synced" : "Pending"}</Badge></div>
-        <Quota label="Requests" value={usageSummary?.request_count ?? 2_391_873} limit={usageSummary?.monthly_request_limit ?? 10_000_000} suffix="" />
-        <Quota label="Rejected" value={usageSummary?.rejected_count ?? 73} limit={Math.max(usageSummary?.rejected_count ?? 73, 100)} suffix="" />
-        <p className="helper-text">Uses the same quota model as Usage: request count, rejections, rate limits, active API keys, and remaining monthly capacity.</p>
-        <div className="split-actions">
-          <button className="button outline" onClick={onManageBilling} disabled={!canManageBilling}>
-            {canManageBilling ? "Manage billing" : "Billing portal unavailable"}
-          </button>
+      <Panel className="billing-summary billing-summary-panel">
+        <div className="panel-head"><h2>Billing and plan control</h2><Badge tone="green">{usageSummary ? "Synced" : "Pending"}</Badge></div>
+        <div className="billing-hero-grid">
+          <div className="billing-summary-copy">
+            <p className="helper-text">Plan changes, request limits, and checkout posture for the active workspace.</p>
+            <div className="billing-action-row">
+              <button className="button primary blue" onClick={onManageBilling} disabled={!canManageBilling}>
+                {canManageBilling ? "Manage billing" : "Billing portal unavailable"}
+              </button>
+              <button className="button outline" onClick={() => onGoToUsage()}>Usage</button>
+              <button className="button outline" onClick={() => onGoToKeys()}>API keys</button>
+            </div>
+          </div>
+          <div className="billing-summary-grid">
+            <article className="billing-summary-card">
+              <span>Current plan</span>
+              <strong>{planName}</strong>
+              <small>{planMode} billing posture for the active workspace.</small>
+            </article>
+            <article className="billing-summary-card">
+              <span>Monthly requests</span>
+              <strong>{monthlyRequestLimit.toLocaleString()}</strong>
+              <small>Cap for the selected plan and workspace.</small>
+            </article>
+            <article className="billing-summary-card">
+              <span>Rate limit</span>
+              <strong>{rateLimit}/min</strong>
+              <small>Throughput guard for live traffic and integrations.</small>
+            </article>
+            <article className="billing-summary-card">
+              <span>Included projects</span>
+              <strong>{includedProjects}</strong>
+              <small>Projects covered before you need to upgrade.</small>
+            </article>
+          </div>
+        </div>
+        <div className="billing-note-card">
+          <span>Billing posture</span>
+          <strong>Use the same workspace to manage plans, usage, and server-side API access.</strong>
         </div>
       </Panel>
       {plans.length > 0 ? plans.map((plan) => (
@@ -5671,12 +5713,12 @@ function RevenueDashboard({
           <article className="revenue-provider-card">
             <span>Paystack</span>
             <strong className="healthy">Live</strong>
-            <small>${providerTotals.Paystack.toLocaleString()} collected • webhook synced 2 min ago</small>
+            <small>${providerTotals.Paystack.toLocaleString()} collected | webhook synced 2 min ago</small>
           </article>
           <article className="revenue-provider-card">
             <span>Flutterwave</span>
             <strong className="healthy">Live</strong>
-            <small>${providerTotals.Flutterwave.toLocaleString()} collected • settlement pending: $420</small>
+            <small>${providerTotals.Flutterwave.toLocaleString()} collected | settlement pending: $420</small>
           </article>
           <article className="revenue-provider-card">
             <span>Last payout</span>

@@ -2905,6 +2905,61 @@ td small {
   grid-template-columns: repeat(4, minmax(220px, 1fr));
   gap: 16px;
 }
+.billing-summary-panel {
+  display: grid;
+  gap: 16px;
+}
+.billing-hero-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+.billing-summary-copy {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+.billing-summary-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.billing-summary-card,
+.billing-note-card {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+}
+.billing-summary-card span,
+.billing-note-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.billing-summary-card strong,
+.billing-note-card strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.billing-summary-card small,
+.billing-note-card small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.billing-action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 .selected-plan {
   border-color: #1463e9;
   box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.09);
@@ -4252,6 +4307,8 @@ td small {
   .projects-grid { grid-template-columns: 1fr; }
   .keys-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .keys-grid { grid-template-columns: 1fr; }
+  .billing-hero-grid { grid-template-columns: 1fr; }
+  .billing-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .revenue-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .revenue-provider-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .revenue-grid { grid-template-columns: 1fr; }
@@ -4275,6 +4332,10 @@ td small {
   .projects-summary-grid,
   .projects-metric-row { grid-template-columns: 1fr; }
   .keys-summary-grid { grid-template-columns: 1fr; }
+  .billing-grid { grid-template-columns: 1fr; }
+  .billing-summary-grid { grid-template-columns: 1fr; }
+  .billing-action-row { flex-direction: column; }
+  .billing-action-row .button { width: 100%; }
   .revenue-summary-grid,
   .revenue-provider-grid { grid-template-columns: 1fr; }
   .usage-provider-row { grid-template-columns: 1fr; }
