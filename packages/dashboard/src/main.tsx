@@ -1745,7 +1745,6 @@ function Overview({
     return counts;
   }, {});
   const openPipelineCount = (pipelineCounts["New Lead"] ?? 0) + (pipelineCounts["Quoted"] ?? 0) + (pipelineCounts["Booked"] ?? 0) + (pipelineCounts["In Progress"] ?? 0);
-  const closedPipelineCount = (pipelineCounts["Completed"] ?? 0) + (pipelineCounts["Paid"] ?? 0) + (pipelineCounts["Review Requested"] ?? 0);
   const topPipelineStage = serviceStages.reduce((bestStage, stage) => (pipelineCounts[stage] ?? 0) > (pipelineCounts[bestStage] ?? 0) ? stage : bestStage, serviceStages[0]);
   const projectName = selectedProject?.name ?? "No project selected";
   const projectSlug = selectedProject?.slug ?? "clientpad-api";
@@ -1796,6 +1795,9 @@ function Overview({
             <small>WhatsApp {latestWhatsAppActivity}</small>
             <small>Payments {latestPaymentEvent}</small>
             <small>{recentWebhooks} webhook{recentWebhooks === 1 ? "" : "s"} in the current window</small>
+            <small>Project {projectName} | {projectSlug}</small>
+            <small>{projectEnv} | Owner {projectOwner}</small>
+            <small>{projectCreated} | {openPipelineCount} open leads | Top stage {topPipelineStage} ({pipelineCounts[topPipelineStage] ?? 0}) | {heroConnectionLabel}</small>
           </div>
           <div className="hero-contract">
             <span>Public API</span>
@@ -1803,19 +1805,6 @@ function Overview({
             <small>Build against <code>CLIENTPAD_API_KEY</code> server-side.</small>
             <small>{heroSyncLabel}</small>
             <CopyButton text={publicApiUrl} />
-          </div>
-          <div className="hero-project">
-            <span>Selected project</span>
-            <strong>{projectName}</strong>
-            <small>{projectSlug} | {projectEnv}</small>
-            <small>Owner {projectOwner}</small>
-            <small>{projectCreated} | {heroConnectionLabel}</small>
-          </div>
-          <div className="hero-pipeline">
-            <span>Pipeline</span>
-            <strong>{openPipelineCount} open leads</strong>
-            <small>New {pipelineCounts["New Lead"] ?? 0} | Quoted {pipelineCounts["Quoted"] ?? 0} | Booked {pipelineCounts["Booked"] ?? 0}</small>
-            <small>Active {pipelineCounts["In Progress"] ?? 0} | Closed {closedPipelineCount} | Top stage {topPipelineStage} ({pipelineCounts[topPipelineStage] ?? 0})</small>
           </div>
           <div className="hero-metric">
             <span>Usage</span>
