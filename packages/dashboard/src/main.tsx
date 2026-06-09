@@ -1113,7 +1113,18 @@ function Dashboard({
               readiness={readiness}
             />
           )}
-          {page === "projects" && <Projects projects={filteredProjects} onCreate={createProject} setPage={setPage} />}
+          {page === "projects" && (
+            <Projects
+              projects={filteredProjects}
+              onCreate={createProject}
+              setPage={setPage}
+              usage={usage}
+              usageSummary={usageSummary}
+              onGoToKeys={() => setPage("keys")}
+              onGoToUsage={() => setPage("usage")}
+              onGoToBilling={() => setPage("billing")}
+            />
+          )}
           {page === "keys" && (
             <Keys
               workspaceId={selectedWorkspace}
@@ -1818,42 +1829,154 @@ function Overview({
   );
 }
 
-function Projects({ projects, onCreate, setPage }: { projects: Project[]; onCreate: (input: ProjectFormState) => Promise<void>; setPage: (page: Page) => void }) {
+function Projects({
+  projects,
+  onCreate,
+  setPage,
+  usage,
+  usageSummary,
+  onGoToKeys,
+  onGoToUsage,
+  onGoToBilling,
+}: {
+  projects: Project[];
+  onCreate: (input: ProjectFormState) => Promise<void>;
+  setPage: (page: Page) => void;
+  usage: UsageRow[];
+  usageSummary: UsageSummary | null;
+  onGoToKeys: () => void;
+  onGoToUsage: () => void;
+  onGoToBilling: () => void;
+}) {
   const [form, setForm] = useState<ProjectFormState>({ name: "", owner_email: "", plan_code: "free" });
+  const productionCount = projects.filter((project) => project.environment === "production").length;
+  const stagingCount = projects.filter((project) => project.environment === "staging").length;
+  const developmentCount = projects.filter((project) => project.environment === "development").length;
+  const totalRequests = usageSummary?.request_count ?? usage.reduce((sum, row) => sum + row.request_count, 0);
+  const activeKeys = usageSummary?.active_api_key_count ?? 0;
 
   return (
-    <div className="detail-layout">
-      <Panel>
-        <h2>Create project</h2>
-        <FormField label="Project name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
-        <FormField label="Owner email" value={form.owner_email} onChange={(value) => setForm({ ...form, owner_email: value })} />
-        <label className="field">
-          Plan
-          <select value={form.plan_code} onChange={(event) => setForm({ ...form, plan_code: event.target.value })}>
-            <option value="free">Free</option>
-            <option value="developer">Developer</option>
-            <option value="pro">Pro</option>
-            <option value="business">Business</option>
-          </select>
-        </label>
-        <button className="button primary blue" onClick={() => onCreate(form)}>
-          <Plus size={16} /> Create project
-        </button>
-      </Panel>
-      <Panel className="table-panel wide-detail">
+    <div className="projects-layout">
+      <Panel className="projects-hero">
         <div className="panel-head bordered">
-          <h2>Hosted projects</h2>
-          <button className="button outline" onClick={() => setPage("keys")}>Create key</button>
-        </div>
-        {projects.length > 0 ? (
-          <ProjectsTable projects={projects} usage={demoUsage} />
-        ) : (
-          <div className="empty-state-panel compact">
-            <h3>No projects yet</h3>
-            <p>Create your first workspace project to activate API keys, usage tracking, and live WhatsApp workflows.</p>
+          <div>
+            <h2>Projects</h2>
+            <p className="helper-text">Workspaces, app environments, and the client/business records they control.</p>
           </div>
-        )}
+          <StatusChip tone="blue" label="Workspace control" />
+        </div>
+        <div className="projects-summary-grid">
+          <article className="projects-summary-card">
+            <span>Projects</span>
+            <strong>{projects.length}</strong>
+            <small>Hosted app and CRM workspaces.</small>
+          </article>
+          <article className="projects-summary-card">
+            <span>Production</span>
+            <strong>{productionCount}</strong>
+            <small>Live environments serving customers.</small>
+          </article>
+          <article className="projects-summary-card">
+            <span>Staging</span>
+            <strong>{stagingCount}</strong>
+            <small>Pre-production environments for verification.</small>
+          </article>
+          <article className="projects-summary-card">
+            <span>Development</span>
+            <strong>{developmentCount}</strong>
+            <small>Internal sandboxes and test workspaces.</small>
+          </article>
+        </div>
+        <div className="projects-metric-row">
+          <article className="projects-metric-card">
+            <span>Requests</span>
+            <strong>{formatNumber(totalRequests)}</strong>
+          </article>
+          <article className="projects-metric-card">
+            <span>Active keys</span>
+            <strong>{formatNumber(activeKeys)}</strong>
+          </article>
+          <article className="projects-metric-card">
+            <span>Selected plan</span>
+            <strong>{usageSummary?.plan_name ?? "Free"}</strong>
+          </article>
+        </div>
       </Panel>
+
+      <div className="projects-grid">
+        <Panel className="projects-form-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Create project</h2>
+              <p className="helper-text">Create a project to tie API usage, key scopes, and CRM data to a specific business.</p>
+            </div>
+            <StatusChip tone="green" label="Project builder" />
+          </div>
+          <FormField label="Project name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
+          <FormField label="Owner email" value={form.owner_email} onChange={(value) => setForm({ ...form, owner_email: value })} />
+          <label className="field">
+            Plan
+            <select value={form.plan_code} onChange={(event) => setForm({ ...form, plan_code: event.target.value })}>
+              <option value="free">Free</option>
+              <option value="developer">Developer</option>
+              <option value="pro">Pro</option>
+              <option value="business">Business</option>
+            </select>
+          </label>
+          <div className="project-form-actions">
+            <button className="button primary blue" onClick={() => onCreate(form)}>
+              <Plus size={16} /> Create project
+            </button>
+            <button className="button outline" onClick={onGoToKeys}>Create key</button>
+          </div>
+        </Panel>
+
+        <Panel className="projects-side-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Workspace actions</h2>
+              <p className="helper-text">Jump to the parts of the product that depend on projects being in place.</p>
+            </div>
+            <StatusChip tone="blue" label="Operator actions" />
+          </div>
+          <div className="projects-action-list">
+            <button className="projects-action-card" type="button" onClick={onGoToUsage}>
+              <span>Usage</span>
+              <strong>Review API request volume for the current workspace.</strong>
+            </button>
+            <button className="projects-action-card" type="button" onClick={onGoToBilling}>
+              <span>Billing</span>
+              <strong>Check plan limits before handing the workspace to a client.</strong>
+            </button>
+            <button className="projects-action-card" type="button" onClick={() => setPage("infrastructure")}>
+              <span>Infrastructure</span>
+              <strong>Confirm hosts, readiness, and deployment mapping.</strong>
+            </button>
+          </div>
+          <div className="projects-note-card">
+            <span>Why it matters</span>
+            <strong>Projects keep the CRM, API usage, and WhatsApp workflows attached to one business.</strong>
+          </div>
+        </Panel>
+
+        <Panel className="table-panel wide-detail projects-table-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Hosted projects</h2>
+              <p className="helper-text">Each row represents an application or client workspace attached to the ClientPad API.</p>
+            </div>
+            <StatusChip tone={projects.length ? "green" : "amber"} label={`${projects.length} projects`} />
+          </div>
+          {projects.length > 0 ? (
+            <ProjectsTable projects={projects} usage={demoUsage} />
+          ) : (
+            <div className="empty-state-panel compact">
+              <h3>No projects yet</h3>
+              <p>Create your first workspace project to activate API keys, usage tracking, and live WhatsApp workflows.</p>
+            </div>
+          )}
+        </Panel>
+      </div>
     </div>
   );
 }
