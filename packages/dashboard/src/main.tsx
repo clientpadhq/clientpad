@@ -5239,6 +5239,8 @@ function TeamInbox({
   const [sending, setSending] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<(typeof inboxFilters)[number]["key"]>("all");
+  const [error, setError] = useState("");
+  const [detailError, setDetailError] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const sdk = useMemo(() => {
@@ -5254,6 +5256,7 @@ function TeamInbox({
       setLoading(false);
       return;
     }
+    setError("");
     setLoading(true);
     sdk.whatsapp.list().then((res) => {
       setConversations(res.data);
@@ -5263,6 +5266,7 @@ function TeamInbox({
       setLoading(false);
     }).catch(err => {
       console.error("Failed to load conversations", err);
+      setError("Failed to load inbox conversations. Check CLIENTPAD_API_KEY and the WhatsApp connection.");
       setLoading(false);
     });
   }, [sdk, publicApiKey]);
@@ -5273,14 +5277,17 @@ function TeamInbox({
       setSuggestions([]);
       return;
     }
-    
+    setDetailError("");
     Promise.all([
       sdk.whatsapp.messages(selectedId),
       sdk.whatsapp.suggestions(selectedId)
     ]).then(([msgRes, sugRes]) => {
       setMessages(msgRes.data);
       setSuggestions(sugRes.data.suggestions);
-    }).catch(err => console.error("Failed to load conversation detail", err));
+    }).catch(err => {
+      console.error("Failed to load conversation detail", err);
+      setDetailError("Failed to load the selected thread. Retry or refresh the inbox.");
+    });
   }, [selectedId, sdk, publicApiKey]);
 
   const filteredConversations = useMemo(() => {
@@ -5328,6 +5335,12 @@ function TeamInbox({
   const draftCount = suggestions.length;
   const selectedStage = (selectedConversation as any)?.lead_pipeline_stage || "New Lead";
   const selectedSummary = selectedConversation?.ai_summary || "Select a live conversation to review the latest customer context.";
+  const hasPublicApiKey = readiness?.summary?.has_public_api_key ?? Boolean(publicApiKey);
+  const hasWhatsAppConfig = readiness?.summary?.has_whatsapp_configuration ?? false;
+  const hasPaymentConfig = readiness?.summary?.has_payment_provider_configuration ?? false;
+  const latestWhatsAppActivity = readiness?.summary?.latest_whatsapp_activity_at
+    ? timeAgo(readiness.summary.latest_whatsapp_activity_at)
+    : "No recent WhatsApp activity";
 
   async function sendReply(textOverride?: string) {
     if (!selectedId) return;
@@ -5335,13 +5348,15 @@ function TeamInbox({
     if (!text.trim()) return;
 
     setSending(true);
+    setError("");
     try {
       await sdk.whatsapp.reply(selectedId, { message_text: text, send: true });
       setReplyText("");
       const msgRes = await sdk.whatsapp.messages(selectedId);
       setMessages(msgRes.data);
     } catch (err) {
-      alert("Failed to send reply");
+      console.error("Failed to send reply", err);
+      setError("Failed to send the reply. Check the API key and try again.");
     } finally {
       setSending(false);
     }
@@ -5350,12 +5365,14 @@ function TeamInbox({
   async function approveSuggestion(index: number) {
     if (!selectedId) return;
     setSending(true);
+    setError("");
     try {
       await sdk.whatsapp.approveSuggestion(selectedId, { suggestion_index: index, send: true });
       const msgRes = await sdk.whatsapp.messages(selectedId);
       setMessages(msgRes.data);
     } catch (err) {
-      alert("Failed to approve suggestion");
+      console.error("Failed to approve suggestion", err);
+      setError("Failed to approve the draft. Reload the inbox and try again.");
     } finally {
       setSending(false);
     }
@@ -5363,11 +5380,13 @@ function TeamInbox({
 
   async function updateStatus(status: WhatsAppConversation["status"]) {
     if (!selectedId) return;
+    setError("");
     try {
       await sdk.whatsapp.updateStatus(selectedId, { status });
       setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, status } : c));
     } catch (err) {
-      alert("Failed to update status");
+      console.error("Failed to update conversation status", err);
+      setError("Failed to update the conversation status. Check the connection and try again.");
     }
   }
 
@@ -5424,6 +5443,28 @@ function TeamInbox({
           </article>
         </div>
       </Panel>
+      {(error || detailError) ? (
+        <Panel className="inbox-alert-panel">
+          <div className="panel-head bordered">
+            <div>
+              <h2>Inbox diagnostics</h2>
+              <p className="helper-text">Inline error handling for API, WhatsApp, and conversation updates.</p>
+            </div>
+            <StatusChip tone="amber" label="Action needed" />
+          </div>
+          <div className="inbox-alert-body">
+            <AlertCircle size={18} />
+            <div>
+              <strong>{error || detailError}</strong>
+              <p>{error ? "Open Settings to confirm the workspace API key and live connection." : "Try reloading the selected thread or switch to another conversation."}</p>
+            </div>
+            <div className="inbox-alert-actions">
+              <button className="button outline" type="button" onClick={onGoToSettings}>Settings</button>
+              <button className="button primary blue" type="button" onClick={onGoToKeys}>API keys</button>
+            </div>
+          </div>
+        </Panel>
+      ) : null}
 
       <div className="inbox-toolbar">
         <label className="inbox-search">
@@ -5562,6 +5603,28 @@ function TeamInbox({
           <StatusChip tone="green" label={`${suggestions.length} drafts`} />
         </div>
         <p className="helper-text">These drafts can be edited before they go out. Keep the workflow simple and human-reviewed.</p>
+        <div className="inbox-context-grid">
+          <article className="inbox-context-card">
+            <span>Public API</span>
+            <strong>{hasPublicApiKey ? "Ready" : "Missing"}</strong>
+            <small>{hasPublicApiKey ? "CLIENTPAD_API_KEY is available for this workspace." : "Set CLIENTPAD_API_KEY in Settings to load live inbox traffic."}</small>
+          </article>
+          <article className="inbox-context-card">
+            <span>WhatsApp</span>
+            <strong>{hasWhatsAppConfig ? "Connected" : "Not connected"}</strong>
+            <small>{hasWhatsAppConfig ? "WhatsApp conversations can be loaded and replied to." : "Configure the WhatsApp connection before using the live inbox."}</small>
+          </article>
+          <article className="inbox-context-card">
+            <span>Payments</span>
+            <strong>{hasPaymentConfig ? "Configured" : "Missing"}</strong>
+            <small>{hasPaymentConfig ? "Billing and collections are ready for this workspace." : "Add payment provider config to surface payment context."}</small>
+          </article>
+          <article className="inbox-context-card">
+            <span>Latest activity</span>
+            <strong>{latestWhatsAppActivity}</strong>
+            <small>Most recent WhatsApp traffic observed by readiness checks.</small>
+          </article>
+        </div>
         <div className="suggestions-list">
           {suggestions.length > 0 ? suggestions.map((s, i) => (
             <div key={i} className="suggestion-card">
@@ -5622,6 +5685,10 @@ function TeamInbox({
             </div>
           </div>
         )}
+        <div className="inbox-action-row">
+          <button className="button outline" type="button" onClick={onGoToSettings}>Settings</button>
+          <button className="button outline" type="button" onClick={onGoToKeys}>API keys</button>
+        </div>
       </Panel>
     </div>
     </div>
