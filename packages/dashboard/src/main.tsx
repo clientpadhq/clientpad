@@ -1166,6 +1166,9 @@ function Dashboard({
               selectedWorkspace={selectedWorkspace}
               publicApiKey={publicApiKey}
               onGoToSettings={() => setPage("settings")}
+              onGoToInfrastructure={() => setPage("infrastructure")}
+              onGoToDocs={() => setPage("docs")}
+              onGoToMonitoring={() => setPage("monitoring")}
             />
           )}
           {page === "infrastructure" && (
@@ -2330,12 +2333,18 @@ function LaunchReadiness({
   selectedWorkspace,
   publicApiKey,
   onGoToSettings,
+  onGoToInfrastructure,
+  onGoToDocs,
+  onGoToMonitoring,
 }: {
   session: Session;
   mode: ConnectionMode;
   selectedWorkspace: string;
   publicApiKey: string;
   onGoToSettings: () => void;
+  onGoToInfrastructure: () => void;
+  onGoToDocs: () => void;
+  onGoToMonitoring: () => void;
 }) {
   const [checks, setChecks] = useState<LaunchCheck[]>(() => buildInitialLaunchChecks(session.baseUrl));
   const [running, setRunning] = useState(false);
@@ -2417,6 +2426,34 @@ function LaunchReadiness({
   const okCount = checks.filter((check) => check.status === "ok").length;
   const warningCount = checks.filter((check) => check.status === "warning").length;
   const failCount = checks.filter((check) => check.status === "fail").length;
+  const launchSummary = [
+    {
+      label: "Connection",
+      value: mode === "preview" ? "Preview mode" : "Live connected",
+      detail: mode === "preview" ? "Sample data powers the launch checks." : cloudBaseUrl,
+    },
+    {
+      label: "Workspace",
+      value: selectedWorkspace || "No workspace selected",
+      detail: `${okCount}/${checks.length} checks green`,
+    },
+    {
+      label: "Public API",
+      value: publicApiUrl,
+      detail: "Use `CLIENTPAD_API_KEY` server-side when you call the public API.",
+    },
+    {
+      label: "Deploy target",
+      value: apiOrigin,
+      detail: "Render API service and docs domain stay separate.",
+    },
+  ];
+  const launchActions = [
+    { label: "Infrastructure", detail: "Review hosts, routes, and service mapping.", onClick: onGoToInfrastructure },
+    { label: "Monitoring", detail: "Inspect uptime, error rate, and request health.", onClick: onGoToMonitoring },
+    { label: "Docs", detail: "Open API reference and quickstart guidance.", onClick: onGoToDocs },
+    { label: "Connection settings", detail: "Adjust base URL and key settings.", onClick: onGoToSettings },
+  ];
   const externalTargets = [
     { label: "Marketing", url: "https://clientpad.xyz" },
     { label: "Docs", url: "https://docs.clientpad.xyz" },
@@ -2429,12 +2466,32 @@ function LaunchReadiness({
     <div className="launch-layout">
       <Panel className="launch-summary">
         <div className="panel-head">
-          <h2>Production readiness</h2>
+          <div>
+            <h2>Production readiness</h2>
+            <p className="helper-text">Readiness for the public API, operator session, and live workspace before you ship.</p>
+          </div>
           <Badge tone={failCount ? "amber" : "green"}>{failCount ? "Action needed" : "Ready"}</Badge>
+        </div>
+        <div className="launch-overview-grid">
+          {launchSummary.map((item) => (
+            <article key={item.label} className="launch-overview-card">
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <small>{item.detail}</small>
+            </article>
+          ))}
         </div>
         <div className="launch-score">
           <strong>{okCount}/{checks.length}</strong>
           <span>{warningCount} warnings | {failCount} failures</span>
+        </div>
+        <div className="launch-action-grid">
+          {launchActions.map((action) => (
+            <button key={action.label} className="launch-action-card" type="button" onClick={action.onClick}>
+              <span>{action.label}</span>
+              <strong>{action.detail}</strong>
+            </button>
+          ))}
         </div>
         <div className="status-banner-actions">
           <button className="button primary blue" onClick={runChecks} disabled={running}>
